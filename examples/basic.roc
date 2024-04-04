@@ -7,22 +7,24 @@ app "basic"
         pf.Stdout,
         pf.Arg,
         pf.Task.{ Task },
-        roclap.Builder.{ cliBuilder, numOption, strOption, flagOption, finishOrErr },
+        roclap.Builder.{ cliBuilder, numOption, strOption, flagOption, occurrenceOption, getParser },
     ]
     provides [main] to pf
 
 main : Task {} I32
 main =
     args <- Arg.list |> Task.await
-    result =
-        cliBuilder args { name: "basic" } {
-            a: <- numOption { short: "a" },
-            b: <- flagOption { short: "b" },
-            xyz: <- strOption { long: "some_text" },
-        }
-        |> finishOrErr
 
-    when result is
+    parser =
+        cliBuilder {
+            alpha: <- numOption { short: "a" },
+            beta: <- flagOption { short: "b", long: "--beta" },
+            xyz: <- strOption { long: "xyz" },
+            verbosity: <- occurrenceOption { short: "v", long: "--verbose" },
+        }
+        |> getParser
+
+    when parser args is
         Ok data ->
             data
             |> Inspect.toStr

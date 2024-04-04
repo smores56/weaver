@@ -3,8 +3,8 @@ interface Parser
     imports []
 
 Arg : [
-    Short { name : Str, ordering : [NotLast, Last] },
-    Long { name : Str, value : [NoValue, HasValue Str] },
+    Short { name : Str, grouped : [Alone, Grouped] },
+    Long { name : Str, value : Result Str [NoValue] },
     Parameter Str,
 ]
 
@@ -42,10 +42,10 @@ parseLongArg : Str -> Arg
 parseLongArg = \arg ->
     when Str.splitFirst arg "=" is
         Ok { before: option, after: value } ->
-            Long { name: option, value: HasValue value }
+            Long { name: option, value: Ok value }
 
         _other ->
-            Long { name: arg, value: NoValue }
+            Long { name: arg, value: Err NoValue }
 
 constructSetOfOptions : Str -> List Arg
 constructSetOfOptions = \combined ->
@@ -55,11 +55,10 @@ constructSetOfOptions = \combined ->
         |> List.keepOks \c -> Str.fromUtf8 [c]
 
     when options is
-        [] -> []
-        [.. as others, last] ->
-            others
-            |> List.map \other -> Short { name: other, ordering: NotLast }
-            |> List.append (Short { name: last, ordering: Last })
+        [alone] -> [Short { name: alone, grouped: Alone }]
+        _other ->
+            List.map options \name ->
+                Short { name, grouped: Grouped }
 
 expect
     parsed = parseArg "-"
@@ -69,27 +68,27 @@ expect
 expect
     parsed = parseArg "-a"
 
-    parsed == Ok [Short { name: "a", ordering: Last }]
+    parsed == Ok [Short { name: "a", grouped: Alone }]
 
 expect
     parsed = parseArg "-abc"
 
     parsed
     == Ok [
-        Short { name: "a", ordering: NotLast },
-        Short { name: "b", ordering: NotLast },
-        Short { name: "c", ordering: Last },
+        Short { name: "a", grouped: Grouped },
+        Short { name: "b", grouped: Grouped },
+        Short { name: "c", grouped: Grouped },
     ]
 
 expect
     parsed = parseArg "--abc"
 
-    parsed == Ok [Long { name: "abc", value: NoValue }]
+    parsed == Ok [Long { name: "abc", value: Err NoValue }]
 
 expect
     parsed = parseArg "--abc=xyz"
 
-    parsed == Ok [Long { name: "abc", value: HasValue "xyz" }]
+    parsed == Ok [Long { name: "abc", value: Ok "xyz" }]
 
 expect
     parsed = parseArg "123"
@@ -97,16 +96,17 @@ expect
     parsed == Ok [Parameter "123"]
 
 expect
-    parsed = parseArgs ["this-won't-show", "-a", "123", "-bcd", "xyz", "--", "--subject=world"]
+    parsed = parseArgs ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
 
     parsed
     == Ok [
-        Short { name: "a", ordering: Last },
+        Short { name: "a", grouped: Alone },
         Parameter "123",
-        Short { name: "b", ordering: NotLast },
-        Short { name: "c", ordering: NotLast },
-        Short { name: "d", ordering: Last },
+        Long { name: "passed", value: Err NoValue },
+        Short { name: "b", grouped: Grouped },
+        Short { name: "c", grouped: Grouped },
+        Short { name: "d", grouped: Grouped },
         Parameter "xyz",
         Parameter "--",
-        Long { name: "subject", value: HasValue "world" },
+        Long { name: "subject", value: Ok "world" },
     ]

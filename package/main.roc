@@ -1,3 +1,3 @@
 package "roclap"
-    exposes [Parser, Option, Builder]
+    exposes [Parser, Config, Builder, Help]
     packages {}

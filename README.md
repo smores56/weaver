@@ -16,16 +16,18 @@ directory, but here's a snippet that shows the basics:
 
 ```roc
 expect
-    args = ["app", "-a", "123", "-b", "--xyz", "some_text"]
-    out =
-        cliBuilder args { name: "app" } {
-            a: <- numOption { short: "a" },
-            b: <- flagOption { short: "b" },
-            xyz: <- strOption { long: "some_text" },
+    parser =
+        cliBuilder {
+            alpha: <- numOption { short: "a" },
+            beta: <- flagOption { short: "b", long: "--beta" },
+            xyz: <- strOption { long: "xyz" },
+            verbosity: <- occurrenceOption { short: "v", long: "--verbose" },
         }
-        |> finishOrErr
+        |> getParser
 
-    out == Ok { a: 123, b: Bool.true, xyz: "some_text" }
+    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
+
+    out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4 }
 ```
 
 ## Roadmap

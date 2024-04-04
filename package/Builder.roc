@@ -1,203 +1,268 @@
 interface Builder
-    exposes [
-        cliBuilder,
-        finishOrErr,
-        numOption,
-        strOption,
-        flagOption,
-        occurrenceOption,
-    ]
+    exposes [strOption, numOption, flagOption, occurrenceOption, cliBuilder, getParser]
     imports [
-        Option.{ CliOption, OptionBase, OptionName, optionName },
+        Config.{
+            ValueType,
+            Plurality,
+            OptionConfig,
+            OptionConfigParams,
+            ParameterConfig,
+            SubcommandConfigParams,
+            SubcommandsConfig,
+            getSubcommandNames,
+            CliConfigParams,
+            CliConfig,
+        },
         Parser.{ Arg, ParsedArgs, ArgParseErr, parseArgs },
     ]
 
+# TODO: make a separate CliBuilderErr for building issues (e.g. duplicate arg names)
+# and a ArgExtractErr for missing args, invalid args, etc.
 CliBuilderErr : [
-    MissingArg Str,
-    NoValueProvidedForArg Str,
-    TooManyValuesForArg Str,
-    InvalidNumArg Str,
+    MissingArg OptionConfig,
+    OptionCanOnlyBeSetOnce OptionConfig,
+    NoValueProvidedForOption OptionConfig,
+    TooManyValuesForArg OptionConfig,
+    CannotUseGroupedShortArgAsValue OptionConfig Arg,
+    InvalidNumArg OptionConfig,
     FailedToParseArgs ArgParseErr,
 ]
 
-CliBuilderConfig : {
-    name : Str,
-    authors ? List Str,
-    version ? Str,
-    description ? Str,
-    allowExtraArgs ? [Allow, Deny],
-}
+# This should return an ArgExtractErr
+ValueParser in out : in, List Arg -> Result (out, List Arg) CliBuilderErr
 
-CliBuilder state := {
-    config : CliBuilderConfig,
-    args : List Arg,
-    options : List CliOption,
-    state : Result state CliBuilderErr,
+CliBuilder base state := {
+    baseBuilder : base,
+    builder : ValueParser base state,
+    options : List OptionConfig,
+    parameters : List ParameterConfig,
+    subcommands : SubcommandsConfig,
 }
 
 ArgValue : Result Str [NoValue]
 
-ValueParser a : List ArgValue -> Result a CliBuilderErr
-
-cliBuilder : List Str, CliBuilderConfig, state -> CliBuilder state
-cliBuilder = \args, config, state ->
-    (parsedArgs, stateResult) =
-        when parseArgs args is
-            Ok parsed -> (parsed, Ok state)
-            Err parseErr -> ([], Err (FailedToParseArgs parseErr))
-
-    @CliBuilder { config, args: parsedArgs, options: [], state: stateResult }
-
-unwrapBuilderState : CliBuilder (a -> state), CliOption, ((a -> state) -> CliBuilder state) -> CliBuilder state
-unwrapBuilderState = \@CliBuilder builder, option, callback ->
-    when builder.state is
-        Ok validState -> callback validState
-        Err invalidState ->
-            @CliBuilder {
-                args: builder.args,
-                config: builder.config,
-                state: Err invalidState,
-                options: List.append builder.options option,
-            }
-
-updateBuilderViaParser : CliBuilder (a -> state), CliOption, ValueParser a -> CliBuilder state
-updateBuilderViaParser = \@CliBuilder builder, option, parser ->
-    validState <- unwrapBuilderState (@CliBuilder builder) option
-
-    result =
-        getValuesOfArgs builder.args option
-        |> Result.try \(values, remainingArgs) ->
-            value <- parser values
-                |> Result.map
-
-            (value, remainingArgs)
-
-    when result is
-        Ok (value, remainingArgs) ->
-            @CliBuilder {
-                args: remainingArgs,
-                config: builder.config,
-                state: Ok (validState value),
-                options: List.append builder.options option,
-            }
-
-        Err parseErr ->
-            @CliBuilder {
-                args: builder.args,
-                config: builder.config,
-                state: Err parseErr,
-                options: List.append builder.options option,
-            }
-
-getValuesOfArgs : List Arg, CliOption -> Result (List ArgValue, List Arg) CliBuilderErr
-getValuesOfArgs = \args, option ->
-    name = optionName option
-
-    argNameMatches = \arg ->
-        when arg is
-            Short s -> s.name == name
-            Long l -> l.name == name
-            Parameter _param -> Bool.false
-
-    expectedAmountOfArgs =
-        when option is
-            Flag _ | Frequency _ -> Zero
-            Str _ | Num _ | MaybeStr _ | MaybeNum _ | Choice _ | StrList _ | NumList _ -> One
-
-    startingState = {
-        action: Nothing,
-        values: [],
-        remainingArgs: [],
+cliBuilder : base -> CliBuilder base base
+cliBuilder = \base ->
+    @CliBuilder {
+        baseBuilder: base,
+        builder: \state, args -> Ok (state, args),
+        options: [],
+        parameters: [],
+        subcommands: NoSubcommands,
     }
 
+getValuesOfArgs : { args : List Arg, option : OptionConfig, subcommandNames : List Str } -> Result (List ArgValue, List Arg) CliBuilderErr
+getValuesOfArgs = \{ args, option, subcommandNames: _ } ->
+    # TODO: add StopParsing action
+    # TODO: only check if _first_ parameter is subcommand, ignore rest
     stateAfter =
         args
-        |> List.walk startingState \state, arg ->
+        |> List.walkTry { action: FindOption, values: [], remainingArgs: [] } \state, arg ->
             when state.action is
-                Nothing ->
-                    if argNameMatches arg then
-                        if expectedAmountOfArgs == Zero then
-                            { state & values: state.values |> List.append (Err NoValue) }
-                        else
-                            { state & action: GetValue }
-                    else
-                        { state & remainingArgs: state.remainingArgs |> List.append arg }
+                FindOption ->
+                    when arg is
+                        Short s ->
+                            if s.name == option.short then
+                                when option.argsNeeded is
+                                    Zero ->
+                                        Ok { state & values: state.values |> List.append (Err NoValue) }
+
+                                    One ->
+                                        Ok { state & action: GetValue }
+                            else
+                                Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
+
+                        Long l ->
+                            if l.name == option.long then
+                                when option.argsNeeded is
+                                    Zero ->
+                                        when l.value is
+                                            Ok _val -> Err (TooManyValuesForArg option)
+                                            Err NoValue -> Ok { state & values: state.values |> List.append (Err NoValue) }
+
+                                    One ->
+                                        when l.value is
+                                            Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
+                                            Err NoValue -> Ok { state & action: GetValue }
+                            else
+                                Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
+
+                        # TODO: detect subcommands
+                        Parameter _p ->
+                            # if subcommandNames |> List.contains p then
+                            #     Ok { state & }
+                            Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
                 GetValue ->
-                    value =
-                        when arg is
-                            Short short -> "-$(short.name)"
-                            Long long -> "--$(long.name)"
-                            Parameter param -> param
+                    when arg is
+                        Short s ->
+                            when s.grouped is
+                                Alone ->
+                                    Ok { state & action: FindOption, values: state.values |> List.append (Ok "-$(s.name)") }
 
-                    { state & action: Nothing, values: state.values |> List.append (Ok value) }
+                                Grouped ->
+                                    Err (CannotUseGroupedShortArgAsValue option arg)
 
-    if stateAfter.action == GetValue then
-        Err (NoValueProvidedForArg (optionName option))
-    else
-        Ok (stateAfter.values, stateAfter.remainingArgs)
+                        Long l ->
+                            value =
+                                when l.value is
+                                    Ok val -> "--$(l.name)=$(val)"
+                                    Err NoValue -> "--$(l.name)"
 
-getFirstValue : List ArgValue, CliOption -> Result Str CliBuilderErr
-getFirstValue = \values, config ->
-    if List.isEmpty values then
-        Err (MissingArg (optionName config))
-    else
-        when List.keepOks values \v -> v is
-            [] -> Err (NoValueProvidedForArg (optionName config))
-            [value] -> Ok value
-            [..] -> Err (TooManyValuesForArg (optionName config))
+                            Ok { state & action: FindOption, values: state.values |> List.append (Ok value) }
 
-numOption : OptionBase {} -> (CliBuilder (U64 -> state) -> CliBuilder state)
-numOption = \config ->
-    parser = \values ->
-        value <- getFirstValue values config
+                        # TODO: detect subcommands
+                        Parameter p ->
+                            Ok { state & action: FindOption, values: state.values |> List.append (Ok p) }
+
+    when stateAfter is
+        Err err -> Err err
+        Ok { action, values, remainingArgs } ->
+            if action == GetValue then
+                Err (NoValueProvidedForOption option)
+            else
+                Ok (values, remainingArgs)
+
+getValuesForOption : CliBuilder base (in -> state), OptionConfig, List Arg -> Result { out : in -> state, values : List (Result Str [NoValue]), remainingArgs : List Arg } CliBuilderErr
+getValuesForOption = \@CliBuilder builder, option, args ->
+    subcommandNames = getSubcommandNames builder.subcommands
+    (out, restOfArgs) <- builder.builder builder.baseBuilder args
+        |> Result.try
+    (values, remainingArgs) <- getValuesOfArgs { args: restOfArgs, option, subcommandNames }
+        |> Result.try
+
+    Ok { out, values, remainingArgs }
+
+numOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder base (U64 -> state) -> CliBuilder base state)
+numOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
+    option : OptionConfig
+    option = { type: Num, plurality: One, argsNeeded: One, short, long, name, help }
+
+    \@CliBuilder builder ->
+        newBuilder = \_state, args ->
+            { out, values, remainingArgs } <- getValuesForOption (@CliBuilder builder) option args
+                |> Result.try
+
+            when values is
+                [] -> Err (MissingArg option)
+                [single] ->
+                    val <- single
+                        |> Result.mapErr \_ -> NoValueProvidedForOption option
+                        |> Result.try
+                    num <- val
+                        |> Str.toU64
+                        |> Result.mapErr \_ -> InvalidNumArg option
+                        |> Result.try
+
+                    Ok (out num, remainingArgs)
+
+                _many -> Err (OptionCanOnlyBeSetOnce option)
+
+        @CliBuilder {
+            baseBuilder: builder.baseBuilder,
+            parameters: builder.parameters,
+            options: builder.options |> List.append option,
+            subcommands: builder.subcommands,
+            builder: newBuilder,
+        }
+
+strOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder base (Str -> state) -> CliBuilder base state)
+strOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
+    option : OptionConfig
+    option = { type: Str, plurality: One, argsNeeded: One, short, long, name, help }
+
+    \@CliBuilder builder ->
+        newBuilder = \_state, args ->
+            { out, values, remainingArgs } <- getValuesForOption (@CliBuilder builder) option args
+                |> Result.try
+
+            when values is
+                [] -> Err (MissingArg option)
+                [single] ->
+                    val <- single
+                        |> Result.mapErr \_ -> NoValueProvidedForOption option
+                        |> Result.try
+
+                    Ok (out val, remainingArgs)
+
+                _many -> Err (OptionCanOnlyBeSetOnce option)
+
+        @CliBuilder {
+            baseBuilder: builder.baseBuilder,
+            parameters: builder.parameters,
+            options: builder.options |> List.append option,
+            subcommands: builder.subcommands,
+            builder: newBuilder,
+        }
+
+flagOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder base (Bool -> state) -> CliBuilder base state)
+flagOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
+    option : OptionConfig
+    option = { type: Bool, plurality: Optional, argsNeeded: Zero, short, long, name, help }
+
+    \@CliBuilder builder ->
+        newBuilder = \_state, args ->
+            { out, values, remainingArgs } <- getValuesForOption (@CliBuilder builder) option args
+                |> Result.try
+
+            when values is
+                [] -> Ok (out Bool.false, remainingArgs)
+                [Err NoValue] -> Ok (out Bool.true, remainingArgs)
+                [Ok _val] -> Err (TooManyValuesForArg option)
+                _many -> Err (OptionCanOnlyBeSetOnce option)
+
+        @CliBuilder {
+            baseBuilder: builder.baseBuilder,
+            parameters: builder.parameters,
+            options: builder.options |> List.append option,
+            subcommands: builder.subcommands,
+            builder: newBuilder,
+        }
+
+occurrenceOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder base (U64 -> state) -> CliBuilder base state)
+occurrenceOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
+    option : OptionConfig
+    option = { type: Bool, plurality: Many, argsNeeded: Zero, short, long, name, help }
+
+    \@CliBuilder builder ->
+        newBuilder = \_state, args ->
+            { out, values, remainingArgs } <- getValuesForOption (@CliBuilder builder) option args
+                |> Result.try
+
+            if values |> List.any Result.isOk then
+                Err (TooManyValuesForArg option)
+            else
+                Ok (out (List.len values), remainingArgs)
+
+        @CliBuilder {
+            baseBuilder: builder.baseBuilder,
+            parameters: builder.parameters,
+            options: builder.options |> List.append option,
+            subcommands: builder.subcommands,
+            builder: newBuilder,
+        }
+
+getParser : CliBuilder base {}state -> (List Str -> Result {}state CliBuilderErr)
+getParser = \@CliBuilder builder ->
+    \args ->
+        parsedArgs <- parseArgs args
+            |> Result.mapErr FailedToParseArgs
             |> Result.try
 
-        value
-        |> Str.toU64
-        |> Result.mapErr \InvalidNumStr -> InvalidNumArg (optionName config)
-
-    \builder -> updateBuilderViaParser builder (Num config) parser
-
-strOption : OptionBase {} -> (CliBuilder (Str -> state) -> CliBuilder state)
-strOption = \config ->
-    parser = \values ->
-        getFirstValue values config
-
-    \builder -> updateBuilderViaParser builder (Str config) parser
-
-flagOption : OptionBase {} -> (CliBuilder (Bool -> state) -> CliBuilder state)
-flagOption = \config ->
-    parser = \values ->
-        Ok (values |> List.isEmpty |> Bool.not)
-
-    \builder -> updateBuilderViaParser builder (Str config) parser
-
-occurrenceOption : OptionBase {} -> (CliBuilder (U64 -> state) -> CliBuilder state)
-occurrenceOption = \config ->
-    parser = \values ->
-        Ok (values |> List.len)
-
-    \builder -> updateBuilderViaParser builder (Str config) parser
-
-finishOrErr : CliBuilder state -> Result state CliBuilderErr
-finishOrErr = \@CliBuilder builder -> builder.state
-
-# TODO: ensure the right quantities of args
-# expectedFrequency =
-#     when option is
-#         Str _ | Num _ -> One
-#         Flag _ | MaybeStr _ | MaybeNum _ | Choice _ -> One -> ZeroOrOne
-#         StrList _ | NumList _ | Frequency _ -> Any
+        builder.baseBuilder
+        |> builder.builder parsedArgs
+        |> Result.map .0
 
 expect
-    args = ["app", "-a", "123", "-b", "--xyz", "some_text"]
-    out =
-        cliBuilder args { name: "app" } {
-            a: <- numOption { short: "a" },
-            b: <- flagOption { short: "b" },
-            xyz: <- strOption { long: "some_text" },
+    parser =
+        cliBuilder {
+            alpha: <- numOption { short: "a" },
+            beta: <- flagOption { short: "b", long: "--beta" },
+            xyz: <- strOption { long: "xyz" },
+            verbosity: <- occurrenceOption { short: "v", long: "--verbose" },
         }
-        |> finishOrErr
+        |> getParser
 
-    out == Ok { a: 123, b: Bool.true, xyz: "some_text" }
+    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
+
+    out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4 }
