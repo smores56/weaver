@@ -36,8 +36,10 @@ This library is barely even work-in-progress, but once I can get an example runn
 with the [basic-cli](https://github.com/roc-lang/basic-cli) platform, these are the
 main features I want to add support for:
 
-- [ ] simply-implemented support for optional args/lists of args
+- [X] simply-implemented support for optional args/lists of args
+- [ ] full documentation of the library's features
+- [ ] multiple documented and tested examples
 - [ ] automatic help text generation
 - [ ] subcommands, as simple as possible
-- [ ] choice args that select an option from a custom enum
+- [X] choice args that select an option from a custom enum
 - [ ] maybe completion generation at some point?

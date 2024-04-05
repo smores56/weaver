@@ -1,1 +1,6 @@
+# Ignore generated binaries (with no extension) by default
+*
+!*.*
+!*/
+
 .direnv/

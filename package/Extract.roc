@@ -7,6 +7,7 @@ interface Extract
         getOptionalValue,
         getSingleValue,
         parseNumValue,
+        parseOptionalNumValue,
     ]
     imports [
         Parser.{ Arg, ArgValue, ArgParseErr },
@@ -21,6 +22,7 @@ ArgExtractErr : [
     # TODO: remove this by allowing what it prevents
     CannotUseGroupedShortArgAsValue OptionConfig Arg,
     InvalidNumArg OptionConfig,
+    InvalidCustomArg OptionConfig Str,
     FailedToParseArgs ArgParseErr,
 ]
 
@@ -138,12 +140,23 @@ getOptionalValue = \values, option ->
         [single] -> Ok (Ok single)
         [..] -> Err (OptionCanOnlyBeSetOnce option)
 
-parseNumValue : ArgValue, OptionConfig -> Result U64 ArgExtractErr
+parseNumValue : ArgValue, OptionConfig -> Result I64 ArgExtractErr
 parseNumValue = \value, option ->
     val <- value
         |> Result.mapErr \_ -> NoValueProvidedForOption option
         |> Result.try
 
     val
-    |> Str.toU64
+    |> Str.toI64
     |> Result.mapErr \_ -> InvalidNumArg option
+
+parseOptionalNumValue : ArgValue, OptionConfig -> Result (Result I64 [NoValue]) ArgExtractErr
+parseOptionalNumValue = \value, option ->
+    when value is
+        Ok val ->
+            when Str.toI64 val is
+                Ok numVal -> Ok (Ok numVal)
+                Err _ -> Err (InvalidNumArg option)
+
+        Err NoValue -> Ok (Err NoValue)
+
