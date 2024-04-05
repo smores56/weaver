@@ -1,7 +1,7 @@
 interface Extract
     exposes [
-        ExtractValuesParams,
-        ExtractValuesOutput,
+        ExtractOptionValuesParams,
+        ExtractOptionValuesOutput,
         extractOptionValues,
         getOptionalValue,
         getSingleValue,
@@ -10,8 +10,84 @@ interface Extract
     ]
     imports [
         Parser.{ Arg, ArgValue, ArgParseErr },
-        Config.{ OptionConfig, ArgExtractErr, DataParser, SubcommandConfig },
+        Config.{ OptionConfig, ParameterConfig, ArgExtractErr, DataParser, SubcommandConfig },
     ]
+
+# ExtractParamValuesParams s : {
+#     args : List Arg,
+#     param : ParameterConfig,
+#     subcommands : Dict Str { parser : DataParser s s, config : SubcommandConfig },
+# }
+
+# ExtractParamValuesOutput s : {
+#     values : List Str,
+#     remainingArgs : List Arg,
+#     subcommandFound : SubcommandSearchResult s,
+# }
+
+# extractParamValues : ExtractParamValuesParams s -> Result (ExtractParamValuesOutput s) ArgExtractErr
+# extractParamValues = \{ args, param, subcommands } ->
+#     startingState = {
+#         action: FindOption,
+#         checkForSubcommand: Check,
+#         values: [],
+#         remainingArgs: [],
+#         subcommandFound: Err NoSubcommand,
+#     }
+
+#     stateAfter =
+#         args
+#         |> List.walkTry startingState \state, arg ->
+#             when state.action is
+#                 FindOption ->
+#                     when arg is
+#                         Short short if short.name == option.short ->
+#                             when option.argsNeeded is
+#                                 Zero ->
+#                                     Ok { state & values: state.values |> List.append (Err NoValue) }
+
+#                                 One ->
+#                                     Ok { state & action: GetValue }
+
+#                         Long long if long.name == option.long ->
+#                             when option.argsNeeded is
+#                                 Zero ->
+#                                     when long.value is
+#                                         Ok _val -> Err (OptionDoesNotExpectValue option)
+#                                         Err NoValue -> Ok { state & values: state.values |> List.append (Err NoValue) }
+
+#                                 One ->
+#                                     when long.value is
+#                                         Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
+#                                         Err NoValue -> Ok { state & action: GetValue }
+
+#                         Parameter param if state.checkForSubcommand == Check ->
+#                             when Dict.get subcommands param is
+#                                 Err KeyNotFound ->
+#                                     Ok { state & checkForSubcommand: DontCheck, remainingArgs: state.remainingArgs |> List.append arg }
+
+#                                 Ok { parser, config } ->
+#                                     Ok
+#                                         { state &
+#                                             action: StopParsing,
+#                                             subcommandFound: Ok { name: param, parser, config, args: [arg] },
+#                                             remainingArgs: state.remainingArgs |> List.append arg,
+#                                         }
+
+#                         _nothingFound ->
+#                             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
+
+#                 GetValue -> getValueForExtraction state arg option
+#                 StopParsing ->
+#                     subcommandFound = state.subcommandFound |> Result.map \sf -> { sf & args: sf.args |> List.append arg }
+#                     Ok { state & subcommandFound }
+
+#     when stateAfter is
+#         Err err -> Err err
+#         Ok { action, values, remainingArgs, subcommandFound } ->
+#             when action is
+#                 GetValue -> Err (NoValueProvidedForOption option)
+#                 FindOption | StopParsing -> Ok { values, remainingArgs, subcommandFound }
 
 SubcommandSearchResult s :
     Result
@@ -23,13 +99,13 @@ SubcommandSearchResult s :
     }
     [NoSubcommand]
 
-ExtractValuesParams s : {
+ExtractOptionValuesParams s : {
     args : List Arg,
     option : OptionConfig,
     subcommands : Dict Str { parser : DataParser s s, config : SubcommandConfig },
 }
 
-ExtractValuesOutput s : {
+ExtractOptionValuesOutput s : {
     values : List ArgValue,
     remainingArgs : List Arg,
     subcommandFound : SubcommandSearchResult s,
@@ -43,7 +119,7 @@ ExtractOptionValueWalkerState s : {
     subcommandFound : SubcommandSearchResult s,
 }
 
-extractOptionValues : ExtractValuesParams s -> Result (ExtractValuesOutput s) ArgExtractErr
+extractOptionValues : ExtractOptionValuesParams s -> Result (ExtractOptionValuesOutput s) ArgExtractErr
 extractOptionValues = \{ args, option, subcommands } ->
     startingState = {
         action: FindOption,
@@ -53,15 +129,17 @@ extractOptionValues = \{ args, option, subcommands } ->
         subcommandFound: Err NoSubcommand,
     }
 
-    stateAfter =
-        args
-        |> List.walkTry startingState \state, arg ->
-            when state.action is
-                FindOption -> findOptionForExtraction state arg option subcommands
-                GetValue -> getValueForExtraction state arg option
-                StopParsing ->
-                    Ok { state & subcommandFound: state.subcommandFound |> Result.map \sf -> { 
-                         sf & args: sf.args |> List.append arg } }
+    stateAfter = List.walkTry args startingState \state, arg ->
+        when state.action is
+            FindOption -> findOptionForExtraction state arg option subcommands
+            GetValue -> getValueForExtraction state arg option
+            StopParsing ->
+                # TODO: do we have to pass remainingArgs along normally if there's no subcommand?
+                subcommandFound =
+                    state.subcommandFound 
+                    |> Result.map \sf -> { sf & args: sf.args |> List.append arg }
+
+                Ok { state & subcommandFound }
 
     when stateAfter is
         Err err -> Err err

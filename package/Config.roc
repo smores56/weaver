@@ -84,6 +84,7 @@ optionName = \{ short, long, name } ->
 
 ParameterConfig : {
     name : Str,
+    help : Str,
     type : ValueType,
     plurality : Plurality,
 }
