@@ -1,5 +1,9 @@
 interface Config
     exposes [
+        DataParser,
+        mapDataParserData,
+        mapDataParserSubcommand,
+        ArgExtractErr,
         ValueType,
         Plurality,
         ArgumentsNeeded,
@@ -10,10 +14,41 @@ interface Config
         CliConfigParams,
         CliConfig,
         SubcommandConfigParams,
+        SubcommandConfig,
         SubcommandsConfig,
         getSubcommandNames,
     ]
-    imports []
+    imports [Parser.{ Arg, ArgParseErr }]
+
+DataParser a s : List Arg -> Result ({ data : a, subcommand : Result s [NoSubcommand] }, List Arg) ArgExtractErr
+
+mapDataParserData : DataParser a s, (a -> b) -> DataParser b s
+mapDataParserData = \parser, mapper ->
+    \args ->
+        ({ data, subcommand }, remainingArgs) <- parser args
+            |> Result.try
+
+        Ok ({ data: mapper data, subcommand }, remainingArgs)
+
+mapDataParserSubcommand : DataParser a s, (s -> t) -> DataParser a t
+mapDataParserSubcommand = \parser, mapper ->
+    \args ->
+        ({ data, subcommand }, remainingArgs) <- parser args
+            |> Result.try
+
+        Ok ({ data, subcommand: subcommand |> Result.map mapper }, remainingArgs)
+
+ArgExtractErr : [
+    MissingArg OptionConfig,
+    OptionCanOnlyBeSetOnce OptionConfig,
+    NoValueProvidedForOption OptionConfig,
+    OptionDoesNotExpectValue OptionConfig,
+    # TODO: remove this by allowing what it prevents
+    CannotUseGroupedShortArgAsValue OptionConfig Arg,
+    InvalidNumArg OptionConfig,
+    InvalidCustomArg OptionConfig Str,
+    FailedToParseArgs ArgParseErr,
+]
 
 ValueType : [Str, Num, Bool, Custom Str]
 
@@ -60,12 +95,12 @@ CliConfigParams : {
     description ? Str,
 }
 
-CliConfig a : {
+CliConfig : {
     name : Str,
     authors : List Str,
     version : Str,
     description : Str,
-    subcommands : SubcommandsConfig a,
+    subcommands : SubcommandsConfig,
     options : List OptionConfig,
     parameters : List ParameterConfig,
 }
@@ -76,20 +111,46 @@ SubcommandConfigParams : {
 }
 
 # Tag union required to avoid infinite recursion
-SubcommandsConfig a : [
+SubcommandsConfig : [
     NoSubcommands,
     HasSubcommands
         (Dict Str {
             description : Str,
-            subcommands : SubcommandsConfig a,
+            subcommands : SubcommandsConfig,
             options : List OptionConfig,
             parameters : List ParameterConfig,
         }),
 ]
 
-getSubcommandNames : SubcommandsConfig * -> List Str
+# Done to avoid infinite recursion
+SubcommandConfig : {
+    description : Str,
+    subcommands : SubcommandsConfig,
+    options : List OptionConfig,
+    parameters : List ParameterConfig,
+}
+
+getSubcommandNames : SubcommandsConfig -> List Str
 getSubcommandNames = \config ->
     when config is
         NoSubcommands -> []
         HasSubcommands configs ->
             Dict.keys configs
+
+# mapSubcommandParser : SubcommandConfig s, (s -> t) -> SubcommandConfig t
+# mapSubcommandParser = \config, mapper ->
+#     childSubcommands =
+#         when config.subcommands is
+#             NoSubcommands -> NoSubcommands
+#             HasSubcommands children ->
+#                 children
+#                 |> Dict.map \(name, child) -> (name, mapSubcommandParser child mapper)
+#                 |> HasSubcommands
+
+#     {
+#         description: config.description,
+#         subcommands: childSubcommands,
+#         options: config.options,
+#         parameters: config.parameters,
+#         parser: mapDataParser config.parser mapper,
+#     }

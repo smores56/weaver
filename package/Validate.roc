@@ -10,6 +10,6 @@ CliValidationErr : [OverlappingOptionNames (OptionConfig, OptionConfig)]
 # - no duplicate argument names
 # - all short flags are exactly 1 character
 # - all long flags are either at least 1 or more than 1 character, TBD
-validateCli : CliConfig a -> Result {} CliValidationErr
+validateCli : CliConfig -> Result {} CliValidationErr
 validateCli = \_config ->
     Ok {}

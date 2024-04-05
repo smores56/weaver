@@ -1,6 +1,5 @@
 interface Extract
     exposes [
-        ArgExtractErr,
         ExtractValuesParams,
         ExtractValuesOutput,
         extractOptionValues,
@@ -11,59 +10,58 @@ interface Extract
     ]
     imports [
         Parser.{ Arg, ArgValue, ArgParseErr },
-        Config.{ OptionConfig },
+        Config.{ OptionConfig, ArgExtractErr, DataParser, SubcommandConfig },
     ]
 
-ArgExtractErr : [
-    MissingArg OptionConfig,
-    OptionCanOnlyBeSetOnce OptionConfig,
-    NoValueProvidedForOption OptionConfig,
-    OptionDoesNotExpectValue OptionConfig,
-    # TODO: remove this by allowing what it prevents
-    CannotUseGroupedShortArgAsValue OptionConfig Arg,
-    InvalidNumArg OptionConfig,
-    InvalidCustomArg OptionConfig Str,
-    FailedToParseArgs ArgParseErr,
-]
+SubcommandSearchResult s :
+    Result
+    {
+        name : Str,
+        parser : DataParser s s,
+        config : SubcommandConfig,
+        args : List Arg,
+    }
+    [NoSubcommand]
 
-ExtractValuesParams : {
+ExtractValuesParams s : {
     args : List Arg,
     option : OptionConfig,
-    subcommandNames : List Str,
+    subcommands : Dict Str { parser : DataParser s s, config : SubcommandConfig },
 }
 
-ExtractValuesOutput : {
+ExtractValuesOutput s : {
     values : List ArgValue,
     remainingArgs : List Arg,
-    subcommandFound : ArgValue,
+    subcommandFound : SubcommandSearchResult s,
 }
 
-ExtractOptionValueWalkerState : {
+ExtractOptionValueWalkerState s : {
     action : [FindOption, GetValue, StopParsing],
     checkForSubcommand : [Check, DontCheck],
     values : List ArgValue,
     remainingArgs : List Arg,
-    subcommandFound : ArgValue,
+    subcommandFound : SubcommandSearchResult s,
 }
 
-extractOptionValues : ExtractValuesParams -> Result ExtractValuesOutput ArgExtractErr
-extractOptionValues = \{ args, option, subcommandNames } ->
+extractOptionValues : ExtractValuesParams s -> Result (ExtractValuesOutput s) ArgExtractErr
+extractOptionValues = \{ args, option, subcommands } ->
     startingState = {
         action: FindOption,
         checkForSubcommand: Check,
         values: [],
         remainingArgs: [],
-        subcommandFound: Err NoValue,
+        subcommandFound: Err NoSubcommand,
     }
 
     stateAfter =
         args
         |> List.walkTry startingState \state, arg ->
             when state.action is
-                FindOption -> findOptionForExtraction state arg option subcommandNames
+                FindOption -> findOptionForExtraction state arg option subcommands
                 GetValue -> getValueForExtraction state arg option
                 StopParsing ->
-                    Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
+                    Ok { state & subcommandFound: state.subcommandFound |> Result.map \sf -> { 
+                         sf & args: sf.args |> List.append arg } }
 
     when stateAfter is
         Err err -> Err err
@@ -72,8 +70,16 @@ extractOptionValues = \{ args, option, subcommandNames } ->
                 GetValue -> Err (NoValueProvidedForOption option)
                 FindOption | StopParsing -> Ok { values, remainingArgs, subcommandFound }
 
-findOptionForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig, List Str -> Result ExtractOptionValueWalkerState ArgExtractErr
-findOptionForExtraction = \state, arg, option, subcommandNames ->
+findOptionForExtraction :
+    ExtractOptionValueWalkerState s,
+    Arg,
+    OptionConfig,
+    Dict Str {
+        parser : DataParser s s,
+        config : SubcommandConfig,
+    }
+    -> Result (ExtractOptionValueWalkerState s) ArgExtractErr
+findOptionForExtraction = \state, arg, option, subcommands ->
     when arg is
         Short short if short.name == option.short ->
             when option.argsNeeded is
@@ -96,15 +102,22 @@ findOptionForExtraction = \state, arg, option, subcommandNames ->
                         Err NoValue -> Ok { state & action: GetValue }
 
         Parameter param if state.checkForSubcommand == Check ->
-            if subcommandNames |> List.contains param then
-                Ok { state & action: StopParsing, remainingArgs: state.remainingArgs |> List.append arg }
-            else
-                Ok { state & checkForSubcommand: DontCheck, remainingArgs: state.remainingArgs |> List.append arg }
+            when Dict.get subcommands param is
+                Err KeyNotFound ->
+                    Ok { state & checkForSubcommand: DontCheck, remainingArgs: state.remainingArgs |> List.append arg }
+
+                Ok { parser, config } ->
+                    Ok
+                        { state &
+                            action: StopParsing,
+                            subcommandFound: Ok { name: param, parser, config, args: [arg] },
+                            remainingArgs: state.remainingArgs |> List.append arg,
+                        }
 
         _nothingFound ->
             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-getValueForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
+getValueForExtraction : ExtractOptionValueWalkerState s, Arg, OptionConfig -> Result (ExtractOptionValueWalkerState s) ArgExtractErr
 getValueForExtraction = \state, arg, option ->
     when arg is
         Short s ->
