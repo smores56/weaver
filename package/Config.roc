@@ -60,12 +60,12 @@ CliConfigParams : {
     description ? Str,
 }
 
-CliConfig : {
+CliConfig a : {
     name : Str,
     authors : List Str,
     version : Str,
     description : Str,
-    subcommands : SubcommandsConfig,
+    subcommands : SubcommandsConfig a,
     options : List OptionConfig,
     parameters : List ParameterConfig,
 }
@@ -76,21 +76,20 @@ SubcommandConfigParams : {
 }
 
 # Tag union required to avoid infinite recursion
-SubcommandsConfig : [
+SubcommandsConfig a : [
     NoSubcommands,
     HasSubcommands
-        (List {
-            name : Str,
+        (Dict Str {
             description : Str,
-            subcommands : SubcommandsConfig,
+            subcommands : SubcommandsConfig a,
             options : List OptionConfig,
             parameters : List ParameterConfig,
         }),
 ]
 
-getSubcommandNames : SubcommandsConfig -> List Str
+getSubcommandNames : SubcommandsConfig * -> List Str
 getSubcommandNames = \config ->
     when config is
         NoSubcommands -> []
         HasSubcommands configs ->
-            List.map configs .name
+            Dict.keys configs

@@ -1,5 +1,5 @@
 interface Parser
-    exposes [parseArgs, Arg, ArgParseErr]
+    exposes [parseArgs, Arg, ArgValue, ArgParseErr]
     imports []
 
 Arg : [
@@ -7,6 +7,8 @@ Arg : [
     Long { name : Str, value : Result Str [NoValue] },
     Parameter Str,
 ]
+
+ArgValue : Result Str [NoValue]
 
 ArgParseErr : [InvalidArg Str, MissingParameterValue Str]
 
