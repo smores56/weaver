@@ -1,125 +1,119 @@
 interface Extract
     exposes [
+        SubcommandSearchResult,
+        ExtractParamValuesParams,
+        ExtractParamValuesOutput,
+        extractParamValues,
         ExtractOptionValuesParams,
         ExtractOptionValuesOutput,
         extractOptionValues,
         getOptionalValue,
         getSingleValue,
-        parseNumValue,
-        parseOptionalNumValue,
     ]
     imports [
         Parser.{ Arg, ArgValue, ArgParseErr },
         Config.{ OptionConfig, ParameterConfig, ArgExtractErr, DataParser, SubcommandConfig },
     ]
 
-# ExtractParamValuesParams s : {
-#     args : List Arg,
-#     param : ParameterConfig,
-#     subcommands : Dict Str { parser : DataParser s s, config : SubcommandConfig },
-# }
-
-# ExtractParamValuesOutput s : {
-#     values : List Str,
-#     remainingArgs : List Arg,
-#     subcommandFound : SubcommandSearchResult s,
-# }
-
-# extractParamValues : ExtractParamValuesParams s -> Result (ExtractParamValuesOutput s) ArgExtractErr
-# extractParamValues = \{ args, param, subcommands } ->
-#     startingState = {
-#         action: FindOption,
-#         checkForSubcommand: Check,
-#         values: [],
-#         remainingArgs: [],
-#         subcommandFound: Err NoSubcommand,
-#     }
-
-#     stateAfter =
-#         args
-#         |> List.walkTry startingState \state, arg ->
-#             when state.action is
-#                 FindOption ->
-#                     when arg is
-#                         Short short if short.name == option.short ->
-#                             when option.argsNeeded is
-#                                 Zero ->
-#                                     Ok { state & values: state.values |> List.append (Err NoValue) }
-
-#                                 One ->
-#                                     Ok { state & action: GetValue }
-
-#                         Long long if long.name == option.long ->
-#                             when option.argsNeeded is
-#                                 Zero ->
-#                                     when long.value is
-#                                         Ok _val -> Err (OptionDoesNotExpectValue option)
-#                                         Err NoValue -> Ok { state & values: state.values |> List.append (Err NoValue) }
-
-#                                 One ->
-#                                     when long.value is
-#                                         Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
-#                                         Err NoValue -> Ok { state & action: GetValue }
-
-#                         Parameter param if state.checkForSubcommand == Check ->
-#                             when Dict.get subcommands param is
-#                                 Err KeyNotFound ->
-#                                     Ok { state & checkForSubcommand: DontCheck, remainingArgs: state.remainingArgs |> List.append arg }
-
-#                                 Ok { parser, config } ->
-#                                     Ok
-#                                         { state &
-#                                             action: StopParsing,
-#                                             subcommandFound: Ok { name: param, parser, config, args: [arg] },
-#                                             remainingArgs: state.remainingArgs |> List.append arg,
-#                                         }
-
-#                         _nothingFound ->
-#                             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
-
-#                 GetValue -> getValueForExtraction state arg option
-#                 StopParsing ->
-#                     subcommandFound = state.subcommandFound |> Result.map \sf -> { sf & args: sf.args |> List.append arg }
-#                     Ok { state & subcommandFound }
-
-#     when stateAfter is
-#         Err err -> Err err
-#         Ok { action, values, remainingArgs, subcommandFound } ->
-#             when action is
-#                 GetValue -> Err (NoValueProvidedForOption option)
-#                 FindOption | StopParsing -> Ok { values, remainingArgs, subcommandFound }
-
-SubcommandSearchResult s :
+SubcommandSearchResult s ss :
     Result
     {
         name : Str,
-        parser : DataParser s s,
+        parser : DataParser s ss,
         config : SubcommandConfig,
         args : List Arg,
     }
     [NoSubcommand]
 
-ExtractOptionValuesParams s : {
+ExtractParamValuesParams s ss : {
+    args : List Arg,
+    param : ParameterConfig,
+    subcommands : Dict Str { parser : DataParser s ss, config : SubcommandConfig },
+}
+
+ExtractParamValuesOutput s ss : {
+    values : List Str,
+    remainingArgs : List Arg,
+    subcommandFound : SubcommandSearchResult s ss,
+}
+
+extractParamValues : ExtractParamValuesParams s ss -> Result (ExtractParamValuesOutput s ss) ArgExtractErr
+extractParamValues = \{ args, param, subcommands } ->
+    startingState = {
+        action: GetParam,
+        checkForSubcommand: Check,
+        values: [],
+        remainingArgs: [],
+        subcommandFound: Err NoSubcommand,
+    }
+
+    stateAfter =
+        args
+        |> List.walkTry startingState \state, arg ->
+            when state.action is
+                GetParam ->
+                    when arg is
+                        Short short ->
+                            Err (UnrecognizedShortArg short)
+
+                        ShortGroup group ->
+                            Err (UnrecognizedShortArg (List.first group.names |> Result.withDefault ""))
+
+                        Long long ->
+                            Err (UnrecognizedLongArg long.name)
+
+                        Parameter p ->
+                            # TODO: pass args through for subcommands when necessary
+                            when (state.checkForSubcommand, Dict.get subcommands p) is
+                                (Check, Ok subcommand) ->
+                                    Ok { state & action: StopParsing, subcommandFound: Ok { name: p, config: subcommand.config, parser: subcommand.parser, args: [] } }
+
+                                _other ->
+                                    if p == "--" then
+                                        Ok { state & action: PassThrough }
+                                    else
+                                        when param.plurality is
+                                            Optional | One -> Ok { state & action: StopParsing, values: state.values |> List.append p }
+                                            Many -> Ok { state & checkForSubcommand: DontCheck, values: state.values |> List.append p }
+
+                PassThrough ->
+                    value = when arg is
+                        Short s -> "-$(s)"
+                        ShortGroup sg -> "-$(Str.joinWith sg.names "")"
+                        Long { name, value: Ok val } -> "--$(name)=$(val)"
+                        Long { name, value: Err NoValue } -> "--$(name)"
+                        Parameter p -> p
+
+                    Ok { state & remainingArgs: state.remainingArgs |> List.append (Parameter value) }
+
+                StopParsing ->
+                    Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
+
+    stateAfter
+    |> Result.map \{ values, remainingArgs, subcommandFound } ->
+        { values, remainingArgs, subcommandFound }
+
+ExtractOptionValuesParams s ss : {
     args : List Arg,
     option : OptionConfig,
-    subcommands : Dict Str { parser : DataParser s s, config : SubcommandConfig },
+    subcommands : Dict Str { parser : DataParser s ss, config : SubcommandConfig },
 }
 
-ExtractOptionValuesOutput s : {
+ExtractOptionValuesOutput s ss : {
     values : List ArgValue,
     remainingArgs : List Arg,
-    subcommandFound : SubcommandSearchResult s,
+    subcommandFound : SubcommandSearchResult s ss,
 }
 
-ExtractOptionValueWalkerState s : {
+ExtractOptionValueWalkerState s ss : {
     action : [FindOption, GetValue, StopParsing],
     checkForSubcommand : [Check, DontCheck],
     values : List ArgValue,
     remainingArgs : List Arg,
-    subcommandFound : SubcommandSearchResult s,
+    subcommandFound : SubcommandSearchResult s ss,
 }
 
-extractOptionValues : ExtractOptionValuesParams s -> Result (ExtractOptionValuesOutput s) ArgExtractErr
+extractOptionValues : ExtractOptionValuesParams s ss -> Result (ExtractOptionValuesOutput s ss) ArgExtractErr
 extractOptionValues = \{ args, option, subcommands } ->
     startingState = {
         action: FindOption,
@@ -149,23 +143,26 @@ extractOptionValues = \{ args, option, subcommands } ->
                 FindOption | StopParsing -> Ok { values, remainingArgs, subcommandFound }
 
 findOptionForExtraction :
-    ExtractOptionValueWalkerState s,
+    ExtractOptionValueWalkerState s ss,
     Arg,
     OptionConfig,
     Dict Str {
-        parser : DataParser s s,
+        parser : DataParser s ss,
         config : SubcommandConfig,
     }
-    -> Result (ExtractOptionValueWalkerState s) ArgExtractErr
+    -> Result (ExtractOptionValueWalkerState s ss) ArgExtractErr
 findOptionForExtraction = \state, arg, option, subcommands ->
     when arg is
-        Short short if short.name == option.short ->
+        Short short if short == option.short ->
             when option.argsNeeded is
                 Zero ->
                     Ok { state & values: state.values |> List.append (Err NoValue) }
 
                 One ->
                     Ok { state & action: GetValue }
+
+        ShortGroup _shortGroup ->
+            crash "todo"
 
         Long long if long.name == option.long ->
             when option.argsNeeded is
@@ -195,27 +192,19 @@ findOptionForExtraction = \state, arg, option, subcommands ->
         _nothingFound ->
             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-getValueForExtraction : ExtractOptionValueWalkerState s, Arg, OptionConfig -> Result (ExtractOptionValueWalkerState s) ArgExtractErr
+getValueForExtraction : ExtractOptionValueWalkerState s ss, Arg, OptionConfig -> Result (ExtractOptionValueWalkerState s ss) ArgExtractErr
 getValueForExtraction = \state, arg, option ->
-    when arg is
-        Short s ->
-            when s.grouped is
-                Alone ->
-                    Ok { state & action: FindOption, values: state.values |> List.append (Ok "-$(s.name)") }
+    value = when arg is
+        Short s -> Ok "-$(s)"
+        ShortGroup { names, complete: Complete } -> Ok "-$(Str.joinWith names "")"
+        ShortGroup { names, complete: Partial } -> Err (CannotUsePartialShortGroupAsValue option names)
+        Long { name, value: Ok val } -> Ok "--$(name)=$(val)"
+        Long { name, value: Err NoValue } -> Ok "--$(name)"
+        Parameter p -> Ok p
 
-                Grouped ->
-                    Err (CannotUseGroupedShortArgAsValue option arg)
-
-        Long l ->
-            value =
-                when l.value is
-                    Ok val -> "--$(l.name)=$(val)"
-                    Err NoValue -> "--$(l.name)"
-
-            Ok { state & action: FindOption, values: state.values |> List.append (Ok value) }
-
-        Parameter p ->
-            Ok { state & action: FindOption, values: state.values |> List.append (Ok p) }
+    value
+    |> Result.map \val ->
+        { state & action: FindOption, values: state.values |> List.append (Ok val) }
 
 getSingleValue : List ArgValue, OptionConfig -> Result ArgValue ArgExtractErr
 getSingleValue = \values, option ->
@@ -231,23 +220,22 @@ getOptionalValue = \values, option ->
         [single] -> Ok (Ok single)
         [..] -> Err (OptionCanOnlyBeSetOnce option)
 
-parseNumValue : ArgValue, OptionConfig -> Result I64 ArgExtractErr
-parseNumValue = \value, option ->
-    val <- value
-        |> Result.mapErr \_ -> NoValueProvidedForOption option
-        |> Result.try
+# parseNumValue : ArgValue, OptionConfig -> Result I64 ArgExtractErr
+# parseNumValue = \value, option ->
+#     val <- value
+#         |> Result.mapErr \_ -> NoValueProvidedForOption option
+#         |> Result.try
 
-    val
-    |> Str.toI64
-    |> Result.mapErr \_ -> InvalidNumArg option
+#     val
+#     |> Str.toI64
+#     |> Result.mapErr \_ -> InvalidNumArg option
 
-parseOptionalNumValue : ArgValue, OptionConfig -> Result (Result I64 [NoValue]) ArgExtractErr
-parseOptionalNumValue = \value, option ->
-    when value is
-        Ok val ->
-            when Str.toI64 val is
-                Ok numVal -> Ok (Ok numVal)
-                Err _ -> Err (InvalidNumArg option)
+# parseOptionalNumValue : ArgValue, OptionConfig -> Result (Result I64 [NoValue]) ArgExtractErr
+# parseOptionalNumValue = \value, option ->
+#     when value is
+#         Ok val ->
+#             when Str.toI64 val is
+#                 Ok numVal -> Ok (Ok numVal)
+#                 Err _ -> Err (InvalidNumArg option)
 
-        Err NoValue -> Ok (Err NoValue)
-
+#         Err NoValue -> Ok (Err NoValue)

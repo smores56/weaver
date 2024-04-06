@@ -43,11 +43,14 @@ ArgExtractErr : [
     OptionCanOnlyBeSetOnce OptionConfig,
     NoValueProvidedForOption OptionConfig,
     OptionDoesNotExpectValue OptionConfig,
-    # TODO: remove this by allowing what it prevents
-    CannotUseGroupedShortArgAsValue OptionConfig Arg,
+    CannotUsePartialShortGroupAsValue OptionConfig (List Str),
     InvalidNumArg OptionConfig,
     InvalidCustomArg OptionConfig Str,
     FailedToParseArgs ArgParseErr,
+    MissingParam ParameterConfig,
+    TooManyParamsProvided ParameterConfig,
+    UnrecognizedShortArg Str,
+    UnrecognizedLongArg Str,
 ]
 
 ValueType : [Str, Num, Bool, Custom Str]
@@ -137,21 +140,3 @@ getSubcommandNames = \config ->
         NoSubcommands -> []
         HasSubcommands configs ->
             Dict.keys configs
-
-# mapSubcommandParser : SubcommandConfig s, (s -> t) -> SubcommandConfig t
-# mapSubcommandParser = \config, mapper ->
-#     childSubcommands =
-#         when config.subcommands is
-#             NoSubcommands -> NoSubcommands
-#             HasSubcommands children ->
-#                 children
-#                 |> Dict.map \(name, child) -> (name, mapSubcommandParser child mapper)
-#                 |> HasSubcommands
-
-#     {
-#         description: config.description,
-#         subcommands: childSubcommands,
-#         options: config.options,
-#         parameters: config.parameters,
-#         parser: mapDataParser config.parser mapper,
-#     }

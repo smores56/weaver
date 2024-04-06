@@ -3,7 +3,8 @@ interface Parser
     imports []
 
 Arg : [
-    Short { name : Str, grouped : [Alone, Grouped] },
+    Short Str,
+    ShortGroup { names : List Str, complete : [Complete, Partial] },
     Long { name : Str, value : Result Str [NoValue] },
     Parameter Str,
 ]
@@ -17,28 +18,27 @@ parseArgs = \args ->
     args
     |> List.dropFirst 1
     |> List.mapTry parseArg
-    |> Result.map List.join
 
-parseArg : Str -> Result (List Arg) ArgParseErr
+parseArg : Str -> Result Arg ArgParseErr
 parseArg = \arg ->
     when Str.splitFirst arg "-" is
         Ok { before: "", after } ->
             if after == "" then
-                Ok [Parameter "-"]
+                Ok (Parameter "-")
             else
                 when Str.splitFirst after "-" is
                     Ok { before: "", after: rest } ->
                         if rest == "" then
-                            Ok [Parameter "--"]
+                            Ok (Parameter "--")
                         else if Str.startsWith rest "-" then
                             Err (InvalidArg arg)
                         else
-                            Ok [parseLongArg rest]
+                            Ok (parseLongArg rest)
 
                     _other -> Ok (constructSetOfOptions after)
 
         _other ->
-            Ok [Parameter arg]
+            Ok (Parameter arg)
 
 parseLongArg : Str -> Arg
 parseLongArg = \arg ->
@@ -49,7 +49,7 @@ parseLongArg = \arg ->
         _other ->
             Long { name: arg, value: Err NoValue }
 
-constructSetOfOptions : Str -> List Arg
+constructSetOfOptions : Str -> Arg
 constructSetOfOptions = \combined ->
     options =
         combined
@@ -57,57 +57,48 @@ constructSetOfOptions = \combined ->
         |> List.keepOks \c -> Str.fromUtf8 [c]
 
     when options is
-        [alone] -> [Short { name: alone, grouped: Alone }]
-        _other ->
-            List.map options \name ->
-                Short { name, grouped: Grouped }
+        [alone] -> Short alone
+        other -> ShortGroup { names: other, complete: Complete }
 
 expect
     parsed = parseArg "-"
 
-    parsed == Ok [Parameter "-"]
+    parsed == Ok (Parameter "-")
 
 expect
     parsed = parseArg "-a"
 
-    parsed == Ok [Short { name: "a", grouped: Alone }]
+    parsed == Ok (Short "a")
 
 expect
     parsed = parseArg "-abc"
 
-    parsed
-    == Ok [
-        Short { name: "a", grouped: Grouped },
-        Short { name: "b", grouped: Grouped },
-        Short { name: "c", grouped: Grouped },
-    ]
+    parsed == Ok (ShortGroup { names: ["a", "b", "c"], complete: Complete })
 
 expect
     parsed = parseArg "--abc"
 
-    parsed == Ok [Long { name: "abc", value: Err NoValue }]
+    parsed == Ok (Long { name: "abc", value: Err NoValue })
 
 expect
     parsed = parseArg "--abc=xyz"
 
-    parsed == Ok [Long { name: "abc", value: Ok "xyz" }]
+    parsed == Ok (Long { name: "abc", value: Ok "xyz" })
 
 expect
     parsed = parseArg "123"
 
-    parsed == Ok [Parameter "123"]
+    parsed == Ok (Parameter "123")
 
 expect
     parsed = parseArgs ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
 
     parsed
     == Ok [
-        Short { name: "a", grouped: Alone },
+        Short "a",
         Parameter "123",
         Long { name: "passed", value: Err NoValue },
-        Short { name: "b", grouped: Grouped },
-        Short { name: "c", grouped: Grouped },
-        Short { name: "d", grouped: Grouped },
+        ShortGroup { names: ["b", "c", "d"], complete: Complete },
         Parameter "xyz",
         Parameter "--",
         Long { name: "subject", value: Ok "world" },

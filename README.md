@@ -39,9 +39,10 @@ These are the main things I want to work on:
 - [ ] full documentation of the library's features
 - [ ] multiple documented and tested examples
 - [ ] automatic help text generation
-- [ ] subcommands, as simple as possible
+- [X] subcommands, as simple as possible
 - [X] choice args that select an option from a custom enum
 - [ ] add more testing
+- [ ] option groups (optionally set { group : Str } per option)
 
 ### Long-Term Goals
 
