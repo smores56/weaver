@@ -161,8 +161,41 @@ findOptionForExtraction = \state, arg, option, subcommands ->
                 One ->
                     Ok { state & action: GetValue }
 
-        ShortGroup _shortGroup ->
-            crash "todo"
+        ShortGroup shortGroup ->
+            stateAfter =
+                shortGroup.names
+                |> List.walkTry { action: FindOption, remaining: [], values: [] } \sgState, name ->
+                    when sgState.action is
+                        GetValue -> Err (CannotUsePartialShortGroupAsValue option shortGroup.names)
+                        FindOption ->
+                            if name == option.short then
+                                when option.argsNeeded is
+                                    Zero -> Ok { sgState & values: sgState.values |> List.append (Err NoValue) }
+                                    One -> Ok { sgState & action: GetValue }
+                            else
+                                Ok sgState
+
+            when stateAfter is
+                Err err -> Err err
+                Ok { action, remaining, values } ->
+                    newAction =
+                        when action is
+                            GetValue -> GetValue
+                            FindOption -> FindOption
+                    restOfGroup =
+                        if List.isEmpty remaining then
+                            Err NoValue
+                        else if List.isEmpty values then
+                            Ok (ShortGroup shortGroup)
+                        else
+                            Ok (ShortGroup { complete: Partial, names: remaining })
+
+                    Ok
+                        { state &
+                            action: newAction,
+                            remainingArgs: state.remainingArgs |> List.appendIfOk restOfGroup,
+                            values: state.values |> List.concat values
+                        }
 
         Long long if long.name == option.long ->
             when option.argsNeeded is
@@ -219,23 +252,3 @@ getOptionalValue = \values, option ->
         [] -> Ok (Ok (Err NoValue))
         [single] -> Ok (Ok single)
         [..] -> Err (OptionCanOnlyBeSetOnce option)
-
-# parseNumValue : ArgValue, OptionConfig -> Result I64 ArgExtractErr
-# parseNumValue = \value, option ->
-#     val <- value
-#         |> Result.mapErr \_ -> NoValueProvidedForOption option
-#         |> Result.try
-
-#     val
-#     |> Str.toI64
-#     |> Result.mapErr \_ -> InvalidNumArg option
-
-# parseOptionalNumValue : ArgValue, OptionConfig -> Result (Result I64 [NoValue]) ArgExtractErr
-# parseOptionalNumValue = \value, option ->
-#     when value is
-#         Ok val ->
-#             when Str.toI64 val is
-#                 Ok numVal -> Ok (Ok numVal)
-#                 Err _ -> Err (InvalidNumArg option)
-
-#         Err NoValue -> Ok (Err NoValue)

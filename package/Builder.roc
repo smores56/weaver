@@ -5,6 +5,7 @@ interface Builder
         cliBuilderWithSubcommands,
         finishSubcommand,
         finishCli,
+        assertCliIsValid,
         subcommandField,
         strOption,
         numOption,
@@ -53,6 +54,7 @@ interface Builder
 GetSubcommandsAction : { getSubcommands : {} }
 GetOptionsAction : { getOptions : {} }
 GetParamsAction : { getParams : {} }
+CliParser state : { config : CliConfig, parser : List Str -> Result state ArgExtractErr }
 
 CliBuilder state subState subSubState action := {
     parser : DataParser state subState,
@@ -251,6 +253,13 @@ finishCli = \@CliBuilder builder, { name ? "", authors ? [], version ? "", descr
 
     validateCli config
     |> Result.map \_ -> { config, parser }
+
+assertCliIsValid : Result (CliParser state) CliValidationErr -> CliParser state
+assertCliIsValid = \result ->
+    # TODO: better formatting for crash
+    when result is
+        Ok cli -> cli
+        Err err -> crash "$(Inspect.toStr err)"
 
 subcommandField : List { name : Str, parser : DataParser subState subSubState, config : SubcommandConfig } -> (CliBuilder (Result subState [NoSubcommand] -> state) subState subSubState GetSubcommandsAction -> CliBuilder state subState subSubState GetOptionsAction)
 subcommandField = \subcommandConfigs ->
@@ -464,12 +473,6 @@ strListParam = \{ name, help ? "" } ->
 
         updateBuilderWithParam builder newParser param
 
-unwrap : Result a err -> a where err implements Inspect
-unwrap = \result ->
-    when result is
-        Ok val -> val
-        Err err -> crash "$(Inspect.toStr err)"
-
 expect
     { parser, config: _ } =
         cliBuilder {
@@ -479,7 +482,7 @@ expect
             verbosity: <- occurrenceOption { short: "v", long: "--verbose" },
         }
         |> finishCli { name: "app" }
-        |> unwrap
+        |> assertCliIsValid
 
     out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
 
@@ -523,7 +526,7 @@ expect
             p: <- strListParam { name: "p" },
         }
         |> finishCli { name: "app" }
-        |> unwrap
+        |> assertCliIsValid
 
     out = parser ["app", "-x", "123", "y", "s1", "-d", "456", "-e", "789", "ss2", "-a", "135", "-c", "246"]
 
