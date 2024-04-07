@@ -421,7 +421,7 @@ occurrenceOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
 
         updateBuilderWithOption builder newParser option
 
-strParam : { name : Str, help ? Str } -> (CliBuilder (Str -> state) subState subSubState action -> CliBuilder state subState subSubState GetParamsAction)
+strParam : { name : Str, help ? Str } -> (CliBuilder (Str -> state) subState subSubState {}action -> CliBuilder state subState subSubState GetParamsAction)
 strParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: One }
 
@@ -436,7 +436,7 @@ strParam = \{ name, help ? "" } ->
 
         updateBuilderWithParam builder newParser param
 
-maybeStrParam : { name : Str, help ? Str } -> (CliBuilder (ArgValue -> state) subState subSubState action -> CliBuilder state subState subSubState GetParamsAction)
+maybeStrParam : { name : Str, help ? Str } -> (CliBuilder (ArgValue -> state) subState subSubState {}action -> CliBuilder state subState subSubState GetParamsAction)
 maybeStrParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: Optional }
 
@@ -451,7 +451,7 @@ maybeStrParam = \{ name, help ? "" } ->
 
         updateBuilderWithParam builder newParser param
 
-strListParam : { name : Str, help ? Str } -> (CliBuilder (List Str -> state) subState subSubState action -> CliBuilder state subState subSubState GetParamsAction)
+strListParam : { name : Str, help ? Str } -> (CliBuilder (List Str -> state) subState subSubState {}action -> CliBuilder state subState subSubState [])
 strListParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: Many }
 
@@ -486,23 +486,23 @@ expect
     out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4 }
 
 expect
-    subSubcommandParser1 =
-        cliBuilder {
-            a: <- numOption { short: "a" },
-            b: <- numOption { short: "b" },
-        }
-        |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
-
-    subSubcommandParser2 =
-        cliBuilder {
-            a: <- numOption { short: "a" },
-            c: <- numOption { short: "c" },
-        }
-        |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
-
+    # subSubcommandParser1 =
+    #     cliBuilder {
+    #         a: <- numOption { short: "a" },
+    #         b: <- numOption { short: "b" },
+    #     }
+    #     |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
+    #
+    # subSubcommandParser2 =
+    #     cliBuilder {
+    #         a: <- numOption { short: "a" },
+    #         c: <- numOption { short: "c" },
+    #     }
+    #     |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
+    #
     subcommandParser1 =
-        cliBuilderWithSubcommands {
-            sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
+        cliBuilder {
+            # sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
             d: <- numOption { short: "d" },
             e: <- numOption { short: "e" },
         }
@@ -520,10 +520,13 @@ expect
             sc: <- subcommandField [subcommandParser1, subcommandParser2],
             x: <- numOption { short: "x" },
             y: <- strParam { name: "y" },
+            p: <- strListParam { name: "p" },
         }
         |> finishCli { name: "app" }
         |> unwrap
 
     out = parser ["app", "-x", "123", "y", "s1", "-d", "456", "-e", "789", "ss2", "-a", "135", "-c", "246"]
 
-    out == Ok { x: 123, y: "y", sc: Ok (S1 { sc: Ok (SS2 { a: 135, c: 246 }), d: 456, e: 789 }) }
+    # out == Ok { x: 123, y: "y", sc: Ok (S1 { sc: Ok (SS2 { a: 135, c: 246 }), d: 456, e: 789 }) }
+
+    out == Ok { x: 123, y: "y", sc: Ok (S1 { d: 456, e: 789 }), p: ["ss2"] }

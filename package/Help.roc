@@ -1,6 +1,6 @@
 interface Help
     exposes [helpText, helpTextForSubcommand]
-    imports [Config.{ CliConfig }]
+    imports [Config.{ CliConfig, OptionConfig, SubcommandsConfig, ParameterConfig }]
 
 # ArgExtractErr : [
 #     MissingArg OptionConfig,
@@ -71,7 +71,11 @@ helpText = \config ->
     $(description)
     $(usageText config)
 
-    $(commandsText config)
+    $(commandsText config.subcommands)
+
+    $(paramsText config.parameters)
+
+    $(optionsText config.options)
     """
 
 usageText : CliConfig -> Str
@@ -104,10 +108,10 @@ usageText = \config ->
     $(subcommandUsage)
     """
 
-commandsText : CliConfig -> Str
-commandsText = \config ->
+commandsText : SubcommandsConfig -> Str
+commandsText = \subcommands ->
     commands =
-        when config.subcommands is
+        when subcommands is
             NoSubcommands -> []
             HasSubcommands sc -> Dict.toList sc
 
@@ -128,45 +132,70 @@ commandsText = \config ->
 
     """
     Commands:
-      $(alignedCommands)
+    $(alignedCommands)
     """
 
-# optionsText : CliConfig -> Str
-# optionsText = \config ->
-#     options = config.options
-#         |> List.map \opt ->
+paramsText : List ParameterConfig -> Str
+paramsText = \params ->
+    formattedParams =
+        params
+        |> List.map \param ->
+            ellipsis =
+                when param.plurality is
+                    Optional | One -> ""
+                    Many -> "..."
 
-#             ()
+            ("[$(param.name)]$(ellipsis)", param.help)
 
-#         """
-#         Options:
-#           $(alignedOptions)
-#         """
+    maxNameLen =
+        formattedParams
+        |> List.map \(name, _help) -> List.len (Str.toUtf8 name)
+        |> List.max
+        |> Result.withDefault 0
 
-# Roc makes two columns, spaced by the longest left column item plus two spaces
-#
-# command-name (version)
-# authors
-#
-# description
-#
-# Usage:
-#   command-name ...
-#
-# Commands:
-#   abc          description description
-#   def          description description
-#   lorem-ipsum  description description
-#
-# Arguments:
-#   [Arg_1]     description description
-#   [Arg_2]...  description description
-#
-# Options:
-#   -a, --auto      description description
-#   -b, --beautify  description description
-#   -c              description description
-#       --delta     description description
-#   -h, --help      Auto-add help text
-#   -V, --version   Auto-add version
-#
+    alignedParams =
+        formattedParams
+        |> List.map \(name, help) ->
+            buffer = Str.repeat " " (maxNameLen - List.len (Str.toUtf8 name))
+            "  $(name)$(buffer)  $(help)"
+
+    """
+    Arguments:
+    $(Str.joinWith alignedParams "\n")
+    """
+
+optionsText : List OptionConfig -> Str
+optionsText = \options ->
+    optionNameFormatter =
+        if List.all options \o -> Str.isEmpty o.short then
+            \opt -> "--$(opt.long)"
+        else if List.all options \o -> Str.isEmpty o.long then
+            \opt -> "-$(opt.short)"
+        else
+            \opt ->
+                when (opt.short, opt.long) is
+                    ("", "") -> ""
+                    (short, "") -> "-$(short)"
+                    ("", long) -> "    --$(long)"
+                    (short, long) -> "-$(short), --$(long)"
+
+    formattedOptions =
+        List.map options \option ->
+            (optionNameFormatter option, option.help)
+
+    maxNameLen =
+        formattedOptions
+        |> List.map \(name, _help) -> List.len (Str.toUtf8 name)
+        |> List.max
+        |> Result.withDefault 0
+
+    alignedOptions =
+        List.map formattedOptions \(name, help) ->
+            buffer = Str.repeat " " (maxNameLen - List.len (Str.toUtf8 name))
+            "  $(name)$(buffer)  $(help)"
+
+    """
+    Options:
+    $(Str.joinWith alignedOptions "\n")
+    """
+
