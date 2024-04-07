@@ -2,7 +2,6 @@ interface Builder
     exposes [
         CliBuilder,
         cliBuilder,
-        cliBuilderWithSubcommands,
         finishSubcommand,
         finishCli,
         assertCliIsValid,
@@ -25,7 +24,6 @@ interface Builder
     imports [
         Config.{
             DataParser,
-            mapDataParserData,
             ArgExtractErr,
             OptionConfig,
             ParameterConfig,
@@ -51,131 +49,45 @@ interface Builder
         Validate.{ validateCli, CliValidationErr },
     ]
 
-GetSubcommandsAction : { getSubcommands : {} }
 GetOptionsAction : { getOptions : {} }
 GetParamsAction : { getParams : {} }
 CliParser state : { config : CliConfig, parser : List Str -> Result state ArgExtractErr }
 
-CliBuilder state subState subSubState action := {
-    parser : DataParser state subState,
+CliBuilder state action := {
+    parser : DataParser state,
     options : List OptionConfig,
     parameters : List ParameterConfig,
-    subcommands : Dict Str { parser : DataParser subState subSubState, config : SubcommandConfig },
+    subcommands : Dict Str SubcommandConfig,
 }
 
-cliBuilder : base -> CliBuilder base subState subSubState GetOptionsAction
+cliBuilder : base -> CliBuilder base GetOptionsAction
 cliBuilder = \base ->
     @CliBuilder {
-        parser: \args -> Ok ({ data: base, subcommand: Err NoSubcommand }, args),
+        parser: \args -> Ok (base, args),
         options: [],
         parameters: [],
         subcommands: Dict.empty {},
     }
 
-cliBuilderWithSubcommands : base -> CliBuilder base subState subSubState GetSubcommandsAction
-cliBuilderWithSubcommands = \base ->
-    @CliBuilder {
-        parser: \args -> Ok ({ data: base, subcommand: Err NoSubcommand }, args),
-        options: [],
-        parameters: [],
-        subcommands: Dict.empty {},
-    }
-
-getValuesForOption :
-    CliBuilder state subState subSubState action,
-    OptionConfig,
-    List Arg
-    -> Result
-        {
-            data : state,
-            subcommand : Result subState [NoSubcommand],
-            values : List ArgValue,
-            remainingArgs : List Arg,
-        }
-        ArgExtractErr
+getValuesForOption : CliBuilder state action, OptionConfig, List Arg -> Result { data : state, values : List ArgValue, remainingArgs : List Arg } ArgExtractErr
 getValuesForOption = \@CliBuilder builder, option, args ->
-    ({ data, subcommand }, restOfArgs) <- builder.parser args
+    (data, restOfArgs) <- builder.parser args
+        |> Result.try
+    { values, remainingArgs } <- extractOptionValues { args: restOfArgs, option }
         |> Result.try
 
-    when subcommand is
-        Ok sc ->
-            { values, remainingArgs, subcommandFound: _ } <- extractOptionValues {
-                    args: restOfArgs,
-                    option,
-                    subcommands: Dict.empty {},
-                }
-                |> Result.try
+    Ok { data, values, remainingArgs }
 
-            Ok { data, subcommand: Ok sc, values, remainingArgs }
-
-        Err NoSubcommand ->
-            { values, remainingArgs, subcommandFound } <- extractOptionValues {
-                    args: restOfArgs,
-                    option,
-                    subcommands: builder.subcommands,
-                }
-                |> Result.try
-
-            # TODO: what about child data?
-            when subcommandFound is
-                Ok found ->
-                    # TODO: probably have to drop the first argument here, since it represents the name of the subcommand
-                    ({ data: subcommandData, subcommand: _ }, otherArgs) <- found.parser found.args
-                        |> Result.try
-
-                    Ok { data, subcommand: Ok subcommandData, values, remainingArgs: otherArgs }
-
-                Err NoSubcommand ->
-                    Ok { data, subcommand: Err NoSubcommand, values, remainingArgs }
-
-getValuesForParam :
-    CliBuilder state subState subSubState action,
-    ParameterConfig,
-    List Arg
-    -> Result
-        {
-            data : state,
-            subcommand : Result subState [NoSubcommand],
-            values : List Str,
-            remainingArgs : List Arg,
-        }
-        ArgExtractErr
+getValuesForParam : CliBuilder state action, ParameterConfig, List Arg -> Result { data : state, values : List Str, remainingArgs : List Arg } ArgExtractErr
 getValuesForParam = \@CliBuilder builder, param, args ->
-    ({ data, subcommand }, restOfArgs) <- builder.parser args
+    (data, restOfArgs) <- builder.parser args
+        |> Result.try
+    { values, remainingArgs } <- extractParamValues { args: restOfArgs, param }
         |> Result.try
 
-    when subcommand is
-        Ok sc ->
-            { values, remainingArgs, subcommandFound: _ } <- extractParamValues {
-                    args: restOfArgs,
-                    param,
-                    subcommands: Dict.empty {},
-                }
-                |> Result.try
+    Ok { data, values, remainingArgs }
 
-            Ok { data, subcommand: Ok sc, values, remainingArgs }
-
-        Err NoSubcommand ->
-            { values, remainingArgs, subcommandFound } <- extractParamValues {
-                    args: restOfArgs,
-                    param,
-                    subcommands: builder.subcommands,
-                }
-                |> Result.try
-
-            # TODO: what about child data?
-            when subcommandFound is
-                Ok found ->
-                    # TODO: probably have to drop the first argument here, since it represents the name of the subcommand
-                    ({ data: subcommandData, subcommand: _ }, otherArgs) <- found.parser found.args
-                        |> Result.try
-
-                    Ok { data, subcommand: Ok subcommandData, values, remainingArgs: otherArgs }
-
-                Err NoSubcommand ->
-                    Ok { data, subcommand: Err NoSubcommand, values, remainingArgs }
-
-updateBuilderWithOption : CliBuilder (a -> state) subState subSubState action1, DataParser state subState, OptionConfig -> CliBuilder state subState subSubState action2
+updateBuilderWithOption : CliBuilder (a -> state) action1, DataParser state, OptionConfig -> CliBuilder state action2
 updateBuilderWithOption = \@CliBuilder builder, parser, option ->
     @CliBuilder {
         parameters: builder.parameters,
@@ -184,7 +96,7 @@ updateBuilderWithOption = \@CliBuilder builder, parser, option ->
         parser,
     }
 
-updateBuilderWithParam : CliBuilder (a -> state) subState subSubState action1, DataParser state subState, ParameterConfig -> CliBuilder state subState subSubState action2
+updateBuilderWithParam : CliBuilder (a -> state) action1, DataParser state, ParameterConfig -> CliBuilder state action2
 updateBuilderWithParam = \@CliBuilder builder, parser, param ->
     @CliBuilder {
         parameters: builder.parameters |> List.append param,
@@ -193,26 +105,23 @@ updateBuilderWithParam = \@CliBuilder builder, parser, param ->
         parser,
     }
 
-finishSubcommand : CliBuilder state subState subSubState action, { name : Str, description : Str, mapper : state -> newState } -> { name : Str, parser : DataParser newState subState, config : SubcommandConfig }
-finishSubcommand = \@CliBuilder builder, { name, description, mapper } ->
-    subcommands =
-        builder.subcommands
-        |> Dict.map \_n, sc -> sc.config
-        |> HasSubcommands
-
-    {
-        name,
-        config: {
-            description,
-            options: builder.options,
-            parameters: builder.parameters,
-            subcommands,
-        },
-        parser: mapDataParserData builder.parser mapper,
-    }
+finishSubcommand : CliBuilder state action, { name : Str, description : Str, mapper : state -> commonState } -> { name : Str, parser : List Arg -> Result (commonState, List Arg) ArgExtractErr, config : SubcommandConfig }
+finishSubcommand = \@CliBuilder builder, { name, description, mapper } -> {
+    name,
+    config: {
+        description,
+        options: builder.options,
+        parameters: builder.parameters,
+        subcommands: HasSubcommands builder.subcommands,
+    },
+    parser: \args ->
+        builder.parser args
+        |> Result.map \(data, remainingArgs) ->
+            (mapper data, remainingArgs),
+}
 
 finishCli :
-    CliBuilder state subState subSubState action,
+    CliBuilder state action,
     {
         name ? Str,
         authors ? List Str,
@@ -230,23 +139,19 @@ finishCli = \@CliBuilder builder, { name ? "", authors ? [], version ? "", descr
         parsedArgs <- parseArgs args
             |> Result.mapErr FailedToParseArgs
             |> Result.try
-        ({ data, subcommand: _ }, _remainingArgs) <- builder.parser parsedArgs
+
+        (data, _remainingArgs) <- builder.parser parsedArgs
             |> Result.try
 
         # TODO allow ensuring no unknown args were passed
         Ok data
-
-    subcommands =
-        builder.subcommands
-        |> Dict.map \_n, sc -> sc.config
-        |> HasSubcommands
 
     config = {
         name,
         authors,
         version,
         description,
-        subcommands,
+        subcommands: HasSubcommands builder.subcommands,
         options: builder.options,
         parameters: builder.parameters,
     }
@@ -261,21 +166,55 @@ assertCliIsValid = \result ->
         Ok cli -> cli
         Err err -> crash "$(Inspect.toStr err)"
 
-subcommandField : List { name : Str, parser : DataParser subState subSubState, config : SubcommandConfig } -> (CliBuilder (Result subState [NoSubcommand] -> state) subState subSubState GetSubcommandsAction -> CliBuilder state subState subSubState GetOptionsAction)
+subcommandField : List { name : Str, parser : DataParser subState, config : SubcommandConfig } -> (CliBuilder (Result subState [NoSubcommand] -> state) GetOptionsAction -> CliBuilder state GetParamsAction)
 subcommandField = \subcommandConfigs ->
     subcommands =
         subcommandConfigs
-        |> List.map \{ name, parser, config } -> (name, { parser, config })
+        |> List.map \{ name, config } -> (name, config)
         |> Dict.fromList
 
-    \@CliBuilder builder ->
-        # TODO: rewrite this to make sure it works?
-        newParser = \args ->
-            when builder.parser args is
-                Ok ({ data, subcommand }, remainingArgs) ->
-                    Ok ({ data: data subcommand, subcommand }, remainingArgs)
+    getParamArg = \arg ->
+        when arg is
+            Parameter p -> Ok p
+            _other -> Err NotParameter
 
-                Err err -> Err err
+    \@CliBuilder builder ->
+        newParser = \args ->
+            (data, remainingArgs) <- builder.parser args
+                |> Result.try
+
+            firstParamResult =
+                remainingArgs
+                |> List.findFirstIndex \arg ->
+                    Result.isOk (getParamArg arg)
+                |> Result.try \argIndex ->
+                    List.get args argIndex
+                    |> Result.try getParamArg
+                    |> Result.map \arg -> (arg, argIndex)
+
+            when firstParamResult is
+                Err _ ->
+                    Ok (data (Err NoSubcommand), remainingArgs)
+
+                Ok (param, paramIndex) ->
+                    subcommand =
+                        subcommandConfigs
+                        |> List.keepIf \c -> c.name == param
+                        |> List.first
+
+                    when subcommand is
+                        Err _ ->
+                            Ok (data (Err NoSubcommand), remainingArgs)
+
+                        Ok sc ->
+                            parentRemainingArgs =
+                                List.takeFirst remainingArgs paramIndex
+                            subcommandArgs =
+                                List.dropFirst remainingArgs (paramIndex + 1)
+                            (subData, subRemainingArgs) <- sc.parser subcommandArgs
+                                |> Result.try
+
+                            Ok (data (Ok subData), List.concat parentRemainingArgs subRemainingArgs)
 
         @CliBuilder {
             options: builder.options,
@@ -284,26 +223,26 @@ subcommandField = \subcommandConfigs ->
             subcommands: subcommands,
         }
 
-singleOption : OptionConfig, (ArgValue -> Result a ArgExtractErr) -> (CliBuilder (a -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+singleOption : OptionConfig, (ArgValue -> Result a ArgExtractErr) -> (CliBuilder (a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 singleOption = \option, valueParser ->
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForOption builder option args
+            { data, values, remainingArgs } <- getValuesForOption builder option args
                 |> Result.try
 
             parsedValue <- getSingleValue values option
                 |> Result.try \val -> valueParser val
                 |> Result.try
 
-            Ok ({ data: data parsedValue, subcommand }, remainingArgs)
+            Ok (data parsedValue, remainingArgs)
 
         updateBuilderWithOption builder newParser option
 
-maybeOption : OptionConfig, (ArgValue -> Result a ArgExtractErr) -> (CliBuilder (Result a [NoValue] -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+maybeOption : OptionConfig, (ArgValue -> Result a ArgExtractErr) -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 maybeOption = \option, valueParser ->
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForOption builder option args
+            { data, values, remainingArgs } <- getValuesForOption builder option args
                 |> Result.try
 
             parsedValue =
@@ -314,22 +253,22 @@ maybeOption = \option, valueParser ->
 
             parsedValue
             |> Result.map \val ->
-                ({ data: data val, subcommand }, remainingArgs)
+                (data val, remainingArgs)
 
         updateBuilderWithOption builder newParser option
 
-listOption : OptionConfig, (ArgValue -> Result a ArgExtractErr) -> (CliBuilder (List a -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+listOption : OptionConfig, (ArgValue -> Result a ArgExtractErr) -> (CliBuilder (List a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 listOption = \option, valueParser ->
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForOption builder option args
+            { data, values, remainingArgs } <- getValuesForOption builder option args
                 |> Result.try
 
             parsedValues <- values
                 |> List.mapTry \val -> valueParser val
                 |> Result.try
 
-            Ok ({ data: data parsedValues, subcommand }, remainingArgs)
+            Ok (data parsedValues, remainingArgs)
 
         updateBuilderWithOption builder newParser option
 
@@ -351,142 +290,158 @@ parseCustomArgValue = \option, parser ->
             Ok val -> parser val |> Result.mapErr \InvalidValue reason -> InvalidCustomArg option reason
             Err NoValue -> Err (NoValueProvidedForOption option)
 
-numOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (I64 -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+numOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (I64 -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 numOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Num, plurality: One, argsNeeded: One, short, long, name, help }
     singleOption option (parseNumArgValue option)
 
-strOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Str -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+strOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Str -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 strOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Str, plurality: One, argsNeeded: One, short, long, name, help }
     singleOption option (parseStrArgValue option)
 
-customOption : { short ? Str, long ? Str, name ? Str, help ? Str, typeName : Str, parser : Str -> Result a [InvalidValue Str] } -> (CliBuilder (a -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+customOption : { short ? Str, long ? Str, name ? Str, help ? Str, typeName : Str, parser : Str -> Result a [InvalidValue Str] } -> (CliBuilder (a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 customOption = \{ short ? "", long ? "", name ? "", help ? "", typeName, parser } ->
     option = { type: Custom typeName, plurality: One, argsNeeded: One, short, long, name, help }
     singleOption option (parseCustomArgValue option parser)
 
-maybeNumOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Result I64 [NoValue] -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+maybeNumOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Result I64 [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 maybeNumOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Num, plurality: Optional, argsNeeded: One, short, long, name, help }
     maybeOption option (parseNumArgValue option)
 
-maybeStrOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Result Str [NoValue] -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+maybeStrOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Result Str [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 maybeStrOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Str, plurality: Optional, argsNeeded: One, short, long, name, help }
     maybeOption option (parseStrArgValue option)
 
-maybeCustomOption : { short ? Str, long ? Str, name ? Str, help ? Str, typeName : Str, parser : Str -> Result a [InvalidValue Str] } -> (CliBuilder (Result a [NoValue] -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+maybeCustomOption : { short ? Str, long ? Str, name ? Str, help ? Str, typeName : Str, parser : Str -> Result a [InvalidValue Str] } -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 maybeCustomOption = \{ short ? "", long ? "", name ? "", help ? "", typeName, parser } ->
     option = { type: Custom typeName, plurality: Optional, argsNeeded: One, short, long, name, help }
     maybeOption option (parseCustomArgValue option parser)
 
-numListOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (List I64 -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+numListOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (List I64 -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 numListOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Num, plurality: Many, argsNeeded: One, short, long, name, help }
     listOption option (parseNumArgValue option)
 
-strListOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (List Str -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+strListOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (List Str -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 strListOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Str, plurality: Many, argsNeeded: One, short, long, name, help }
     listOption option (parseStrArgValue option)
 
-customListOption : { short ? Str, long ? Str, name ? Str, help ? Str, typeName : Str, parser : Str -> Result a [InvalidValue Str] } -> (CliBuilder (List a -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+customListOption : { short ? Str, long ? Str, name ? Str, help ? Str, typeName : Str, parser : Str -> Result a [InvalidValue Str] } -> (CliBuilder (List a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 customListOption = \{ short ? "", long ? "", name ? "", help ? "", typeName, parser } ->
     option = { type: Custom typeName, plurality: Many, argsNeeded: One, short, long, name, help }
     listOption option (parseCustomArgValue option parser)
 
-flagOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Bool -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState GetOptionsAction)
+flagOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (Bool -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 flagOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Bool, plurality: Optional, argsNeeded: Zero, short, long, name, help }
 
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForOption builder option args
+            { data, values, remainingArgs } <- getValuesForOption builder option args
                 |> Result.try
             value <- getOptionalValue values option
                 |> Result.try
 
             when value is
-                Err NoValue -> Ok ({ data: data Bool.false, subcommand }, remainingArgs)
-                Ok (Err NoValue) -> Ok ({ data: data Bool.true, subcommand }, remainingArgs)
+                Err NoValue -> Ok (data Bool.false, remainingArgs)
+                Ok (Err NoValue) -> Ok (data Bool.true, remainingArgs)
                 Ok (Ok _val) -> Err (OptionDoesNotExpectValue option)
 
         updateBuilderWithOption builder newParser option
 
-occurrenceOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (U64 -> state) subState subSubState GetOptionsAction -> CliBuilder state subState subSubState action)
+occurrenceOption : { short ? Str, long ? Str, name ? Str, help ? Str } -> (CliBuilder (U64 -> state) GetOptionsAction -> CliBuilder state action)
 occurrenceOption = \{ short ? "", long ? "", name ? "", help ? "" } ->
     option = { type: Bool, plurality: Many, argsNeeded: Zero, short, long, name, help }
 
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForOption builder option args
+            { data, values, remainingArgs } <- getValuesForOption builder option args
                 |> Result.try
 
             if values |> List.any Result.isOk then
                 Err (OptionDoesNotExpectValue option)
             else
-                Ok ({ data: data (List.len values), subcommand }, remainingArgs)
+                Ok (data (List.len values), remainingArgs)
 
         updateBuilderWithOption builder newParser option
 
-strParam : { name : Str, help ? Str } -> (CliBuilder (Str -> state) subState subSubState {}action -> CliBuilder state subState subSubState GetParamsAction)
+strParam : { name : Str, help ? Str } -> (CliBuilder (Str -> state) {}action -> CliBuilder state GetParamsAction)
 strParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: One }
 
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForParam builder param args
+            { data, values, remainingArgs } <- getValuesForParam builder param args
                 |> Result.try
 
             when List.first values is
-                Ok single -> Ok ({ data: data single, subcommand }, remainingArgs)
+                Ok single -> Ok (data single, remainingArgs)
                 Err ListWasEmpty -> Err (MissingParam param)
 
         updateBuilderWithParam builder newParser param
 
-maybeStrParam : { name : Str, help ? Str } -> (CliBuilder (ArgValue -> state) subState subSubState {}action -> CliBuilder state subState subSubState GetParamsAction)
+maybeStrParam : { name : Str, help ? Str } -> (CliBuilder (ArgValue -> state) {}action -> CliBuilder state GetParamsAction)
 maybeStrParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: Optional }
 
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForParam builder param args
+            { data, values, remainingArgs } <- getValuesForParam builder param args
                 |> Result.try
 
             when List.first values is
-                Ok single -> Ok ({ data: data (Ok single), subcommand }, remainingArgs)
-                Err ListWasEmpty -> Ok ({ data: data (Err NoValue), subcommand }, remainingArgs)
+                Ok single -> Ok (data (Ok single), remainingArgs)
+                Err ListWasEmpty -> Ok (data (Err NoValue), remainingArgs)
 
         updateBuilderWithParam builder newParser param
 
-strListParam : { name : Str, help ? Str } -> (CliBuilder (List Str -> state) subState subSubState {}action -> CliBuilder state subState subSubState [])
+strListParam : { name : Str, help ? Str } -> (CliBuilder (List Str -> state) {}action -> CliBuilder state [])
 strListParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: Many }
 
     \builder ->
         newParser = \args ->
-            { data, subcommand, values, remainingArgs } <- getValuesForParam builder param args
+            { data, values, remainingArgs } <- getValuesForParam builder param args
                 |> Result.try
 
-            Ok ({ data: data values, subcommand }, remainingArgs)
+            Ok (data values, remainingArgs)
 
         updateBuilderWithParam builder newParser param
 
 expect
-    { parser, config: _ } =
+    subSubcommandParser =
+        cliBuilder {
+            e: <- numOption { short: "e" },
+            g: <- numOption { short: "g" },
+        }
+        |> finishSubcommand { name: "sub-sub", description: "", mapper: SubSub }
+
+    subcommandParser =
+        cliBuilder {
+            d: <- numOption { short: "d" },
+            f: <- numOption { short: "f" },
+            sc: <- subcommandField [subSubcommandParser],
+        }
+        |> finishSubcommand { name: "sub", description: "", mapper: Sub }
+
+    { parser } =
         cliBuilder {
             alpha: <- numOption { short: "a" },
-            beta: <- flagOption { short: "b", long: "--beta" },
+            beta: <- flagOption { short: "b", long: "beta" },
             xyz: <- strOption { long: "xyz" },
-            verbosity: <- occurrenceOption { short: "v", long: "--verbose" },
+            verbosity: <- occurrenceOption { short: "v", long: "verbose" },
+            sc: <- subcommandField [subcommandParser],
         }
         |> finishCli { name: "app" }
         |> assertCliIsValid
 
-    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
+    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv", "sub"]
 
-    out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4 }
+    out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }
 
 expect
     # subSubcommandParser1 =
@@ -495,19 +450,17 @@ expect
     #         b: <- numOption { short: "b" },
     #     }
     #     |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
-    #
     # subSubcommandParser2 =
     #     cliBuilder {
     #         a: <- numOption { short: "a" },
     #         c: <- numOption { short: "c" },
     #     }
     #     |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
-    #
     subcommandParser1 =
         cliBuilder {
-            # sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
             d: <- numOption { short: "d" },
             e: <- numOption { short: "e" },
+            # sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
         }
         |> finishSubcommand { name: "s1", description: "", mapper: S1 }
 
@@ -519,9 +472,9 @@ expect
         |> finishSubcommand { name: "s2", description: "", mapper: S2 }
 
     { parser, config: _ } =
-        cliBuilderWithSubcommands {
-            sc: <- subcommandField [subcommandParser1, subcommandParser2],
+        cliBuilder {
             x: <- numOption { short: "x" },
+            sc: <- subcommandField [subcommandParser1, subcommandParser2],
             y: <- strParam { name: "y" },
             p: <- strListParam { name: "p" },
         }
@@ -530,6 +483,5 @@ expect
 
     out = parser ["app", "-x", "123", "y", "s1", "-d", "456", "-e", "789", "ss2", "-a", "135", "-c", "246"]
 
-    # out == Ok { x: 123, y: "y", sc: Ok (S1 { sc: Ok (SS2 { a: 135, c: 246 }), d: 456, e: 789 }) }
-
-    out == Ok { x: 123, y: "y", sc: Ok (S1 { d: 456, e: 789 }), p: ["ss2"] }
+    # out == Ok { x: 123, y: "y", p: [], sc: Ok (S1 { sc: Ok (SS2 { a: 135, c: 246 }), d: 456, e: 789 }) }
+    out == Ok { x: 123, y: "y", p: [], sc: Ok (S1 { d: 456, e: 789 }) }

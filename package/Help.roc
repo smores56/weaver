@@ -17,94 +17,67 @@ interface Help
 #     UnrecognizedLongArg Str,
 # ]
 
-# optionName : OptionConfig -> Str
-
-# CliConfig : {
-#     name : Str,
-#     authors : List Str,
-#     version : Str,
-#     description : Str,
-#     subcommands : Dict Str {
-#         description : Str,
-#         subcommands : SubcommandsConfig,
-#         options : List OptionConfig,
-#         parameters : List ParameterConfig,
-#     },
-#     options : List {
-#         type : [Str, Num, Bool, Custom Str],
-#         plurality : [Option, One, Many],
-#         argsNeeded : [Zero, One],
-#         short : Str,
-#         long : Str,
-#         name : Str,
-#         help : Str,
-#     },
-#     parameters : List {
-#         name : Str,
-#         help : Str,
-#         type : [Str, Num, Bool, Custom Str],
-#         plurality : [Option, One, Many],
-#     }
-# }
-
 helpTextForSubcommand : CliConfig, List Str -> Str
 helpTextForSubcommand = \_config, _path ->
     "TODO"
 
 helpText : CliConfig -> Str
 helpText = \config ->
-    authors =
-        if List.isEmpty config.authors then
-            "$(Str.joinWith config.authors " ")\n"
-        else
-            "\n"
+    { authors, description, name, version, options, parameters, subcommands } = config
 
-    description =
-        if config.description != "" then
-            "$(config.description)\n"
+    authorsText =
+        if List.isEmpty authors then
+            ""
         else
-            "\n"
+            "$(Str.joinWith authors " ")\n"
+
+    descriptionText =
+        if description != "" then
+            description
+        else
+            "No description."
 
     """
-    $(config.name) $(config.version)
-    $(authors)
-    $(description)
+    $(name) $(version)
+    $(authorsText)
+    $(descriptionText)
+
     $(usageText config)
 
-    $(commandsText config.subcommands)
+    $(commandsText subcommands)
 
-    $(paramsText config.parameters)
+    $(paramsText parameters)
 
-    $(optionsText config.options)
+    $(optionsText options)
     """
 
 usageText : CliConfig -> Str
-usageText = \config ->
-    options =
-        if List.isEmpty config.options then
+usageText = \{ name, options, parameters, subcommands } ->
+    optionsStr =
+        if List.isEmpty options then
             ""
         else
             " [OPTIONS]"
 
-    params =
-        config.parameters
-        |> List.map \param ->
+    paramsStr =
+        parameters
+        |> List.map \{ name: paramName, plurality } ->
             ellipsis =
-                when param.plurality is
+                when plurality is
                     Optional | One -> ""
                     Many -> "..."
 
-            " [$(param.name)]$(ellipsis)"
+            " [$(paramName)]$(ellipsis)"
         |> Str.joinWith ""
 
     subcommandUsage =
-        when config.subcommands is
-            HasSubcommands sc if !(Dict.isEmpty sc) -> "  $(config.name) <COMMAND>\n"
+        when subcommands is
+            HasSubcommands sc if !(Dict.isEmpty sc) -> "  $(name) <COMMAND>"
             _other -> ""
 
     """
     Usage:
-      $(config.name)$(options)$(params)
+      $(name)$(optionsStr)$(paramsStr)
     $(subcommandUsage)
     """
 

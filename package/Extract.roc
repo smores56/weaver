@@ -1,6 +1,5 @@
 interface Extract
     exposes [
-        SubcommandSearchResult,
         ExtractParamValuesParams,
         ExtractParamValuesOutput,
         extractParamValues,
@@ -15,36 +14,22 @@ interface Extract
         Config.{ OptionConfig, ParameterConfig, ArgExtractErr, DataParser, SubcommandConfig },
     ]
 
-SubcommandSearchResult s ss :
-    Result
-    {
-        name : Str,
-        parser : DataParser s ss,
-        config : SubcommandConfig,
-        args : List Arg,
-    }
-    [NoSubcommand]
-
-ExtractParamValuesParams s ss : {
+ExtractParamValuesParams : {
     args : List Arg,
     param : ParameterConfig,
-    subcommands : Dict Str { parser : DataParser s ss, config : SubcommandConfig },
 }
 
-ExtractParamValuesOutput s ss : {
+ExtractParamValuesOutput : {
     values : List Str,
     remainingArgs : List Arg,
-    subcommandFound : SubcommandSearchResult s ss,
 }
 
-extractParamValues : ExtractParamValuesParams s ss -> Result (ExtractParamValuesOutput s ss) ArgExtractErr
-extractParamValues = \{ args, param, subcommands } ->
+extractParamValues : ExtractParamValuesParams -> Result ExtractParamValuesOutput ArgExtractErr
+extractParamValues = \{ args, param } ->
     startingState = {
         action: GetParam,
-        checkForSubcommand: Check,
         values: [],
         remainingArgs: [],
-        subcommandFound: Err NoSubcommand,
     }
 
     stateAfter =
@@ -63,95 +48,68 @@ extractParamValues = \{ args, param, subcommands } ->
                             Err (UnrecognizedLongArg long.name)
 
                         Parameter p ->
-                            # TODO: pass args through for subcommands when necessary
-                            when (state.checkForSubcommand, Dict.get subcommands p) is
-                                (Check, Ok subcommand) ->
-                                    Ok { state & action: StopParsing, subcommandFound: Ok { name: p, config: subcommand.config, parser: subcommand.parser, args: [] } }
-
-                                _other ->
-                                    if p == "--" then
-                                        Ok { state & action: PassThrough }
-                                    else
-                                        when param.plurality is
-                                            Optional | One -> Ok { state & action: StopParsing, values: state.values |> List.append p }
-                                            Many -> Ok { state & checkForSubcommand: DontCheck, values: state.values |> List.append p }
+                            if p == "--" then
+                                Ok { state & action: PassThrough }
+                            else
+                                when param.plurality is
+                                    Optional | One -> Ok { state & action: StopParsing, values: state.values |> List.append p }
+                                    Many -> Ok { state & values: state.values |> List.append p }
 
                 PassThrough ->
-                    value = when arg is
-                        Short s -> "-$(s)"
-                        ShortGroup sg -> "-$(Str.joinWith sg.names "")"
-                        Long { name, value: Ok val } -> "--$(name)=$(val)"
-                        Long { name, value: Err NoValue } -> "--$(name)"
-                        Parameter p -> p
+                    value =
+                        when arg is
+                            Short s -> "-$(s)"
+                            ShortGroup sg -> "-$(Str.joinWith sg.names "")"
+                            Long { name, value: Ok val } -> "--$(name)=$(val)"
+                            Long { name, value: Err NoValue } -> "--$(name)"
+                            Parameter p -> p
 
                     Ok { state & remainingArgs: state.remainingArgs |> List.append (Parameter value) }
 
                 StopParsing ->
                     Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-    stateAfter
-    |> Result.map \{ values, remainingArgs, subcommandFound } ->
-        { values, remainingArgs, subcommandFound }
+    Result.map stateAfter \{ values, remainingArgs } -> { values, remainingArgs }
 
-ExtractOptionValuesParams s ss : {
+ExtractOptionValuesParams : {
     args : List Arg,
     option : OptionConfig,
-    subcommands : Dict Str { parser : DataParser s ss, config : SubcommandConfig },
 }
 
-ExtractOptionValuesOutput s ss : {
+ExtractOptionValuesOutput : {
     values : List ArgValue,
     remainingArgs : List Arg,
-    subcommandFound : SubcommandSearchResult s ss,
 }
 
-ExtractOptionValueWalkerState s ss : {
+ExtractOptionValueWalkerState : {
     action : [FindOption, GetValue, StopParsing],
-    checkForSubcommand : [Check, DontCheck],
     values : List ArgValue,
     remainingArgs : List Arg,
-    subcommandFound : SubcommandSearchResult s ss,
 }
 
-extractOptionValues : ExtractOptionValuesParams s ss -> Result (ExtractOptionValuesOutput s ss) ArgExtractErr
-extractOptionValues = \{ args, option, subcommands } ->
+extractOptionValues : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
+extractOptionValues = \{ args, option } ->
     startingState = {
         action: FindOption,
-        checkForSubcommand: Check,
         values: [],
         remainingArgs: [],
-        subcommandFound: Err NoSubcommand,
     }
 
     stateAfter = List.walkTry args startingState \state, arg ->
         when state.action is
-            FindOption -> findOptionForExtraction state arg option subcommands
+            FindOption -> findOptionForExtraction state arg option
             GetValue -> getValueForExtraction state arg option
-            StopParsing ->
-                # TODO: do we have to pass remainingArgs along normally if there's no subcommand?
-                subcommandFound =
-                    state.subcommandFound 
-                    |> Result.map \sf -> { sf & args: sf.args |> List.append arg }
-
-                Ok { state & subcommandFound }
+            StopParsing -> Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
     when stateAfter is
         Err err -> Err err
-        Ok { action, values, remainingArgs, subcommandFound } ->
+        Ok { action, values, remainingArgs } ->
             when action is
                 GetValue -> Err (NoValueProvidedForOption option)
-                FindOption | StopParsing -> Ok { values, remainingArgs, subcommandFound }
+                FindOption | StopParsing -> Ok { values, remainingArgs }
 
-findOptionForExtraction :
-    ExtractOptionValueWalkerState s ss,
-    Arg,
-    OptionConfig,
-    Dict Str {
-        parser : DataParser s ss,
-        config : SubcommandConfig,
-    }
-    -> Result (ExtractOptionValueWalkerState s ss) ArgExtractErr
-findOptionForExtraction = \state, arg, option, subcommands ->
+findOptionForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
+findOptionForExtraction = \state, arg, option ->
     when arg is
         Short short if short == option.short ->
             when option.argsNeeded is
@@ -183,10 +141,10 @@ findOptionForExtraction = \state, arg, option, subcommands ->
                             GetValue -> GetValue
                             FindOption -> FindOption
                     restOfGroup =
-                        if List.isEmpty remaining then
-                            Err NoValue
-                        else if List.isEmpty values then
+                        if List.isEmpty values then
                             Ok (ShortGroup shortGroup)
+                        else if List.isEmpty remaining then
+                            Err NoValue
                         else
                             Ok (ShortGroup { complete: Partial, names: remaining })
 
@@ -194,7 +152,7 @@ findOptionForExtraction = \state, arg, option, subcommands ->
                         { state &
                             action: newAction,
                             remainingArgs: state.remainingArgs |> List.appendIfOk restOfGroup,
-                            values: state.values |> List.concat values
+                            values: state.values |> List.concat values,
                         }
 
         Long long if long.name == option.long ->
@@ -209,31 +167,19 @@ findOptionForExtraction = \state, arg, option, subcommands ->
                         Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
                         Err NoValue -> Ok { state & action: GetValue }
 
-        Parameter param if state.checkForSubcommand == Check ->
-            when Dict.get subcommands param is
-                Err KeyNotFound ->
-                    Ok { state & checkForSubcommand: DontCheck, remainingArgs: state.remainingArgs |> List.append arg }
-
-                Ok { parser, config } ->
-                    Ok
-                        { state &
-                            action: StopParsing,
-                            subcommandFound: Ok { name: param, parser, config, args: [arg] },
-                            remainingArgs: state.remainingArgs |> List.append arg,
-                        }
-
         _nothingFound ->
             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-getValueForExtraction : ExtractOptionValueWalkerState s ss, Arg, OptionConfig -> Result (ExtractOptionValueWalkerState s ss) ArgExtractErr
+getValueForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
 getValueForExtraction = \state, arg, option ->
-    value = when arg is
-        Short s -> Ok "-$(s)"
-        ShortGroup { names, complete: Complete } -> Ok "-$(Str.joinWith names "")"
-        ShortGroup { names, complete: Partial } -> Err (CannotUsePartialShortGroupAsValue option names)
-        Long { name, value: Ok val } -> Ok "--$(name)=$(val)"
-        Long { name, value: Err NoValue } -> Ok "--$(name)"
-        Parameter p -> Ok p
+    value =
+        when arg is
+            Short s -> Ok "-$(s)"
+            ShortGroup { names, complete: Complete } -> Ok "-$(Str.joinWith names "")"
+            ShortGroup { names, complete: Partial } -> Err (CannotUsePartialShortGroupAsValue option names)
+            Long { name, value: Ok val } -> Ok "--$(name)=$(val)"
+            Long { name, value: Err NoValue } -> Ok "--$(name)"
+            Parameter p -> Ok p
 
     value
     |> Result.map \val ->

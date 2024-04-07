@@ -9,10 +9,10 @@ app "basic"
         pf.Task.{ Task },
         roclap.Builder.{
             cliBuilder,
-            # cliBuilderWithSubcommands,
             finishCli,
-            # finishSubcommand,
-            # subcommandField,
+            assertCliIsValid,
+            finishSubcommand,
+            subcommandField,
             numOption,
             strParam,
         },
@@ -25,55 +25,48 @@ main =
     args <- Arg.list |> Task.await
     { parser, config } = cliParser
 
-    when parser args is
-        Ok data ->
-            data
-            |> Inspect.toStr
-            |> Stdout.line
+    textToDisplay =
+        when parser args is
+            Ok data -> Inspect.toStr data
+            Err err -> "Error: $(Inspect.toStr err)\n\n$(helpText config)"
 
-        Err err ->
-            _ <- Stdout.line ("Error: $(Inspect.toStr err)\n\n")
-                |> Task.await
-            Stdout.line (helpText config)
+    Stdout.line textToDisplay
 
 cliParser =
-    # subSubcommandParser1 =
-    #     cliBuilder {
-    #         a: <- numOption { short: "a" },
-    #         b: <- numOption { short: "b" },
-    #     }
-    #     |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
-
-    # subSubcommandParser2 =
-    #     cliBuilder {
-    #         a: <- numOption { short: "a" },
-    #         c: <- numOption { short: "c" },
-    #     }
-    #     |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
-
-    # subcommandParser1 =
-    #     cliBuilder {
-    #         # sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
-    #         d: <- numOption { short: "d" },
-    #         e: <- numOption { short: "e" },
-    #     }
-    #     |> finishSubcommand { name: "s1", description: "", mapper: S1 }
-
-    # subcommandParser2 =
-    #     cliBuilder {
-    #         d: <- numOption { short: "d" },
-    #         f: <- numOption { short: "f" },
-    #     }
-    #     |> finishSubcommand { name: "s2", description: "", mapper: S2 }
-
-    result =
+    subSubcommandParser1 =
         cliBuilder {
-            # sc: <- subcommandField [subcommandParser1, subcommandParser2],
-            x: <- numOption { short: "x" },
-            y: <- strParam { name: "y" },
+            a: <- numOption { short: "a" },
+            b: <- numOption { short: "b" },
         }
-        |> finishCli { name: "app" }
+        |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
 
-    when result is
-        Ok { parser, config } -> { parser, config }
-        Err err -> crash "Err: $(Inspect.toStr err)"
+    subSubcommandParser2 =
+        cliBuilder {
+            a: <- numOption { short: "a" },
+            c: <- numOption { short: "c" },
+        }
+        |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
+
+    subcommandParser1 =
+        cliBuilder {
+            d: <- numOption { short: "d" },
+            e: <- numOption { short: "e" },
+            sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
+        }
+        |> finishSubcommand { name: "s1", description: "", mapper: S1 }
+
+    subcommandParser2 =
+        cliBuilder {
+            d: <- numOption { short: "d" },
+            f: <- numOption { short: "f" },
+        }
+        |> finishSubcommand { name: "s2", description: "", mapper: S2 }
+
+    cliBuilder {
+        x: <- numOption { short: "x" },
+        sc: <- subcommandField [subcommandParser1, subcommandParser2],
+        y: <- strParam { name: "y" },
+    }
+    |> finishCli { name: "basic", version: "v0.0.1", authors: ["Sam Mohr <sam@sammohr.dev>"] }
+    |> assertCliIsValid
+

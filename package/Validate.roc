@@ -1,7 +1,7 @@
 interface Validate
     exposes [validateCli, CliValidationErr]
     imports [
-        Utils.{ strLen },
+        Utils.{ strLen, isKebabCase },
         Config.{
             OptionConfig,
             ParameterConfig,
@@ -29,7 +29,7 @@ validateCli = \{ name, options, parameters, subcommands } ->
         parentOptions: [],
         parameters,
         subcommands,
-        subcommandPath: [],
+        subcommandPath: [name],
     }
 
 validateCommand : { name : Str, options : List OptionConfig, parentOptions : List OptionAtSubcommand, parameters : List ParameterConfig, subcommands : SubcommandsConfig, subcommandPath : List Str } -> Result {} CliValidationErr
@@ -44,7 +44,7 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
         |> Result.try
 
     when subcommands is
-        HasSubcommands subcommandConfigs ->
+        HasSubcommands subcommandConfigs if !(Dict.isEmpty subcommandConfigs) ->
             subcommandConfigs
             |> Dict.toList
             |> List.mapTry \(subcommandName, subcommand) ->
@@ -63,7 +63,7 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
                 }
             |> Result.map \_successes -> {}
 
-        NoSubcommands ->
+        _noSubcommands ->
             allOptionsToCheck =
                 options
                 |> List.map \option -> { option, subcommandPath }
@@ -71,30 +71,16 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
 
             checkIfThereAreOverlappingOptions allOptionsToCheck
 
-charIsCamelCase : U8 -> Bool
-charIsCamelCase = \char ->
-    lowerAAsciiCode = 97
-    lowerZAsciiCode = 122
-    upperAAsciiCode = 65
-    upperZAsciiCode = 90
-    dashAsciiCode = 45
-
-    (char >= lowerAAsciiCode && char <= lowerZAsciiCode)
-    || (char >= upperAAsciiCode && char <= upperZAsciiCode)
-    || (char == dashAsciiCode)
-
 ensureCommandIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
 ensureCommandIsWellNamed = \{ name, subcommandPath } ->
-    nameIsCamelCase = Str.toUtf8 name |> List.all charIsCamelCase
-    if name != "" && nameIsCamelCase then
+    if isKebabCase name then
         Ok {}
     else
         Err (InvalidCommandName { name, subcommandPath })
 
 ensureParamIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
 ensureParamIsWellNamed = \{ name, subcommandPath } ->
-    nameIsCamelCase = Str.toUtf8 name |> List.all charIsCamelCase
-    if strLen name >= 1 && nameIsCamelCase then
+    if isKebabCase name then
         Ok {}
     else
         Err (InvalidParameterName { name, subcommandPath })
@@ -118,20 +104,20 @@ ensureShortFlagIsWellNamed = \{ name, subcommandPath } ->
 
 ensureLongFlagIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
 ensureLongFlagIsWellNamed = \{ name, subcommandPath } ->
-    nameIsCamelCase = Str.toUtf8 name |> List.all charIsCamelCase
-    if strLen name > 1 && nameIsCamelCase then
+    if strLen name > 1 && isKebabCase name then
         Ok {}
     else
         Err (InvalidLongFlagName { name, subcommandPath })
 
 checkIfThereAreOverlappingOptions : List OptionAtSubcommand -> Result {} CliValidationErr
 checkIfThereAreOverlappingOptions = \options ->
-    List.range { start: At 1, end: At (List.len options) }
-    |> List.map \offset -> List.map2 options (List.dropFirst options offset) Pair
+    List.range { start: At 1, end: Before (List.len options) }
+    |> List.map \offset ->
+        List.map2 options (List.dropFirst options offset) Pair
     |> List.mapTry \pairs ->
         pairs
         |> List.mapTry \Pair left right ->
-            if left.option.short == right.option.short || left.option.long == right.option.long then
+            if (left.option.short != "" && left.option.short == right.option.short) || (left.option.long != "" && left.option.long == right.option.long) then
                 Err (OverlappingOptionNames left right)
             else
                 Ok {}

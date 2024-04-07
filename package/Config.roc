@@ -1,8 +1,8 @@
 interface Config
     exposes [
         DataParser,
-        mapDataParserData,
-        mapDataParserSubcommand,
+        # mapDataParserData,
+        # mapDataParserSubcommand,
         ArgExtractErr,
         ValueType,
         Plurality,
@@ -20,23 +20,23 @@ interface Config
     ]
     imports [Parser.{ Arg, ArgParseErr }]
 
-DataParser a s : List Arg -> Result ({ data : a, subcommand : Result s [NoSubcommand] }, List Arg) ArgExtractErr
+DataParser a : List Arg -> Result (a, List Arg) ArgExtractErr
 
-mapDataParserData : DataParser a s, (a -> b) -> DataParser b s
-mapDataParserData = \parser, mapper ->
-    \args ->
-        ({ data, subcommand }, remainingArgs) <- parser args
-            |> Result.try
+# mapDataParserData : DataParser a s, (a -> b) -> DataParser b s
+# mapDataParserData = \parser, mapper ->
+#     \args ->
+#         ({ data, subcommand }, remainingArgs) <- parser args
+#             |> Result.try
 
-        Ok ({ data: mapper data, subcommand }, remainingArgs)
+#         Ok ({ data: mapper data, subcommand }, remainingArgs)
 
-mapDataParserSubcommand : DataParser a s, (s -> t) -> DataParser a t
-mapDataParserSubcommand = \parser, mapper ->
-    \args ->
-        ({ data, subcommand }, remainingArgs) <- parser args
-            |> Result.try
+# mapDataParserSubcommand : DataParser a s, (s -> t) -> DataParser a t
+# mapDataParserSubcommand = \parser, mapper ->
+#     \args ->
+#         ({ data, subcommand }, remainingArgs) <- parser args
+#             |> Result.try
 
-        Ok ({ data, subcommand: subcommand |> Result.map mapper }, remainingArgs)
+#         Ok ({ data, subcommand: subcommand |> Result.map mapper }, remainingArgs)
 
 ArgExtractErr : [
     MissingArg OptionConfig,
