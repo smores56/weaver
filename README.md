@@ -9,31 +9,47 @@ Without code generation at compile time, the closest we can get in Roc is the us
 [record builder syntax](https://www.roc-lang.org/examples/RecordBuilder/README.html).
 This allows us to build our config and parser at the same time, in a type-safe way!
 
+## Status
+
+This library is mostly built out for the basic features, but there are still some logic bugs that I need
+to iron out (ignoring compiler issues that I'm trying not to get blocked on). There will still be some
+breaking changes in the next few weeks, but it's ready for alpha testing (more or less) if you're feeling
+brave! Once I think the API is where I want it, I'll start making GitHub releases.
+
+Documentation is the next thing on my ticket, so look out for that in the next few days!
+
 ## Example
 
 ```roc
 expect
     subcommandParser =
         cliBuilder {
-            d: <- numOption { short: "d" },
-            f: <- numOption { short: "f" },
+            d: <- numOption { name: Short "d", help: "A required number." },
+            f: <- maybeNumOption { name: Short "f", help: "An optional number." },
         }
-        |> finishSubcommand { name: "sub", description: "More detailed options", mapper: Sub }
+        |> finishSubcommand { name: "sub", description: "A specific action to take.", mapper: Sub }
 
-    { parser } =
+    { parser, config: _ } =
         cliBuilder {
-            alpha: <- numOption { short: "a" },
-            beta: <- flagOption { short: "b", long: "beta" },
-            xyz: <- strOption { long: "xyz" },
-            verbosity: <- occurrenceOption { short: "v", long: "verbose" },
+            alpha: <- numOption { name: Short "a", help: "Set the alpha level." },
+            beta: <- flagOption { name: Both "b" "beta" },
+            xyz: <- strOption { name: Long "xyz" },
+            verbosity: <- occurrenceOption { name: Both "v" "verbose" },
             sc: <- subcommandField [subcommandParser],
         }
-        |> finishCli { name: "app", version: "v0.0.1" }
-        |> assertCliIsValid
+        |> finishCli { name: "app", version: "v0.0.1", authors: ["Some One <some.one@mail.com>"] }
+        |> assertCliIsValid # crash immediately on unrecoverable issues, e.g. empty flag names
 
-    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
+    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv", "sub", "-d", "456"]
 
-    out == SuccessfullyParsed { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }
+    out
+    == SuccessfullyParsed {
+        alpha: 123,
+        beta: Bool.true,
+        xyz: "some_text",
+        verbosity: 4,
+        sc: Ok (Sub { d: 456, f: Err NoValue }),
+    }
 ```
 
 There are also some examples in the [examples](./examples) directory that are more feature-complete,
@@ -41,8 +57,7 @@ with more to come as this library matures.
 
 ## Roadmap
 
-This library is a work-in-progress, but should be ready for usage in the next week or so!
-These are the main things I want to work on:
+Beyond finishing up the basics, these are the main things I want to work on:
 
 - [X] simply-implemented support for optional args/lists of args
 - [ ] full documentation of the library's features
@@ -52,6 +67,7 @@ These are the main things I want to work on:
 - [X] choice args that select an option from a custom enum
 - [ ] add more testing
 - [ ] maybe add option groups (optionally set { group : Str } per option)
+- [ ] CI/CD testing and deployment, respectively
 
 ### Long-Term Goals
 

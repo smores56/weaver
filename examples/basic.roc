@@ -45,8 +45,8 @@ cliParser =
 
     subSubcommandParser2 =
         cliBuilder {
-            a: <- numOption { name: Short "a" },
-            c: <- numOption { name: Both "c" "create" },
+            a: <- numOption { name: Short "a", help: "Set the alpha level." },
+            c: <- numOption { name: Both "c" "create", help: "Create a doohickey." },
             data: <- strParam { name: "data", help: "Data to manipulate." },
         }
         |> finishSubcommand { name: "ss2", description: "Another sub-subcommand.", mapper: SS2 }

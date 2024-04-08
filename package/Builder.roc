@@ -427,28 +427,28 @@ strListParam = \{ name, help ? "" } ->
 expect
     subSubcommandParser =
         cliBuilder {
-            e: <- numOption { name: Short "e" },
-            g: <- numOption { name: Short "g" },
+            e: <- numOption { name: Short "e", help: "" },
+            g: <- numOption { name: Short "g", help: "" },
         }
         |> finishSubcommand { name: "sub-sub", description: "First subcommand", mapper: SubSub }
 
     subcommandParser =
         cliBuilder {
-            d: <- numOption { name: Short "d" },
-            f: <- numOption { name: Short "f" },
+            d: <- numOption { name: Short "d", help: "" },
+            f: <- numOption { name: Short "f", help: "" },
             sc: <- subcommandField [subSubcommandParser],
         }
         |> finishSubcommand { name: "sub", description: "Second subcommand", mapper: Sub }
 
     cliParser =
         cliBuilder {
-            alpha: <- numOption { name: Short "a" },
+            alpha: <- numOption { name: Short "a", help: "" },
             beta: <- flagOption { name: Both "b" "beta" },
             xyz: <- strOption { name: Long "xyz" },
             verbosity: <- occurrenceOption { name: Both "v" "verbose" },
             sc: <- subcommandField [subcommandParser],
         }
-        |> finishCli { name: "app" }
+        |> finishCli { name: "app", authors: [], version: "" }
         |> assertCliIsValid
 
     args = ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
@@ -459,11 +459,41 @@ expect
 expect
     cliParser =
         cliBuilder {
-            alpha: <- maybeNumOption { name: Short "a" },
+            alpha: <- maybeNumOption { name: Short "a", help: "" },
         }
-        |> finishCli { name: "app" }
+        |> finishCli { name: "app", authors: [], version: "" }
         |> assertCliIsValid
 
     out = cliParser.parser ["args"]
 
     out == SuccessfullyParsed { alpha: Err NoValue }
+
+expect
+    subcommandParser =
+        cliBuilder {
+            d: <- numOption { name: Short "d", help: "A required number." },
+            f: <- maybeNumOption { name: Short "f", help: "An optional number." },
+        }
+        |> finishSubcommand { name: "sub", description: "A specific action to take.", mapper: Sub }
+
+    { parser, config: _ } =
+        cliBuilder {
+            alpha: <- numOption { name: Short "a", help: "Set the alpha level." },
+            beta: <- flagOption { name: Both "b" "beta" },
+            xyz: <- strOption { name: Long "xyz" },
+            verbosity: <- occurrenceOption { name: Both "v" "verbose" },
+            sc: <- subcommandField [subcommandParser],
+        }
+        |> finishCli { name: "app", version: "v0.0.1", authors: ["Some One <some.one@mail.com>"] }
+        |> assertCliIsValid # crash immediately on unrecoverable issues, e.g. empty flag names
+
+    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv", "sub", "-d", "456"]
+
+    out
+    == SuccessfullyParsed {
+        alpha: 123,
+        beta: Bool.true,
+        xyz: "some_text",
+        verbosity: 4,
+        sc: Ok (Sub { d: 456, f: Err NoValue }),
+    }
