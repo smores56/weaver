@@ -1,13 +1,13 @@
 app "basic"
     packages {
         pf: "https://github.com/roc-lang/basic-cli/releases/download/0.8.1/x8URkvfyi9I0QhmVG98roKBUs_AZRkLFwFJVJ3942YA.tar.br",
-        roclap: "../package/main.roc",
+        weaver: "../package/main.roc",
     }
     imports [
         pf.Stdout,
         pf.Arg,
         pf.Task.{ Task },
-        roclap.Builder.{
+        weaver.Builder.{
             cliBuilder,
             finishCli,
             assertCliIsValid,
@@ -16,7 +16,7 @@ app "basic"
             numOption,
             strParam,
         },
-        roclap.Help.{ helpText },
+        weaver.Help.{ helpText },
     ]
     provides [main] to pf
 
@@ -27,8 +27,8 @@ main =
 
     textToDisplay =
         when parser args is
-            Ok data -> Inspect.toStr data
-            Err err -> "Error: $(Inspect.toStr err)\n\n$(helpText config)"
+            Ok data -> "Successfully parsed! Here's what I got:\n\n$(Inspect.toStr data)"
+            Err err -> "Error while extracting args: $(Inspect.toStr err)\n\n$(helpText config)"
 
     Stdout.line textToDisplay
 
@@ -69,4 +69,3 @@ cliParser =
     }
     |> finishCli { name: "basic", version: "v0.0.1", authors: ["Sam Mohr <sam@sammohr.dev>"] }
     |> assertCliIsValid
-

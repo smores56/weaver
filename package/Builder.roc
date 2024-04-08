@@ -439,7 +439,7 @@ expect
         |> finishCli { name: "app" }
         |> assertCliIsValid
 
-    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv", "sub"]
+    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
 
     out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }
 
