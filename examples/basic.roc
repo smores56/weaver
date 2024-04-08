@@ -28,44 +28,44 @@ main =
     textToDisplay =
         when parser args is
             Ok data -> "Successfully parsed! Here's what I got:\n\n$(Inspect.toStr data)"
-            Err err -> "Error while extracting args: $(Inspect.toStr err)\n\n$(helpText config)"
+            Err err -> "Error while extracting args: $(Inspect.toStr err)\n\n$(helpText { config })"
 
     Stdout.line textToDisplay
 
 cliParser =
     subSubcommandParser1 =
         cliBuilder {
-            a: <- numOption { short: "a" },
-            b: <- numOption { short: "b" },
+            a: <- numOption { name: Short "a" },
+            b: <- numOption { name: Short "b" },
         }
         |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
 
     subSubcommandParser2 =
         cliBuilder {
-            a: <- numOption { short: "a" },
-            c: <- numOption { short: "c" },
+            a: <- numOption { name: Short "a" },
+            c: <- numOption { name: Short "c" },
         }
         |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
 
     subcommandParser1 =
         cliBuilder {
-            d: <- numOption { short: "d" },
-            e: <- numOption { short: "e" },
+            d: <- numOption { name: Short "d" },
+            e: <- numOption { name: Short "e" },
             sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
         }
         |> finishSubcommand { name: "s1", description: "", mapper: S1 }
 
     subcommandParser2 =
         cliBuilder {
-            d: <- numOption { short: "d" },
-            f: <- numOption { short: "f" },
+            d: <- numOption { name: Short "d" },
+            f: <- numOption { name: Short "f" },
         }
         |> finishSubcommand { name: "s2", description: "", mapper: S2 }
 
     cliBuilder {
-        x: <- numOption { short: "x" },
+        x: <- numOption { name: Short "x" },
         sc: <- subcommandField [subcommandParser1, subcommandParser2],
         y: <- strParam { name: "y" },
     }
-    |> finishCli { name: "basic", version: "v0.0.1", authors: ["Sam Mohr <sam@sammohr.dev>"] }
+    |> finishCli { name: "basic", version: "v0.0.1", authors: ["John Doe <john.doe@mail.com>"] }
     |> assertCliIsValid

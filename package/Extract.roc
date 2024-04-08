@@ -1,17 +1,26 @@
 interface Extract
     exposes [
-        ExtractParamValuesParams,
-        ExtractParamValuesOutput,
         extractParamValues,
-        ExtractOptionValuesParams,
-        ExtractOptionValuesOutput,
         extractOptionValues,
-        getOptionalValue,
         getSingleValue,
+        getOptionalValue,
     ]
     imports [
-        Parser.{ Arg, ArgValue, ArgParseErr },
-        Config.{ OptionConfig, ParameterConfig, ArgExtractErr, DataParser, SubcommandConfig },
+        Config.{
+            ArgExtractErr,
+            SpecialFlags,
+            OptionName,
+            optionShortName,
+            optionLongName,
+            OptionConfig,
+            helpOption,
+            versionOption,
+            ParameterConfig,
+        },
+        Parser.{
+            Arg,
+            ArgValue,
+        },
     ]
 
 ExtractParamValuesParams : {
@@ -79,12 +88,14 @@ ExtractOptionValuesParams : {
 ExtractOptionValuesOutput : {
     values : List ArgValue,
     remainingArgs : List Arg,
+    specialFlags : SpecialFlags,
 }
 
 ExtractOptionValueWalkerState : {
-    action : [FindOption, GetValue, StopParsing],
+    action : [FindOption, GetValue],
     values : List ArgValue,
     remainingArgs : List Arg,
+    specialFlags : SpecialFlags,
 }
 
 extractOptionValues : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
@@ -93,31 +104,42 @@ extractOptionValues = \{ args, option } ->
         action: FindOption,
         values: [],
         remainingArgs: [],
+        specialFlags: { help: Bool.false, version: Bool.false },
     }
 
     stateAfter = List.walkTry args startingState \state, arg ->
         when state.action is
             FindOption -> findOptionForExtraction state arg option
             GetValue -> getValueForExtraction state arg option
-            StopParsing -> Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
     when stateAfter is
         Err err -> Err err
-        Ok { action, values, remainingArgs } ->
+        Ok { action, values, remainingArgs, specialFlags } ->
             when action is
                 GetValue -> Err (NoValueProvidedForOption option)
-                FindOption | StopParsing -> Ok { values, remainingArgs }
+                FindOption -> Ok { values, remainingArgs, specialFlags }
 
 findOptionForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
 findOptionForExtraction = \state, arg, option ->
     when arg is
-        Short short if short == option.short ->
-            when option.argsNeeded is
-                Zero ->
+        Short short ->
+            if short == optionShortName option.name then
+                if option.expectedType == None then
                     Ok { state & values: state.values |> List.append (Err NoValue) }
-
-                One ->
+                else
                     Ok { state & action: GetValue }
+            else if short == optionShortName helpOption.name then
+                if state.specialFlags.help then
+                    Err (OptionCanOnlyBeSetOnce helpOption)
+                else
+                    Ok { state & specialFlags: { help: Bool.true, version: state.specialFlags.version } }
+            else if short == optionShortName versionOption.name then
+                if state.specialFlags.version then
+                    Err (OptionCanOnlyBeSetOnce versionOption)
+                else
+                    Ok { state & specialFlags: { help: state.specialFlags.help, version: Bool.true } }
+            else
+                Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
         ShortGroup shortGroup ->
             stateAfter =
@@ -126,20 +148,17 @@ findOptionForExtraction = \state, arg, option ->
                     when sgState.action is
                         GetValue -> Err (CannotUsePartialShortGroupAsValue option shortGroup.names)
                         FindOption ->
-                            if name == option.short then
-                                when option.argsNeeded is
-                                    Zero -> Ok { sgState & values: sgState.values |> List.append (Err NoValue) }
-                                    One -> Ok { sgState & action: GetValue }
+                            if name == optionShortName option.name then
+                                if option.expectedType == None then
+                                    Ok { sgState & values: sgState.values |> List.append (Err NoValue) }
+                                else
+                                    Ok { sgState & action: GetValue }
                             else
                                 Ok sgState
 
             when stateAfter is
                 Err err -> Err err
                 Ok { action, remaining, values } ->
-                    newAction =
-                        when action is
-                            GetValue -> GetValue
-                            FindOption -> FindOption
                     restOfGroup =
                         if List.isEmpty values then
                             Ok (ShortGroup shortGroup)
@@ -150,22 +169,33 @@ findOptionForExtraction = \state, arg, option ->
 
                     Ok
                         { state &
-                            action: newAction,
+                            action,
                             remainingArgs: state.remainingArgs |> List.appendIfOk restOfGroup,
                             values: state.values |> List.concat values,
                         }
 
-        Long long if long.name == option.long ->
-            when option.argsNeeded is
-                Zero ->
+        Long long ->
+            if long.name == optionLongName option.name then
+                if option.expectedType == None then
                     when long.value is
                         Ok _val -> Err (OptionDoesNotExpectValue option)
                         Err NoValue -> Ok { state & values: state.values |> List.append (Err NoValue) }
-
-                One ->
+                else
                     when long.value is
                         Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
                         Err NoValue -> Ok { state & action: GetValue }
+            else if long.name == optionLongName helpOption.name then
+                if state.specialFlags.help then
+                    Err (OptionCanOnlyBeSetOnce helpOption)
+                else
+                    Ok { state & specialFlags: { help: Bool.true, version: state.specialFlags.version } }
+            else if long.name == optionLongName versionOption.name then
+                if state.specialFlags.version then
+                    Err (OptionCanOnlyBeSetOnce versionOption)
+                else
+                    Ok { state & specialFlags: { help: state.specialFlags.help, version: Bool.true } }
+            else
+                Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
         _nothingFound ->
             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }

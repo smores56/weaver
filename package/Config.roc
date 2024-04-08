@@ -1,15 +1,18 @@
 interface Config
     exposes [
         DataParser,
-        # mapDataParserData,
-        # mapDataParserSubcommand,
         ArgExtractErr,
-        ValueType,
+        ExpectedType,
         Plurality,
-        ArgumentsNeeded,
+        SpecialFlags,
+        OptionName,
+        optionShortName,
+        optionLongName,
         OptionConfigParams,
         OptionConfig,
-        optionName,
+        helpOption,
+        versionOption,
+        ParameterConfigParams,
         ParameterConfig,
         CliConfigParams,
         CliConfig,
@@ -21,22 +24,6 @@ interface Config
     imports [Parser.{ Arg, ArgParseErr }]
 
 DataParser a : List Arg -> Result (a, List Arg) ArgExtractErr
-
-# mapDataParserData : DataParser a s, (a -> b) -> DataParser b s
-# mapDataParserData = \parser, mapper ->
-#     \args ->
-#         ({ data, subcommand }, remainingArgs) <- parser args
-#             |> Result.try
-
-#         Ok ({ data: mapper data, subcommand }, remainingArgs)
-
-# mapDataParserSubcommand : DataParser a s, (s -> t) -> DataParser a t
-# mapDataParserSubcommand = \parser, mapper ->
-#     \args ->
-#         ({ data, subcommand }, remainingArgs) <- parser args
-#             |> Result.try
-
-#         Ok ({ data, subcommand: subcommand |> Result.map mapper }, remainingArgs)
 
 ArgExtractErr : [
     MissingArg OptionConfig,
@@ -53,42 +40,56 @@ ArgExtractErr : [
     UnrecognizedLongArg Str,
 ]
 
-ValueType : [Str, Num, Bool, Custom Str]
+ExpectedType : [Str, Num, Custom Str]
+MaybeExpectedType : [None, Str, Num, Custom Str]
 
 Plurality : [Optional, One, Many]
 
-ArgumentsNeeded : [Zero, One]
+OptionName : [Short Str, Long Str, Both Str Str]
+
+optionShortName : OptionName -> Str
+optionShortName = \name ->
+    when name is
+        Short short -> short
+        Long _long -> ""
+        Both short _long -> short
+
+optionLongName : OptionName -> Str
+optionLongName = \name ->
+    when name is
+        Short _short -> ""
+        Long long -> long
+        Both _short long -> long
+
+SpecialFlags : { help : Bool, version : Bool }
 
 OptionConfigParams : {
-    short ? Str,
-    long ? Str,
-    name ? Str,
+    name : OptionName,
     help ? Str,
 }
 
 OptionConfig : {
-    type : ValueType,
+    expectedType : MaybeExpectedType,
     plurality : Plurality,
-    argsNeeded : ArgumentsNeeded,
-    short : Str,
-    long : Str,
-    name : Str,
+    name : OptionName,
     help : Str,
 }
 
-optionName : OptionConfig -> Str
-optionName = \{ short, long, name } ->
-    if name != "" then
-        name
-    else if long != "" then
-        long
-    else
-        short
+helpOption : OptionConfig
+helpOption = { name: Both "h" "help", help: "Show this help page.", expectedType: None, plurality: Optional }
+
+versionOption : OptionConfig
+versionOption = { name: Both "V" "version", help: "Show the version.", expectedType: None, plurality: Optional }
+
+ParameterConfigParams : {
+    name : Str,
+    help ? Str,
+}
 
 ParameterConfig : {
     name : Str,
     help : Str,
-    type : ValueType,
+    type : ExpectedType,
     plurality : Plurality,
 }
 

@@ -11,7 +11,7 @@ Arg : [
 
 ArgValue : Result Str [NoValue]
 
-ArgParseErr : [InvalidArg Str, MissingParameterValue Str]
+ArgParseErr : [InvalidArg Str]
 
 parseArgs : List Str -> Result (List Arg) ArgParseErr
 parseArgs = \args ->

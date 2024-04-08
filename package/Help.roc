@@ -1,29 +1,72 @@
 interface Help
-    exposes [helpText, helpTextForSubcommand]
-    imports [Config.{ CliConfig, OptionConfig, SubcommandsConfig, ParameterConfig }]
+    exposes [helpText]
+    imports [
+        Config.{
+            CliConfig,
+            OptionConfig,
+            ParameterConfig,
+            SubcommandConfig,
+            SubcommandsConfig,
+        },
+        Utils.{ toUpperCase, strLen },
+    ]
 
-# ArgExtractErr : [
-#     MissingArg OptionConfig,
-#     OptionCanOnlyBeSetOnce OptionConfig,
-#     NoValueProvidedForOption OptionConfig,
-#     OptionDoesNotExpectValue OptionConfig,
-#     CannotUsePartialShortGroupAsValue OptionConfig (List Str),
-#     InvalidNumArg OptionConfig,
-#     InvalidCustomArg OptionConfig Str,
-#     FailedToParseArgs ArgParseErr,
-#     MissingParam ParameterConfig,
-#     TooManyParamsProvided ParameterConfig,
-#     UnrecognizedShortArg Str,
-#     UnrecognizedLongArg Str,
-# ]
+helpText : { config : CliConfig, subcommandPath ? List Str } -> Str
+helpText = \{ config, subcommandPath ? [] } ->
+    findSubcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
+    findSubcommand = \command, path ->
+        when path is
+            [] -> Ok command
+            [first, .. as rest] ->
+                when command.subcommands is
+                    NoSubcommands -> Err KeyNotFound
+                    HasSubcommands scs ->
+                        Dict.get scs first
+                        |> Result.try \sc ->
+                            findSubcommand sc rest
 
-helpTextForSubcommand : CliConfig, List Str -> Str
-helpTextForSubcommand = \_config, _path ->
-    "TODO"
+    baseCommand = {
+        description: config.description,
+        options: config.options,
+        parameters: config.parameters,
+        subcommands: config.subcommands,
+    }
 
-helpText : CliConfig -> Str
-helpText = \config ->
-    { authors, description, name, version, options, parameters, subcommands } = config
+    (commandFound, subcommandPathFound) =
+        when findSubcommand baseCommand (List.dropFirst subcommandPath 1) is
+            Err KeyNotFound -> (baseCommand, [config.name])
+            Ok c ->
+                (
+                    c,
+                    if List.isEmpty subcommandPath then
+                        [config.name]
+                    else
+                        subcommandPath,
+                )
+
+    helpTextForCommand {
+        subcommandPath: subcommandPathFound,
+        version: config.version,
+        authors: config.authors,
+        description: commandFound.description,
+        options: commandFound.options,
+        parameters: commandFound.parameters,
+        subcommands: commandFound.subcommands,
+    }
+
+helpTextForCommand :
+    {
+        subcommandPath : List Str,
+        version : Str,
+        authors : List Str,
+        description : Str,
+        options : List OptionConfig,
+        parameters : List ParameterConfig,
+        subcommands : SubcommandsConfig,
+    }
+    -> Str
+helpTextForCommand = \{ subcommandPath, version, authors, description, options, parameters, subcommands } ->
+    name = subcommandPath |> Str.joinWith " "
 
     authorsText =
         if List.isEmpty authors then
@@ -37,22 +80,45 @@ helpText = \config ->
         else
             "No description."
 
+    subcommandsText =
+        when subcommands is
+            HasSubcommands scs if !(Dict.isEmpty scs) ->
+                commandsHelp subcommands
+
+            _noSubcommands -> ""
+
+    parametersText =
+        if List.isEmpty parameters then
+            ""
+        else
+            parametersHelp parameters
+
+    optionsText =
+        if List.isEmpty options then
+            ""
+        else
+            optionsHelp options
+
     """
     $(name) $(version)
     $(authorsText)
     $(descriptionText)
 
-    $(usageText config)
+    $(usageHelp { name, options, parameters, subcommands })
 
-    $(commandsText subcommands)
-
-    $(paramsText parameters)
-
-    $(optionsText options)
+    $([subcommandsText, parametersText, optionsText] |> Str.joinWith "\n\n")
     """
 
-usageText : CliConfig -> Str
-usageText = \{ name, options, parameters, subcommands } ->
+# TODO: consider showing required arguments in the usage
+usageHelp :
+    {
+        name : Str,
+        options : List OptionConfig,
+        parameters : List ParameterConfig,
+        subcommands : SubcommandsConfig,
+    }
+    -> Str
+usageHelp = \{ name, options, parameters, subcommands } ->
     optionsStr =
         if List.isEmpty options then
             ""
@@ -81,35 +147,26 @@ usageText = \{ name, options, parameters, subcommands } ->
     $(subcommandUsage)
     """
 
-commandsText : SubcommandsConfig -> Str
-commandsText = \subcommands ->
+commandsHelp : SubcommandsConfig -> Str
+commandsHelp = \subcommands ->
     commands =
         when subcommands is
             NoSubcommands -> []
             HasSubcommands sc -> Dict.toList sc
 
-    longestCommand =
-        commands
-        |> List.map \(name, _subConfig) -> List.len (Str.toUtf8 name)
-        |> List.max
-        |> Result.withDefault 0
-
     alignedCommands =
         commands
         |> List.map \(name, subConfig) ->
-            nameLen = List.len (Str.toUtf8 name)
-            buffer = Str.repeat " " (longestCommand - nameLen)
-
-            "  $(name)$(buffer)  $(subConfig.description)"
-        |> Str.joinWith "\n"
+            (name, subConfig.description)
+        |> alignTwoColumns
 
     """
     Commands:
-    $(alignedCommands)
+    $(Str.joinWith alignedCommands "\n")
     """
 
-paramsText : List ParameterConfig -> Str
-paramsText = \params ->
+parametersHelp : List ParameterConfig -> Str
+parametersHelp = \params ->
     formattedParams =
         params
         |> List.map \param ->
@@ -119,56 +176,50 @@ paramsText = \params ->
                     Many -> "..."
 
             ("[$(param.name)]$(ellipsis)", param.help)
-
-    maxNameLen =
-        formattedParams
-        |> List.map \(name, _help) -> List.len (Str.toUtf8 name)
-        |> List.max
-        |> Result.withDefault 0
-
-    alignedParams =
-        formattedParams
-        |> List.map \(name, help) ->
-            buffer = Str.repeat " " (maxNameLen - List.len (Str.toUtf8 name))
-            "  $(name)$(buffer)  $(help)"
+        |> alignTwoColumns
 
     """
     Arguments:
-    $(Str.joinWith alignedParams "\n")
+    $(Str.joinWith formattedParams "\n")
     """
 
-optionsText : List OptionConfig -> Str
-optionsText = \options ->
-    optionNameFormatter =
-        if List.all options \o -> Str.isEmpty o.short then
-            \opt -> "--$(opt.long)"
-        else if List.all options \o -> Str.isEmpty o.long then
-            \opt -> "-$(opt.short)"
-        else
-            \opt ->
-                when (opt.short, opt.long) is
-                    ("", "") -> ""
-                    (short, "") -> "-$(short)"
-                    ("", long) -> "    --$(long)"
-                    (short, long) -> "-$(short), --$(long)"
+optionsHelp : List OptionConfig -> Str
+optionsHelp = \options ->
+    optionNameFormatter = \opt ->
+        name =
+            when opt.name is
+                Short short -> "-$(short)"
+                Long long -> "    --$(long)"
+                Both short long -> "-$(short), --$(long)"
+
+        typeName =
+            when opt.expectedType is
+                None -> ""
+                Str -> " STR"
+                Num -> " NUM"
+                Custom c -> " $(toUpperCase c)"
+
+        Str.concat name typeName
 
     formattedOptions =
-        List.map options \option ->
+        options
+        |> List.map \option ->
             (optionNameFormatter option, option.help)
-
-    maxNameLen =
-        formattedOptions
-        |> List.map \(name, _help) -> List.len (Str.toUtf8 name)
-        |> List.max
-        |> Result.withDefault 0
-
-    alignedOptions =
-        List.map formattedOptions \(name, help) ->
-            buffer = Str.repeat " " (maxNameLen - List.len (Str.toUtf8 name))
-            "  $(name)$(buffer)  $(help)"
+        |> alignTwoColumns
 
     """
     Options:
-    $(Str.joinWith alignedOptions "\n")
+    $(Str.joinWith formattedOptions "\n")
     """
 
+alignTwoColumns : List (Str, Str) -> List Str
+alignTwoColumns = \columns ->
+    maxFirstColumnLen =
+        columns
+        |> List.map \(first, _second) -> strLen first
+        |> List.max
+        |> Result.withDefault 0
+
+    List.map columns \(first, second) ->
+        buffer = Str.repeat " " (maxFirstColumnLen - strLen first)
+        "  $(first)$(buffer)  $(second)"

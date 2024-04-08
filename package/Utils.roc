@@ -1,6 +1,10 @@
 interface Utils
-    exposes [strLen, isKebabCase]
+    exposes [strLen, isKebabCase, toUpperCase]
     imports []
+
+lowerAAsciiCode = 97
+lowerZAsciiCode = 122
+lowerToUpperCaseAsciiDelta = 32
 
 strLen : Str -> U64
 strLen = \s -> List.len (Str.toUtf8 s)
@@ -14,8 +18,6 @@ isDigit = \char ->
 
 isLowerCase : U8 -> Bool
 isLowerCase = \char ->
-    lowerAAsciiCode = 97
-    lowerZAsciiCode = 122
 
     char >= lowerAAsciiCode && char <= lowerZAsciiCode
 
@@ -41,3 +43,15 @@ isKebabCase = \s ->
                     !(left == dashAsciiCode && right == dashAsciiCode)
 
             firstIsKebab && lastIsKebab && middleIsKebab && noDoubleDashes
+
+toUpperCase : Str -> Str
+toUpperCase = \str ->
+    str
+    |> Str.toUtf8
+    |> List.map \c ->
+        if isLowerCase c then
+            c - lowerToUpperCaseAsciiDelta
+        else
+            c
+    |> Str.fromUtf8
+    |> Result.withDefault ""
