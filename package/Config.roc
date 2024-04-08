@@ -1,6 +1,8 @@
 interface Config
     exposes [
-        DataParser,
+        ArgParserResult,
+        ArgParser,
+        onSuccessfulArgParse,
         ArgExtractErr,
         ExpectedType,
         Plurality,
@@ -23,7 +25,24 @@ interface Config
     ]
     imports [Parser.{ Arg, ArgParseErr }]
 
-DataParser a : List Arg -> Result (a, List Arg) ArgExtractErr
+ArgParserResult a : [
+    ShowHelp { subcommandPath : List Str },
+    ShowVersion,
+    IncorrectUsage ArgExtractErr { subcommandPath : List Str },
+    SuccessfullyParsed a,
+]
+
+ArgParser a : { args : List Arg, subcommandPath : List Str } -> ArgParserResult { data : a, remainingArgs : List Arg, subcommandPath : List Str }
+
+onSuccessfulArgParse : ArgParser a, ({ data : a, remainingArgs : List Arg, subcommandPath : List Str } -> ArgParserResult { data : b, remainingArgs : List Arg, subcommandPath : List Str }) -> ArgParser b
+onSuccessfulArgParse = \result, mapper ->
+    \input ->
+        when result input is
+            ShowVersion -> ShowVersion
+            ShowHelp { subcommandPath } -> ShowHelp { subcommandPath }
+            IncorrectUsage argExtractErr { subcommandPath } -> IncorrectUsage argExtractErr { subcommandPath }
+            SuccessfullyParsed { data, remainingArgs, subcommandPath } ->
+                mapper { data, remainingArgs, subcommandPath }
 
 ArgExtractErr : [
     MissingArg OptionConfig,
@@ -33,11 +52,10 @@ ArgExtractErr : [
     CannotUsePartialShortGroupAsValue OptionConfig (List Str),
     InvalidNumArg OptionConfig,
     InvalidCustomArg OptionConfig Str,
-    FailedToParseArgs ArgParseErr,
     MissingParam ParameterConfig,
-    TooManyParamsProvided ParameterConfig,
     UnrecognizedShortArg Str,
     UnrecognizedLongArg Str,
+    ExtraParamProvided Str,
 ]
 
 ExpectedType : [Str, Num, Custom Str]

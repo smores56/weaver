@@ -1,8 +1,7 @@
 interface ErrorFormatter
-    exposes [formatArgExtractErr, formatArgParseErr, formatCliValidationErr]
+    exposes [formatArgExtractErr, formatCliValidationErr]
     imports [
         Config.{ ArgExtractErr, OptionName, OptionConfig },
-        Parser.{ ArgParseErr },
         Validate.{ CliValidationErr },
     ]
 
@@ -39,22 +38,16 @@ formatArgExtractErr = \err ->
         CannotUsePartialShortGroupAsValue option partialGroup ->
             renderedGroup = "-$(Str.joinWith partialGroup "")"
 
-            "The short option group $(renderedGroup) has been partially consumed and cannot be used as a value for $(optionDisplayName option)."
+            "The short option group $(renderedGroup) was partially consumed and cannot be used as a value for $(optionDisplayName option)."
 
         InvalidNumArg option ->
-            "The value provided to $(optionDisplayName option) is not a valid number."
+            "The value provided to $(optionDisplayName option) was not a valid number."
 
         InvalidCustomArg option reason ->
-            "The value provided to $(optionDisplayName option) is not a valid $(optionTypeName option): $(reason)."
-
-        FailedToParseArgs argParseErr ->
-            formatArgParseErr argParseErr
+            "The value provided to $(optionDisplayName option) was not a valid $(optionTypeName option): $(reason)."
 
         MissingParam parameter ->
             "The parameter $(parameter |> .name) did not receive a value."
-
-        TooManyParamsProvided parameter ->
-            "The parameter $(parameter |> .name) received too many values."
 
         UnrecognizedShortArg short ->
             "The argument -$(short) was not recognized."
@@ -62,11 +55,8 @@ formatArgExtractErr = \err ->
         UnrecognizedLongArg long ->
             "The argument --$(long) was not recognized."
 
-formatArgParseErr : ArgParseErr -> Str
-formatArgParseErr = \err ->
-    when err is
-        InvalidArg arg ->
-            "The argument $(arg) is invalid."
+        ExtraParamProvided param ->
+            "The parameter $(param) was not requested."
 
 formatCliValidationErr : CliValidationErr -> Str
 formatCliValidationErr = \err ->
@@ -75,7 +65,7 @@ formatCliValidationErr = \err ->
             if List.len subcommandPath <= 1 then
                 ""
             else
-                " for command $(Str.joinWith subcommandPath " ")"
+                " for command '$(Str.joinWith subcommandPath " ")'"
 
         "$(name)$(subcommandPathSuffix)"
 

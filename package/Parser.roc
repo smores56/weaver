@@ -1,5 +1,5 @@
 interface Parser
-    exposes [parseArgs, Arg, ArgValue, ArgParseErr]
+    exposes [parseArgs, Arg, ArgValue]
     imports []
 
 Arg : [
@@ -11,34 +11,30 @@ Arg : [
 
 ArgValue : Result Str [NoValue]
 
-ArgParseErr : [InvalidArg Str]
-
-parseArgs : List Str -> Result (List Arg) ArgParseErr
+parseArgs : List Str -> List Arg
 parseArgs = \args ->
     args
     |> List.dropFirst 1
-    |> List.mapTry parseArg
+    |> List.map parseArg
 
-parseArg : Str -> Result Arg ArgParseErr
+parseArg : Str -> Arg
 parseArg = \arg ->
     when Str.splitFirst arg "-" is
         Ok { before: "", after } ->
             if after == "" then
-                Ok (Parameter "-")
+                Parameter "-"
             else
                 when Str.splitFirst after "-" is
                     Ok { before: "", after: rest } ->
-                        if rest == "" then
-                            Ok (Parameter "--")
-                        else if Str.startsWith rest "-" then
-                            Err (InvalidArg arg)
+                        if Str.startsWith rest "-" then
+                            Parameter arg
                         else
-                            Ok (parseLongArg rest)
+                            parseLongArg rest
 
-                    _other -> Ok (constructSetOfOptions after)
+                    _other -> constructSetOfOptions after
 
         _other ->
-            Ok (Parameter arg)
+            Parameter arg
 
 parseLongArg : Str -> Arg
 parseLongArg = \arg ->
@@ -63,38 +59,38 @@ constructSetOfOptions = \combined ->
 expect
     parsed = parseArg "-"
 
-    parsed == Ok (Parameter "-")
+    parsed == (Parameter "-")
 
 expect
     parsed = parseArg "-a"
 
-    parsed == Ok (Short "a")
+    parsed == (Short "a")
 
 expect
     parsed = parseArg "-abc"
 
-    parsed == Ok (ShortGroup { names: ["a", "b", "c"], complete: Complete })
+    parsed == (ShortGroup { names: ["a", "b", "c"], complete: Complete })
 
 expect
     parsed = parseArg "--abc"
 
-    parsed == Ok (Long { name: "abc", value: Err NoValue })
+    parsed == (Long { name: "abc", value: Err NoValue })
 
 expect
     parsed = parseArg "--abc=xyz"
 
-    parsed == Ok (Long { name: "abc", value: Ok "xyz" })
+    parsed == (Long { name: "abc", value: Ok "xyz" })
 
 expect
     parsed = parseArg "123"
 
-    parsed == Ok (Parameter "123")
+    parsed == (Parameter "123")
 
 expect
     parsed = parseArgs ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
 
     parsed
-    == Ok [
+    == [
         Short "a",
         Parameter "123",
         Long { name: "passed", value: Err NoValue },

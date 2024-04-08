@@ -11,24 +11,23 @@ app "basic"
             cliBuilder,
             finishCli,
             assertCliIsValid,
+            parseOrDisplayMessage,
             finishSubcommand,
             subcommandField,
             numOption,
-            strParam,
+            maybeStrParam,
         },
-        weaver.Help.{ helpText },
     ]
     provides [main] to pf
 
 main : Task {} I32
 main =
     args <- Arg.list |> Task.await
-    { parser, config } = cliParser
 
     textToDisplay =
-        when parser args is
+        when parseOrDisplayMessage cliParser args is
             Ok data -> "Successfully parsed! Here's what I got:\n\n$(Inspect.toStr data)"
-            Err err -> "Error while extracting args: $(Inspect.toStr err)\n\n$(helpText { config })"
+            Err message -> message
 
     Stdout.line textToDisplay
 
@@ -65,7 +64,7 @@ cliParser =
     cliBuilder {
         x: <- numOption { name: Short "x" },
         sc: <- subcommandField [subcommandParser1, subcommandParser2],
-        y: <- strParam { name: "y" },
+        y: <- maybeStrParam { name: "y" },
     }
     |> finishCli { name: "basic", version: "v0.0.1", authors: ["John Doe <john.doe@mail.com>"] }
     |> assertCliIsValid

@@ -5,6 +5,8 @@ interface Validate
         Config.{
             OptionName,
             OptionConfig,
+            helpOption,
+            versionOption,
             ParameterConfig,
             SubcommandsConfig,
             CliConfig,
@@ -110,16 +112,19 @@ ensureLongFlagIsWellNamed = \{ name, subcommandPath } ->
 
 namesOverlap : OptionName, OptionName -> Bool
 namesOverlap = \left, right ->
-    when (left, right) is
-        (Short sl, Short sr) -> sl == sr
-        (Long _ll, Short _sr) -> Bool.false
-        (Both sl _ll, Short sr) -> sl == sr
-        (Short _sl, Long _lr) -> Bool.false
-        (Long ll, Long lr) -> ll == lr
-        (Both _sl ll, Long lr) -> ll == lr
-        (Short sl, Both sr _lr) -> sl == sr
-        (Long ll, Both _sr lr) -> ll == lr
-        (Both sl ll, Both sr lr) -> sl == sr || ll == lr
+    if left == helpOption.name || left == versionOption.name then
+        Bool.false
+    else
+        when (left, right) is
+            (Short sl, Short sr) -> sl == sr
+            (Long _ll, Short _sr) -> Bool.false
+            (Both sl _ll, Short sr) -> sl == sr
+            (Short _sl, Long _lr) -> Bool.false
+            (Long ll, Long lr) -> ll == lr
+            (Both _sl ll, Long lr) -> ll == lr
+            (Short sl, Both sr _lr) -> sl == sr
+            (Long ll, Both _sr lr) -> ll == lr
+            (Both sl ll, Both sr lr) -> sl == sr || ll == lr
 
 checkIfThereAreOverlappingOptions : List OptionAtSubcommand -> Result {} CliValidationErr
 checkIfThereAreOverlappingOptions = \options ->

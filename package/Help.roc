@@ -1,5 +1,5 @@
 interface Help
-    exposes [helpText]
+    exposes [helpText, usageHelp]
     imports [
         Config.{
             CliConfig,
@@ -11,20 +11,8 @@ interface Help
         Utils.{ toUpperCase, strLen },
     ]
 
-helpText : { config : CliConfig, subcommandPath ? List Str } -> Str
-helpText = \{ config, subcommandPath ? [] } ->
-    findSubcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
-    findSubcommand = \command, path ->
-        when path is
-            [] -> Ok command
-            [first, .. as rest] ->
-                when command.subcommands is
-                    NoSubcommands -> Err KeyNotFound
-                    HasSubcommands scs ->
-                        Dict.get scs first
-                        |> Result.try \sc ->
-                            findSubcommand sc rest
-
+findSubcommandOrDefault : CliConfig, List Str -> { config : CliConfig, path : List Str }
+findSubcommandOrDefault = \config, path ->
     baseCommand = {
         description: config.description,
         options: config.options,
@@ -32,40 +20,43 @@ helpText = \{ config, subcommandPath ? [] } ->
         subcommands: config.subcommands,
     }
 
-    (commandFound, subcommandPathFound) =
-        when findSubcommand baseCommand (List.dropFirst subcommandPath 1) is
-            Err KeyNotFound -> (baseCommand, [config.name])
-            Ok c ->
-                (
-                    c,
-                    if List.isEmpty subcommandPath then
-                        [config.name]
-                    else
-                        subcommandPath,
-                )
+    when findSubcommand baseCommand (List.dropFirst path 1) is
+        Err KeyNotFound -> { config, path }
+        Ok { config: c, path: subPath } ->
+            {
+                config: {
+                    name: config.name,
+                    version: config.version,
+                    authors: config.authors,
+                    description: c.description,
+                    options: c.options,
+                    parameters: c.parameters,
+                    subcommands: c.subcommands,
+                },
+                path: subPath,
+            }
 
-    helpTextForCommand {
-        subcommandPath: subcommandPathFound,
-        version: config.version,
-        authors: config.authors,
-        description: commandFound.description,
-        options: commandFound.options,
-        parameters: commandFound.parameters,
-        subcommands: commandFound.subcommands,
-    }
+findSubcommand : SubcommandConfig, List Str -> Result { config : SubcommandConfig, path : List Str } [KeyNotFound]
+findSubcommand = \command, path ->
+    when path is
+        [] -> Ok { config: command, path }
+        [first, .. as rest] ->
+            when command.subcommands is
+                NoSubcommands -> Err KeyNotFound
+                HasSubcommands scs ->
+                    Dict.get scs first
+                    |> Result.try \sc ->
+                        findSubcommand sc rest
 
-helpTextForCommand :
-    {
-        subcommandPath : List Str,
-        version : Str,
-        authors : List Str,
-        description : Str,
-        options : List OptionConfig,
-        parameters : List ParameterConfig,
-        subcommands : SubcommandsConfig,
-    }
-    -> Str
-helpTextForCommand = \{ subcommandPath, version, authors, description, options, parameters, subcommands } ->
+helpText : { config : CliConfig, subcommandPath ? List Str } -> Str
+helpText = \{ config, subcommandPath ? [] } ->
+    { config: command, path } = findSubcommandOrDefault config subcommandPath
+    helpTextForCommand command path
+
+helpTextForCommand : CliConfig, List Str -> Str
+helpTextForCommand = \config, subcommandPath ->
+    { version, authors, description, options, parameters, subcommands } = config
+
     name = subcommandPath |> Str.joinWith " "
 
     authorsText =
@@ -104,21 +95,17 @@ helpTextForCommand = \{ subcommandPath, version, authors, description, options, 
     $(authorsText)
     $(descriptionText)
 
-    $(usageHelp { name, options, parameters, subcommands })
+    $(usageHelp config subcommandPath)
 
     $([subcommandsText, parametersText, optionsText] |> Str.joinWith "\n\n")
     """
 
 # TODO: consider showing required arguments in the usage
-usageHelp :
-    {
-        name : Str,
-        options : List OptionConfig,
-        parameters : List ParameterConfig,
-        subcommands : SubcommandsConfig,
-    }
-    -> Str
-usageHelp = \{ name, options, parameters, subcommands } ->
+usageHelp : CliConfig, List Str -> Str
+usageHelp = \config, path ->
+    { config: { options, parameters, subcommands }, path: subcommandPath } = findSubcommandOrDefault config path
+    name = Str.joinWith subcommandPath " "
+
     optionsStr =
         if List.isEmpty options then
             ""
