@@ -33,7 +33,7 @@ expect
 
     out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
 
-    out == Ok { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }
+    out == SuccessfullyParsed { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }
 ```
 
 There are also some examples in the [examples](./examples) directory that are more feature-complete,
@@ -47,7 +47,7 @@ These are the main things I want to work on:
 - [X] simply-implemented support for optional args/lists of args
 - [ ] full documentation of the library's features
 - [ ] multiple documented and tested examples
-- [~] automatic help text generation
+- [X] automatic help text generation
 - [X] subcommands, as simple as possible
 - [X] choice args that select an option from a custom enum
 - [ ] add more testing

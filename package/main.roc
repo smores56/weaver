@@ -1,3 +1,3 @@
 package "weaver"
-    exposes [Parser, Config, Builder, Help]
+    exposes [Builder, Config, Help, Validate]
     packages {}

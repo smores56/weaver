@@ -56,7 +56,7 @@ formatArgExtractErr = \err ->
             "The argument --$(long) was not recognized."
 
         ExtraParamProvided param ->
-            "The parameter $(param) was not requested."
+            "The parameter $(param) was not expected."
 
 formatCliValidationErr : CliValidationErr -> Str
 formatCliValidationErr = \err ->

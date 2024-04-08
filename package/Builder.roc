@@ -197,6 +197,7 @@ parseOrDisplayMessage : CliParser state, List Str -> Result state Str
 parseOrDisplayMessage = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
+        # TODO: guess submodule so we can tell which subcommand was called even if help is parsed first
         ShowHelp { subcommandPath } -> Err (helpText { config: parser.config, subcommandPath })
         ShowVersion -> Err parser.config.version
         IncorrectUsage err { subcommandPath } ->
@@ -210,6 +211,7 @@ parseOrDisplayMessage = \parser, args ->
                 """
 
             Err incorrectUsageStr
+
 
 subcommandField : List { name : Str, parser : ArgParser subState, config : SubcommandConfig } -> (CliBuilder (Result subState [NoSubcommand] -> state) GetOptionsAction -> CliBuilder state GetParamsAction)
 subcommandField = \subcommandConfigs ->
@@ -416,7 +418,7 @@ expect
         }
         |> finishSubcommand { name: "sub", description: "Second subcommand", mapper: Sub }
 
-    { parser } =
+    cliParser =
         cliBuilder {
             alpha: <- numOption { name: Short "a" },
             beta: <- flagOption { name: Both "b" "beta" },
@@ -427,6 +429,8 @@ expect
         |> finishCli { name: "app" }
         |> assertCliIsValid
 
-    out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
+    args = ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
+
+    out = cliParser.parser args
 
     out == SuccessfullyParsed { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }

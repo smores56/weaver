@@ -26,7 +26,7 @@ parseArg = \arg ->
             else
                 when Str.splitFirst after "-" is
                     Ok { before: "", after: rest } ->
-                        if Str.startsWith rest "-" then
+                        if rest == "" || Str.startsWith rest "-" then
                             Parameter arg
                         else
                             parseLongArg rest

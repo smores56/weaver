@@ -22,7 +22,7 @@ findSubcommandOrDefault = \config, path ->
 
     when findSubcommand baseCommand (List.dropFirst path 1) is
         Err KeyNotFound -> { config, path }
-        Ok { config: c, path: subPath } ->
+        Ok c ->
             {
                 config: {
                     name: config.name,
@@ -33,13 +33,13 @@ findSubcommandOrDefault = \config, path ->
                     parameters: c.parameters,
                     subcommands: c.subcommands,
                 },
-                path: subPath,
+                path,
             }
 
-findSubcommand : SubcommandConfig, List Str -> Result { config : SubcommandConfig, path : List Str } [KeyNotFound]
+findSubcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
 findSubcommand = \command, path ->
     when path is
-        [] -> Ok { config: command, path }
+        [] -> Ok command
         [first, .. as rest] ->
             when command.subcommands is
                 NoSubcommands -> Err KeyNotFound
@@ -48,8 +48,8 @@ findSubcommand = \command, path ->
                     |> Result.try \sc ->
                         findSubcommand sc rest
 
-helpText : { config : CliConfig, subcommandPath ? List Str } -> Str
-helpText = \{ config, subcommandPath ? [] } ->
+helpText : { config : CliConfig, subcommandPath : List Str } -> Str
+helpText = \{ config, subcommandPath } ->
     { config: command, path } = findSubcommandOrDefault config subcommandPath
     helpTextForCommand command path
 
@@ -125,13 +125,12 @@ usageHelp = \config, path ->
 
     subcommandUsage =
         when subcommands is
-            HasSubcommands sc if !(Dict.isEmpty sc) -> "  $(name) <COMMAND>"
+            HasSubcommands sc if !(Dict.isEmpty sc) -> "\n  $(name) <COMMAND>"
             _other -> ""
 
     """
     Usage:
-      $(name)$(optionsStr)$(paramsStr)
-    $(subcommandUsage)
+      $(name)$(optionsStr)$(paramsStr)$(subcommandUsage)
     """
 
 commandsHelp : SubcommandsConfig -> Str
