@@ -23,7 +23,7 @@ optionTypeName = \option ->
 formatArgExtractErr : ArgExtractErr -> Str
 formatArgExtractErr = \err ->
     when err is
-        MissingArg option ->
+        MissingOption option ->
             "Required option $(optionDisplayName option) is missing."
 
         OptionCanOnlyBeSetOnce option ->
@@ -72,9 +72,15 @@ formatCliValidationErr = \err ->
     optionAtSubcommandName = \{ option, subcommandPath } ->
         valueAtSubcommandName { name: "option '$(optionDisplayName option)'", subcommandPath }
 
+    paramAtSubcommandName = \{ name, subcommandPath } ->
+        valueAtSubcommandName { name: "parameter '$(name)'", subcommandPath }
+
     when err is
         OverlappingOptionNames option1 option2 ->
             "The $(optionAtSubcommandName option1) overlaps with the $(optionAtSubcommandName option2)."
+
+        OverlappingParameterNames { first, second, subcommandPath } ->
+            "The $(paramAtSubcommandName { name: first, subcommandPath }) overlaps with the $(paramAtSubcommandName { name: second, subcommandPath })."
 
         InvalidShortFlagName { name, subcommandPath } ->
             valueName = "option '-$(name)'"

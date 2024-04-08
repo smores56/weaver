@@ -3,6 +3,7 @@ interface Config
         ArgParserResult,
         ArgParser,
         onSuccessfulArgParse,
+        mapSuccessfullyParsed,
         ArgExtractErr,
         ExpectedType,
         Plurality,
@@ -44,8 +45,17 @@ onSuccessfulArgParse = \result, mapper ->
             SuccessfullyParsed { data, remainingArgs, subcommandPath } ->
                 mapper { data, remainingArgs, subcommandPath }
 
+mapSuccessfullyParsed : ArgParserResult a, (a -> b) -> ArgParserResult b
+mapSuccessfullyParsed = \result, mapper ->
+    when result is
+        ShowVersion -> ShowVersion
+        ShowHelp { subcommandPath } -> ShowHelp { subcommandPath }
+        IncorrectUsage argExtractErr { subcommandPath } -> IncorrectUsage argExtractErr { subcommandPath }
+        SuccessfullyParsed parsed ->
+            SuccessfullyParsed (mapper parsed)
+
 ArgExtractErr : [
-    MissingArg OptionConfig,
+    MissingOption OptionConfig,
     OptionCanOnlyBeSetOnce OptionConfig,
     NoValueProvidedForOption OptionConfig,
     OptionDoesNotExpectValue OptionConfig,

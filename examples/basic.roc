@@ -15,7 +15,11 @@ app "basic"
             finishSubcommand,
             subcommandField,
             numOption,
+            maybeNumOption,
+            strParam,
             maybeStrParam,
+            strListParam,
+            flagOption,
         },
     ]
     provides [main] to pf
@@ -34,37 +38,47 @@ main =
 cliParser =
     subSubcommandParser1 =
         cliBuilder {
-            a: <- numOption { name: Short "a" },
-            b: <- numOption { name: Short "b" },
+            a: <- numOption { name: Short "a", help: "An example short flag for a sub-subcommand." },
+            b: <- numOption { name: Short "b", help: "Another example short flag for a sub-subcommand." },
         }
-        |> finishSubcommand { name: "ss1", description: "", mapper: SS1 }
+        |> finishSubcommand { name: "ss1", description: "A sub-subcommand.", mapper: SS1 }
 
     subSubcommandParser2 =
         cliBuilder {
             a: <- numOption { name: Short "a" },
-            c: <- numOption { name: Short "c" },
+            c: <- numOption { name: Both "c" "create" },
+            data: <- strParam { name: "data", help: "Data to manipulate." },
         }
-        |> finishSubcommand { name: "ss2", description: "", mapper: SS2 }
+        |> finishSubcommand { name: "ss2", description: "Another sub-subcommand.", mapper: SS2 }
 
     subcommandParser1 =
         cliBuilder {
-            d: <- numOption { name: Short "d" },
-            e: <- numOption { name: Short "e" },
+            d: <- maybeNumOption { name: Short "d", help: "A non-overlapping subcommand flag with s2." },
+            volume: <- maybeNumOption { name: Both "v" "volume", help: "How loud to grind the gears." },
             sc: <- subcommandField [subSubcommandParser1, subSubcommandParser2],
         }
-        |> finishSubcommand { name: "s1", description: "", mapper: S1 }
+        |> finishSubcommand { name: "s1", description: "A first subcommand.", mapper: S1 }
 
     subcommandParser2 =
         cliBuilder {
-            d: <- numOption { name: Short "d" },
-            f: <- numOption { name: Short "f" },
+            d: <- maybeNumOption { name: Short "d", help: "This doesn't overlap with s1's -d flag." },
         }
-        |> finishSubcommand { name: "s2", description: "", mapper: S2 }
+        |> finishSubcommand {
+            name: "s2",
+            description: "Another subcommand.",
+            mapper: S2,
+        }
 
     cliBuilder {
-        x: <- numOption { name: Short "x" },
+        force: <- flagOption { name: Short "f", help: "Force the task to complete." },
         sc: <- subcommandField [subcommandParser1, subcommandParser2],
-        y: <- maybeStrParam { name: "y" },
+        file: <- maybeStrParam { name: "file" },
+        files: <- strListParam { name: "files" },
     }
-    |> finishCli { name: "basic", version: "v0.0.1", authors: ["John Doe <john.doe@mail.com>"] }
+    |> finishCli {
+        name: "basic",
+        version: "v0.0.1",
+        authors: ["Some One <some.one@mail.com>"],
+        description: "This is a basic example of what you can build with Weaver. You get safe parsing, useful error messages, and help pages all for free!",
+    }
     |> assertCliIsValid

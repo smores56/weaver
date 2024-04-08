@@ -8,13 +8,10 @@ interface Extract
     imports [
         Config.{
             ArgExtractErr,
-            SpecialFlags,
             OptionName,
             optionShortName,
             optionLongName,
             OptionConfig,
-            helpOption,
-            versionOption,
             ParameterConfig,
         },
         Parser.{
@@ -78,7 +75,8 @@ extractParamValues = \{ args, param } ->
                 StopParsing ->
                     Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-    Result.map stateAfter \{ values, remainingArgs } -> { values, remainingArgs }
+    Result.map stateAfter \{ values, remainingArgs } ->
+        { values, remainingArgs }
 
 ExtractOptionValuesParams : {
     args : List Arg,
@@ -88,14 +86,12 @@ ExtractOptionValuesParams : {
 ExtractOptionValuesOutput : {
     values : List ArgValue,
     remainingArgs : List Arg,
-    specialFlags : SpecialFlags,
 }
 
 ExtractOptionValueWalkerState : {
     action : [FindOption, GetValue],
     values : List ArgValue,
     remainingArgs : List Arg,
-    specialFlags : SpecialFlags,
 }
 
 extractOptionValues : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
@@ -104,7 +100,6 @@ extractOptionValues = \{ args, option } ->
         action: FindOption,
         values: [],
         remainingArgs: [],
-        specialFlags: { help: Bool.false, version: Bool.false },
     }
 
     stateAfter = List.walkTry args startingState \state, arg ->
@@ -114,10 +109,10 @@ extractOptionValues = \{ args, option } ->
 
     when stateAfter is
         Err err -> Err err
-        Ok { action, values, remainingArgs, specialFlags } ->
+        Ok { action, values, remainingArgs } ->
             when action is
                 GetValue -> Err (NoValueProvidedForOption option)
-                FindOption -> Ok { values, remainingArgs, specialFlags }
+                FindOption -> Ok { values, remainingArgs }
 
 findOptionForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
 findOptionForExtraction = \state, arg, option ->
@@ -128,16 +123,6 @@ findOptionForExtraction = \state, arg, option ->
                     Ok { state & values: state.values |> List.append (Err NoValue) }
                 else
                     Ok { state & action: GetValue }
-            else if short == optionShortName helpOption.name then
-                if state.specialFlags.help then
-                    Err (OptionCanOnlyBeSetOnce helpOption)
-                else
-                    Ok { state & specialFlags: { help: Bool.true, version: state.specialFlags.version } }
-            else if short == optionShortName versionOption.name then
-                if state.specialFlags.version then
-                    Err (OptionCanOnlyBeSetOnce versionOption)
-                else
-                    Ok { state & specialFlags: { help: state.specialFlags.help, version: Bool.true } }
             else
                 Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
@@ -184,16 +169,6 @@ findOptionForExtraction = \state, arg, option ->
                     when long.value is
                         Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
                         Err NoValue -> Ok { state & action: GetValue }
-            else if long.name == optionLongName helpOption.name then
-                if state.specialFlags.help then
-                    Err (OptionCanOnlyBeSetOnce helpOption)
-                else
-                    Ok { state & specialFlags: { help: Bool.true, version: state.specialFlags.version } }
-            else if long.name == optionLongName versionOption.name then
-                if state.specialFlags.version then
-                    Err (OptionCanOnlyBeSetOnce versionOption)
-                else
-                    Ok { state & specialFlags: { help: state.specialFlags.help, version: Bool.true } }
             else
                 Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
@@ -218,13 +193,13 @@ getValueForExtraction = \state, arg, option ->
 getSingleValue : List ArgValue, OptionConfig -> Result ArgValue ArgExtractErr
 getSingleValue = \values, option ->
     when values is
-        [] -> Err (MissingArg option)
+        [] -> Err (MissingOption option)
         [single] -> Ok single
         [..] -> Err (OptionCanOnlyBeSetOnce option)
 
 getOptionalValue : List ArgValue, OptionConfig -> Result (Result ArgValue [NoValue]) ArgExtractErr
 getOptionalValue = \values, option ->
     when values is
-        [] -> Ok (Ok (Err NoValue))
+        [] -> Ok (Err NoValue)
         [single] -> Ok (Ok single)
         [..] -> Err (OptionCanOnlyBeSetOnce option)

@@ -16,6 +16,7 @@ interface Validate
 OptionAtSubcommand : { option : OptionConfig, subcommandPath : List Str }
 
 CliValidationErr : [
+    OverlappingParameterNames { first : Str, second : Str, subcommandPath : List Str },
     OverlappingOptionNames OptionAtSubcommand OptionAtSubcommand,
     InvalidShortFlagName { name : Str, subcommandPath : List Str },
     InvalidLongFlagName { name : Str, subcommandPath : List Str },
@@ -43,6 +44,8 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
         |> Result.try
     _ <- parameters
         |> List.mapTry \param -> ensureParamIsWellNamed { name: param.name, subcommandPath }
+        |> Result.try
+    {} <- checkIfThereAreOverlappingParameters parameters subcommandPath
         |> Result.try
 
     when subcommands is
@@ -128,7 +131,6 @@ namesOverlap = \left, right ->
 
 checkIfThereAreOverlappingOptions : List OptionAtSubcommand -> Result {} CliValidationErr
 checkIfThereAreOverlappingOptions = \options ->
-
     List.range { start: At 1, end: Before (List.len options) }
     |> List.map \offset ->
         List.map2 options (List.dropFirst options offset) Pair
@@ -137,6 +139,20 @@ checkIfThereAreOverlappingOptions = \options ->
         |> List.mapTry \Pair left right ->
             if namesOverlap left.option.name right.option.name then
                 Err (OverlappingOptionNames left right)
+            else
+                Ok {}
+    |> Result.map \_sucesses -> {}
+
+checkIfThereAreOverlappingParameters : List ParameterConfig, List Str -> Result {} CliValidationErr
+checkIfThereAreOverlappingParameters = \parameters, subcommandPath ->
+    List.range { start: At 1, end: Before (List.len parameters) }
+    |> List.map \offset ->
+        List.map2 parameters (List.dropFirst parameters offset) Pair
+    |> List.mapTry \pairs ->
+        pairs
+        |> List.mapTry \Pair first second ->
+            if first.name == second.name then
+                Err (OverlappingParameterNames { first: first.name, second: second.name, subcommandPath })
             else
                 Ok {}
     |> Result.map \_sucesses -> {}

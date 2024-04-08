@@ -27,7 +27,10 @@ interface Builder
             ArgParser,
             ArgParserResult,
             onSuccessfulArgParse,
+            mapSuccessfullyParsed,
             ArgExtractErr,
+            optionShortName,
+            optionLongName,
             OptionConfigParams,
             OptionConfig,
             helpOption,
@@ -99,15 +102,10 @@ buildParserUsingExtractedOption = \@CliBuilder builder, option, handler ->
 
     when extractOptionValues { args: restOfArgs, option } is
         Err extractErr -> IncorrectUsage extractErr { subcommandPath }
-        Ok { values, remainingArgs, specialFlags } ->
-            if specialFlags.help then
-                ShowHelp { subcommandPath }
-            else if specialFlags.version then
-                ShowVersion
-            else
-                when handler { data, values } is
-                    Ok nextData -> SuccessfullyParsed { data: nextData, remainingArgs, subcommandPath }
-                    Err err -> IncorrectUsage err { subcommandPath }
+        Ok { values, remainingArgs } ->
+            when handler { data, values } is
+                Ok nextData -> SuccessfullyParsed { data: nextData, remainingArgs, subcommandPath }
+                Err err -> IncorrectUsage err { subcommandPath }
 
 updateBuilderWithParameterParser : CliBuilder (a -> state) action, ParameterConfig, (List Str -> Result a ArgExtractErr) -> CliBuilder state nextAction
 updateBuilderWithParameterParser = \@CliBuilder builder, param, valueParser ->
@@ -133,6 +131,33 @@ buildParserUsingExtractedParameter = \@CliBuilder builder, param, handler ->
                 Ok nextData -> SuccessfullyParsed { data: nextData, remainingArgs, subcommandPath }
                 Err err -> IncorrectUsage err { subcommandPath }
 
+checkForHelpAndVersionAfterParsing : ArgParserResult a, List Arg, List Str -> ArgParserResult a
+checkForHelpAndVersionAfterParsing = \result, args, subcommandPath ->
+    when result is
+        ShowHelp { subcommandPath: sp } -> ShowHelp { subcommandPath: sp }
+        ShowVersion -> ShowVersion
+        other ->
+            helpWasPassed = List.any args \arg ->
+                when arg is
+                    Short short -> short == optionShortName helpOption.name
+                    ShortGroup sg -> List.any sg.names \n -> n == optionShortName helpOption.name
+                    Long long -> long.name == optionLongName helpOption.name
+                    Parameter _p -> Bool.false
+
+            versionWasPassed = List.any args \arg ->
+                when arg is
+                    Short short -> short == optionShortName versionOption.name
+                    ShortGroup sg -> List.any sg.names \n -> n == optionShortName versionOption.name
+                    Long long -> long.name == optionLongName versionOption.name
+                    Parameter _p -> Bool.false
+
+            if helpWasPassed then
+                ShowHelp { subcommandPath }
+            else if versionWasPassed then
+                ShowVersion
+            else
+                other
+
 finishSubcommand : CliBuilder state action, { name : Str, description : Str, mapper : state -> commonState } -> { name : Str, parser : ArgParser commonState, config : SubcommandConfig }
 finishSubcommand = \@CliBuilder builder, { name, description, mapper } -> {
     name,
@@ -142,8 +167,11 @@ finishSubcommand = \@CliBuilder builder, { name, description, mapper } -> {
         parameters: builder.parameters,
         subcommands: HasSubcommands builder.subcommands,
     },
-    parser: onSuccessfulArgParse builder.parser \{ data, remainingArgs, subcommandPath } ->
-        SuccessfullyParsed { data: mapper data, remainingArgs, subcommandPath },
+    parser: \{ args, subcommandPath } ->
+        builder.parser { args, subcommandPath }
+        |> checkForHelpAndVersionAfterParsing args subcommandPath
+        |> mapSuccessfullyParsed \{ data, remainingArgs, subcommandPath: sp2 } ->
+            { data: mapper data, remainingArgs, subcommandPath: sp2 },
 }
 
 finishCli : CliBuilder state action, CliConfigParams -> Result (CliParser state) CliValidationErr
@@ -178,12 +206,11 @@ finishCli = \@CliBuilder builder, { name, authors ? [], version ? "", descriptio
     |> Result.map \_ -> {
         config,
         parser: \args ->
-            when parser { args: parseArgs args, subcommandPath: [name] } is
-                ShowVersion -> ShowVersion
-                ShowHelp { subcommandPath } -> ShowHelp { subcommandPath }
-                IncorrectUsage argExtractErr { subcommandPath } -> IncorrectUsage argExtractErr { subcommandPath }
-                SuccessfullyParsed { data, remainingArgs: _, subcommandPath: _ } ->
-                    SuccessfullyParsed data
+            parsedArgs = parseArgs args
+
+            parser { args: parsedArgs, subcommandPath: [name] }
+            |> checkForHelpAndVersionAfterParsing parsedArgs [name]
+            |> mapSuccessfullyParsed \{ data } -> data,
     }
 
 assertCliIsValid : Result (CliParser state) CliValidationErr -> CliParser state
@@ -211,7 +238,6 @@ parseOrDisplayMessage = \parser, args ->
                 """
 
             Err incorrectUsageStr
-
 
 subcommandField : List { name : Str, parser : ArgParser subState, config : SubcommandConfig } -> (CliBuilder (Result subState [NoSubcommand] -> state) GetOptionsAction -> CliBuilder state GetParamsAction)
 subcommandField = \subcommandConfigs ->
@@ -266,7 +292,7 @@ singleOption = \option, valueParser ->
             Ok val -> valueParser val
             Err NoValue -> Err (NoValueProvidedForOption option)
 
-maybeOption : OptionConfig, (Str -> Result a ArgExtractErr) -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
+maybeOption : OptionConfig, (Str -> Result a ArgExtractErr) -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction) where a implements Inspect
 maybeOption = \option, valueParser ->
     \builder ->
         values <- updateBuilderWithOptionParser builder option
@@ -326,7 +352,7 @@ maybeStrOption = \{ name, help ? "" } ->
     option = { expectedType: Str, plurality: Optional, name, help }
     maybeOption option (parseStrArgValue option)
 
-maybeCustomOption : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
+maybeCustomOption : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction) where a implements Inspect
 maybeCustomOption = \{ name, help ? "", typeName, parser } ->
     option = { expectedType: Custom typeName, plurality: Optional, name, help }
     maybeOption option (parseCustomArgValue option parser)
@@ -396,11 +422,7 @@ maybeStrParam = \{ name, help ? "" } ->
 strListParam : { name : Str, help ? Str } -> (CliBuilder (List Str -> state) {}action -> CliBuilder state StopCollectingAction)
 strListParam = \{ name, help ? "" } ->
     param = { name, help, type: Str, plurality: Many }
-
-    \builder ->
-        values <- updateBuilderWithParameterParser builder param
-
-        Ok values
+    \builder -> updateBuilderWithParameterParser builder param Ok
 
 expect
     subSubcommandParser =
@@ -430,7 +452,18 @@ expect
         |> assertCliIsValid
 
     args = ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv"]
-
     out = cliParser.parser args
 
     out == SuccessfullyParsed { alpha: 123, beta: Bool.true, xyz: "some_text", verbosity: 4, sc: Err NoSubcommand }
+
+expect
+    cliParser =
+        cliBuilder {
+            alpha: <- maybeNumOption { name: Short "a" },
+        }
+        |> finishCli { name: "app" }
+        |> assertCliIsValid
+
+    out = cliParser.parser ["args"]
+
+    out == SuccessfullyParsed { alpha: Err NoValue }

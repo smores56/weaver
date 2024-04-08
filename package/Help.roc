@@ -90,6 +90,11 @@ helpTextForCommand = \config, subcommandPath ->
         else
             optionsHelp options
 
+    bottomSections =
+        [subcommandsText, parametersText, optionsText]
+        |> List.dropIf Str.isEmpty
+        |> Str.joinWith "\n\n"
+
     """
     $(name) $(version)
     $(authorsText)
@@ -97,7 +102,7 @@ helpTextForCommand = \config, subcommandPath ->
 
     $(usageHelp config subcommandPath)
 
-    $([subcommandsText, parametersText, optionsText] |> Str.joinWith "\n\n")
+    $(bottomSections)
     """
 
 # TODO: consider showing required arguments in the usage
