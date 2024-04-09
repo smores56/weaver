@@ -18,7 +18,6 @@ isDigit = \char ->
 
 isLowerCase : U8 -> Bool
 isLowerCase = \char ->
-
     char >= lowerAAsciiCode && char <= lowerZAsciiCode
 
 isKebabCase : Str -> Bool
@@ -55,3 +54,31 @@ toUpperCase = \str ->
             c
     |> Str.fromUtf8
     |> Result.withDefault ""
+
+expect strLen "123" == 3
+
+expect
+    sample = "19aB "
+
+    sample
+    |> Str.toUtf8
+    |> List.map isDigit
+    == [Bool.true, Bool.true, Bool.false, Bool.false, Bool.false]
+
+expect
+    sample = "aAzZ-"
+
+    sample
+    |> Str.toUtf8
+    |> List.map isLowerCase
+    == [Bool.true, Bool.false, Bool.true, Bool.false, Bool.false]
+
+expect isKebabCase "abc-def"
+expect isKebabCase "-abc-def" |> Bool.not
+expect isKebabCase "abc-def-" |> Bool.not
+expect isKebabCase "-" |> Bool.not
+expect isKebabCase "" |> Bool.not
+
+expect toUpperCase "abc" == "ABC"
+expect toUpperCase "ABC" == "ABC"
+expect toUpperCase "aBc00-" == "ABC00-"

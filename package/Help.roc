@@ -1,7 +1,7 @@
 interface Help
     exposes [helpText, usageHelp]
     imports [
-        Config.{
+        Base.{
             CliConfig,
             OptionConfig,
             ParameterConfig,
@@ -11,8 +11,8 @@ interface Help
         Utils.{ toUpperCase, strLen },
     ]
 
-findSubcommandOrDefault : CliConfig, List Str -> { config : CliConfig, path : List Str }
-findSubcommandOrDefault = \config, path ->
+findSubcommandOrDefault : CliConfig, List Str -> { config : CliConfig, subcommandPath : List Str }
+findSubcommandOrDefault = \config, subcommandPath ->
     baseCommand = {
         description: config.description,
         options: config.options,
@@ -20,8 +20,8 @@ findSubcommandOrDefault = \config, path ->
         subcommands: config.subcommands,
     }
 
-    when findSubcommand baseCommand (List.dropFirst path 1) is
-        Err KeyNotFound -> { config, path }
+    when findSubcommand baseCommand (List.dropFirst subcommandPath 1) is
+        Err KeyNotFound -> { config, subcommandPath }
         Ok c ->
             {
                 config: {
@@ -33,7 +33,7 @@ findSubcommandOrDefault = \config, path ->
                     parameters: c.parameters,
                     subcommands: c.subcommands,
                 },
-                path,
+                subcommandPath,
             }
 
 findSubcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
@@ -50,7 +50,7 @@ findSubcommand = \command, path ->
 
 helpText : { config : CliConfig, subcommandPath : List Str } -> Str
 helpText = \{ config, subcommandPath } ->
-    { config: command, path } = findSubcommandOrDefault config subcommandPath
+    { config: command, subcommandPath: path } = findSubcommandOrDefault config subcommandPath
     helpTextForCommand command path
 
 helpTextForCommand : CliConfig, List Str -> Str
@@ -108,7 +108,8 @@ helpTextForCommand = \config, subcommandPath ->
 # TODO: consider showing required arguments in the usage
 usageHelp : CliConfig, List Str -> Str
 usageHelp = \config, path ->
-    { config: { options, parameters, subcommands }, path: subcommandPath } = findSubcommandOrDefault config path
+    { config: { options, parameters, subcommands }, subcommandPath } = findSubcommandOrDefault config path
+
     name = Str.joinWith subcommandPath " "
 
     optionsStr =
@@ -176,21 +177,30 @@ parametersHelp = \params ->
 
 optionsHelp : List OptionConfig -> Str
 optionsHelp = \options ->
-    optionNameFormatter = \opt ->
-        name =
-            when opt.name is
-                Short short -> "-$(short)"
-                Long long -> "    --$(long)"
-                Both short long -> "-$(short), --$(long)"
+    optionNameFormatter = \{ short, long, expectedType } ->
+        shortName =
+            if short != "" then
+                "-$(short)"
+            else
+                ""
+
+        longName =
+            if long != "" then
+                "--$(long)"
+            else
+                ""
 
         typeName =
-            when opt.expectedType is
+            when expectedType is
                 None -> ""
                 Str -> " STR"
                 Num -> " NUM"
                 Custom c -> " $(toUpperCase c)"
 
-        Str.concat name typeName
+        [shortName, longName]
+        |> List.dropIf Str.isEmpty
+        |> List.map \name -> Str.concat name typeName
+        |> Str.joinWith ", "
 
     formattedOptions =
         options

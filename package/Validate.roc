@@ -2,7 +2,7 @@ interface Validate
     exposes [validateCli, CliValidationErr]
     imports [
         Utils.{ strLen, isKebabCase },
-        Config.{
+        Base.{
             OptionName,
             OptionConfig,
             helpOption,
@@ -22,6 +22,9 @@ CliValidationErr : [
     InvalidLongFlagName { name : Str, subcommandPath : List Str },
     InvalidCommandName { name : Str, subcommandPath : List Str },
     InvalidParameterName { name : Str, subcommandPath : List Str },
+    OptionMustHaveShortOrLongName { subcommandPath : List Str },
+    OverrodeSpecialHelpFlag { option : OptionConfig, subcommandPath : List Str },
+    OverrodeSpecialVersionFlag { option : OptionConfig, subcommandPath : List Str },
 ]
 
 validateCli : CliConfig -> Result {} CliValidationErr
@@ -35,7 +38,16 @@ validateCli = \{ name, options, parameters, subcommands } ->
         subcommandPath: [name],
     }
 
-validateCommand : { name : Str, options : List OptionConfig, parentOptions : List OptionAtSubcommand, parameters : List ParameterConfig, subcommands : SubcommandsConfig, subcommandPath : List Str } -> Result {} CliValidationErr
+validateCommand :
+    {
+        name : Str,
+        options : List OptionConfig,
+        parentOptions : List OptionAtSubcommand,
+        parameters : List ParameterConfig,
+        subcommands : SubcommandsConfig,
+        subcommandPath : List Str,
+    }
+    -> Result {} CliValidationErr
 validateCommand = \{ name, options, parentOptions, parameters, subcommands, subcommandPath } ->
     {} <- ensureCommandIsWellNamed { name, subcommandPath }
         |> Result.try
@@ -92,10 +104,11 @@ ensureParamIsWellNamed = \{ name, subcommandPath } ->
 
 ensureOptionIsWellNamed : { option : OptionConfig, subcommandPath : List Str } -> Result {} CliValidationErr
 ensureOptionIsWellNamed = \{ option, subcommandPath } ->
-    when option.name is
-        Short short -> ensureShortFlagIsWellNamed { name: short, subcommandPath }
-        Long long -> ensureLongFlagIsWellNamed { name: long, subcommandPath }
-        Both short long ->
+    when (option.short, option.long) is
+        ("", "") -> Err (OptionMustHaveShortOrLongName { subcommandPath })
+        (short, "") -> ensureShortFlagIsWellNamed { name: short, subcommandPath }
+        ("", long) -> ensureLongFlagIsWellNamed { name: long, subcommandPath }
+        (short, long) ->
             ensureShortFlagIsWellNamed { name: short, subcommandPath }
             |> Result.try \{} -> ensureLongFlagIsWellNamed { name: long, subcommandPath }
 
@@ -113,21 +126,27 @@ ensureLongFlagIsWellNamed = \{ name, subcommandPath } ->
     else
         Err (InvalidLongFlagName { name, subcommandPath })
 
-namesOverlap : OptionName, OptionName -> Bool
-namesOverlap = \left, right ->
-    if left == helpOption.name || left == versionOption.name then
-        Bool.false
+ensureOptionNamesDoNotOverlap : OptionAtSubcommand, OptionAtSubcommand -> Result {} CliValidationErr
+ensureOptionNamesDoNotOverlap = \left, right ->
+    sameCommand = left.subcommandPath == right.subcommandPath
+    eitherNameMatches =
+        (left.option.short != "" && left.option.short == right.option.short)
+        || (left.option.long != "" && left.option.long == right.option.long)
+
+    if eitherNameMatches then
+        matchesHelp =
+            left.option.short == helpOption.short || left.option.long == helpOption.long
+        matchesVersion =
+            left.option.short == versionOption.short || left.option.long == versionOption.long
+
+        if matchesHelp && sameCommand then
+            Err (OverrodeSpecialHelpFlag left)
+        else if matchesVersion && sameCommand then
+            Err (OverrodeSpecialVersionFlag right)
+        else
+            Err (OverlappingOptionNames left right)
     else
-        when (left, right) is
-            (Short sl, Short sr) -> sl == sr
-            (Long _ll, Short _sr) -> Bool.false
-            (Both sl _ll, Short sr) -> sl == sr
-            (Short _sl, Long _lr) -> Bool.false
-            (Long ll, Long lr) -> ll == lr
-            (Both _sl ll, Long lr) -> ll == lr
-            (Short sl, Both sr _lr) -> sl == sr
-            (Long ll, Both _sr lr) -> ll == lr
-            (Both sl ll, Both sr lr) -> sl == sr || ll == lr
+        Ok {}
 
 checkIfThereAreOverlappingOptions : List OptionAtSubcommand -> Result {} CliValidationErr
 checkIfThereAreOverlappingOptions = \options ->
@@ -137,10 +156,7 @@ checkIfThereAreOverlappingOptions = \options ->
     |> List.mapTry \pairs ->
         pairs
         |> List.mapTry \Pair left right ->
-            if namesOverlap left.option.name right.option.name then
-                Err (OverlappingOptionNames left right)
-            else
-                Ok {}
+            ensureOptionNamesDoNotOverlap left right
     |> Result.map \_sucesses -> {}
 
 checkIfThereAreOverlappingParameters : List ParameterConfig, List Str -> Result {} CliValidationErr

@@ -1,3 +1,13 @@
 package "weaver"
-    exposes [Builder, Config, Help, Validate]
+    exposes [
+        Arg,
+        Base,
+        Cli,
+        ErrorFormatter,
+        Example,
+        Help,
+        Param,
+        Subcommand,
+        Validate,
+    ]
     packages {}

@@ -13,9 +13,29 @@ ArgValue : Result Str [NoValue]
 
 parseArgs : List Str -> List Arg
 parseArgs = \args ->
-    args
-    |> List.dropFirst 1
-    |> List.map parseArg
+    startingState = { parsedArgs: [], passThrough: KeepParsing }
+
+    stateAfter =
+        args
+        |> List.dropFirst 1
+        |> List.walk startingState \{ parsedArgs, passThrough }, arg ->
+            when passThrough is
+                KeepParsing ->
+                    parsedArg = parseArg arg
+                    when parsedArg is
+                        Parameter "--" ->
+                            { passThrough: PassThrough, parsedArgs }
+
+                        _other ->
+                            { passThrough: KeepParsing, parsedArgs: parsedArgs |> List.append parsedArg }
+
+                PassThrough ->
+                    {
+                        passThrough: PassThrough,
+                        parsedArgs: parsedArgs |> List.append (Parameter arg),
+                    }
+
+    stateAfter.parsedArgs
 
 parseArg : Str -> Arg
 parseArg = \arg ->
@@ -96,6 +116,5 @@ expect
         Long { name: "passed", value: Err NoValue },
         ShortGroup { names: ["b", "c", "d"], complete: Complete },
         Parameter "xyz",
-        Parameter "--",
-        Long { name: "subject", value: Ok "world" },
+        Parameter "--subject=world",
     ]

@@ -1,6 +1,8 @@
-interface Config
+interface Base
     exposes [
         ArgParserResult,
+        ArgParserParams,
+        ArgParserState,
         ArgParser,
         onSuccessfulArgParse,
         mapSuccessfullyParsed,
@@ -8,9 +10,6 @@ interface Config
         ExpectedType,
         Plurality,
         SpecialFlags,
-        OptionName,
-        optionShortName,
-        optionLongName,
         OptionConfigParams,
         OptionConfig,
         helpOption,
@@ -22,7 +21,6 @@ interface Config
         SubcommandConfigParams,
         SubcommandConfig,
         SubcommandsConfig,
-        getSubcommandNames,
     ]
     imports [Parser.{ Arg, ArgParseErr }]
 
@@ -33,9 +31,11 @@ ArgParserResult a : [
     SuccessfullyParsed a,
 ]
 
-ArgParser a : { args : List Arg, subcommandPath : List Str } -> ArgParserResult { data : a, remainingArgs : List Arg, subcommandPath : List Str }
+ArgParserParams : { args : List Arg, subcommandPath : List Str }
+ArgParserState a : { data : a, remainingArgs : List Arg, subcommandPath : List Str }
+ArgParser a : ArgParserParams -> ArgParserResult (ArgParserState a)
 
-onSuccessfulArgParse : ArgParser a, ({ data : a, remainingArgs : List Arg, subcommandPath : List Str } -> ArgParserResult { data : b, remainingArgs : List Arg, subcommandPath : List Str }) -> ArgParser b
+onSuccessfulArgParse : ArgParser a, (ArgParserState a -> ArgParserResult (ArgParserState b)) -> ArgParser b
 onSuccessfulArgParse = \result, mapper ->
     \input ->
         when result input is
@@ -62,6 +62,8 @@ ArgExtractErr : [
     CannotUsePartialShortGroupAsValue OptionConfig (List Str),
     InvalidNumArg OptionConfig,
     InvalidCustomArg OptionConfig Str,
+    InvalidNumParam ParameterConfig,
+    InvalidCustomParam ParameterConfig Str,
     MissingParam ParameterConfig,
     UnrecognizedShortArg Str,
     UnrecognizedLongArg Str,
@@ -73,41 +75,27 @@ MaybeExpectedType : [None, Str, Num, Custom Str]
 
 Plurality : [Optional, One, Many]
 
-OptionName : [Short Str, Long Str, Both Str Str]
-
-optionShortName : OptionName -> Str
-optionShortName = \name ->
-    when name is
-        Short short -> short
-        Long _long -> ""
-        Both short _long -> short
-
-optionLongName : OptionName -> Str
-optionLongName = \name ->
-    when name is
-        Short _short -> ""
-        Long long -> long
-        Both _short long -> long
-
 SpecialFlags : { help : Bool, version : Bool }
 
 OptionConfigParams : {
-    name : OptionName,
+    short ? Str,
+    long ? Str,
     help ? Str,
 }
 
 OptionConfig : {
     expectedType : MaybeExpectedType,
     plurality : Plurality,
-    name : OptionName,
+    short : Str,
+    long : Str,
     help : Str,
 }
 
 helpOption : OptionConfig
-helpOption = { name: Both "h" "help", help: "Show this help page.", expectedType: None, plurality: Optional }
+helpOption = { short: "h", long: "help", help: "Show this help page.", expectedType: None, plurality: Optional }
 
 versionOption : OptionConfig
-versionOption = { name: Both "V" "version", help: "Show the version.", expectedType: None, plurality: Optional }
+versionOption = { short: "V", long: "version", help: "Show the version.", expectedType: None, plurality: Optional }
 
 ParameterConfigParams : {
     name : Str,
@@ -143,7 +131,7 @@ SubcommandConfigParams : {
     description ? Str,
 }
 
-# Tag union required to avoid infinite recursion
+# Tag union required to avoid cyclic alias
 SubcommandsConfig : [
     NoSubcommands,
     HasSubcommands
@@ -155,17 +143,10 @@ SubcommandsConfig : [
         }),
 ]
 
-# Done to avoid infinite recursion
+# Done to avoid infinite type recursion
 SubcommandConfig : {
     description : Str,
     subcommands : SubcommandsConfig,
     options : List OptionConfig,
     parameters : List ParameterConfig,
 }
-
-getSubcommandNames : SubcommandsConfig -> List Str
-getSubcommandNames = \config ->
-    when config is
-        NoSubcommands -> []
-        HasSubcommands configs ->
-            Dict.keys configs

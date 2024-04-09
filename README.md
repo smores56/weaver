@@ -23,22 +23,22 @@ Documentation is the next thing on my ticket, so look out for that in the next f
 ```roc
 expect
     subcommandParser =
-        cliBuilder {
-            d: <- numOption { name: Short "d", help: "A required number." },
-            f: <- maybeNumOption { name: Short "f", help: "An optional number." },
+        Cli.weave {
+            d: <- Arg.num { short: "d", help: "A required number." },
+            f: <- Arg.maybeNum { short: "f", help: "An optional number." },
         }
-        |> finishSubcommand { name: "sub", description: "A specific action to take.", mapper: Sub }
+        |> Subcommand.finish { name: "sub", description: "A specific action to take.", mapper: Sub }
 
     { parser, config: _ } =
-        cliBuilder {
-            alpha: <- numOption { name: Short "a", help: "Set the alpha level." },
-            beta: <- flagOption { name: Both "b" "beta" },
-            xyz: <- strOption { name: Long "xyz" },
-            verbosity: <- occurrenceOption { name: Both "v" "verbose" },
-            sc: <- subcommandField [subcommandParser],
+        Cli.weave {
+            alpha: <- Arg.num { short: "a", help: "Set the alpha level." },
+            beta: <- Arg.flag { short: "b", long: "beta" },
+            xyz: <- Arg.str { long: "xyz" },
+            verbosity: <- Arg.count { short: "v", long: "verbose" },
+            sc: <- Subcommand.field [subcommandParser],
         }
-        |> finishCli { name: "app", version: "v0.0.1", authors: ["Some One <some.one@mail.com>"] }
-        |> assertCliIsValid # crash immediately on unrecoverable issues, e.g. empty flag names
+        |> Cli.finish { name: "app", version: "v0.0.1", authors: ["Some One <some.one@mail.com>"] }
+        |> Cli.assertValid # crash immediately on unrecoverable issues, e.g. empty flag names
 
     out = parser ["app", "-a", "123", "-b", "--xyz", "some_text", "-vvvv", "sub", "-d", "456"]
 

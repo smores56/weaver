@@ -1,34 +1,6 @@
-app "basic"
-    packages {
-        pf: "https://github.com/roc-lang/basic-cli/releases/download/0.8.1/x8URkvfyi9I0QhmVG98roKBUs_AZRkLFwFJVJ3942YA.tar.br",
-        weaver: "../package/main.roc",
-    }
-    imports [
-        pf.Stdout,
-        # pf.Arg,
-        pf.Task.{ Task },
-        weaver.Arg,
-        weaver.Cli,
-        weaver.Param,
-        weaver.Subcommand,
-    ]
-    provides [main] to pf
-
-main : Task {} I32
-main =
-    # Can't import both Arg modules at the same time without things breaking,
-    # so we currently have to hard-code arguments until the import syntax changes
-    # make module renaming possible on import.
-    #
-    # args <- Arg.list |> Task.await
-    args = ["basic"]
-
-    textToDisplay =
-        when Cli.parseOrDisplayMessage cliParser args is
-            Ok data -> "Successfully parsed! Here's what I got:\n\n$(Inspect.toStr data)"
-            Err message -> message
-
-    Stdout.line textToDisplay
+interface Example
+    exposes [cliParser]
+    imports [Arg, Cli, Param, Subcommand]
 
 cliParser =
     subSubcommandParser1 =
