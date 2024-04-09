@@ -91,7 +91,6 @@ parseOrDisplayMessage : CliParser state, List Str -> Result state Str
 parseOrDisplayMessage = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
-        # TODO: guess submodule so we can tell which subcommand was called even if help is parsed first
         ShowHelp { subcommandPath } -> Err (helpText { config: parser.config, subcommandPath })
         ShowVersion -> Err parser.config.version
         IncorrectUsage err { subcommandPath } ->

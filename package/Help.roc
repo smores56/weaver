@@ -175,33 +175,34 @@ parametersHelp = \params ->
     $(Str.joinWith formattedParams "\n")
     """
 
+optionNameFormatter : OptionConfig -> Str
+optionNameFormatter = \{ short, long, expectedType } ->
+    shortName =
+        if short != "" then
+            "-$(short)"
+        else
+            ""
+
+    longName =
+        if long != "" then
+            "--$(long)"
+        else
+            ""
+
+    typeName =
+        when expectedType is
+            None -> ""
+            Str -> " STR"
+            Num -> " NUM"
+            Custom c -> " $(toUpperCase c)"
+
+    [shortName, longName]
+    |> List.dropIf Str.isEmpty
+    |> List.map \name -> Str.concat name typeName
+    |> Str.joinWith ", "
+
 optionsHelp : List OptionConfig -> Str
 optionsHelp = \options ->
-    optionNameFormatter = \{ short, long, expectedType } ->
-        shortName =
-            if short != "" then
-                "-$(short)"
-            else
-                ""
-
-        longName =
-            if long != "" then
-                "--$(long)"
-            else
-                ""
-
-        typeName =
-            when expectedType is
-                None -> ""
-                Str -> " STR"
-                Num -> " NUM"
-                Custom c -> " $(toUpperCase c)"
-
-        [shortName, longName]
-        |> List.dropIf Str.isEmpty
-        |> List.map \name -> Str.concat name typeName
-        |> Str.joinWith ", "
-
     formattedOptions =
         options
         |> List.map \option ->
