@@ -1,10 +1,9 @@
 package "weaver"
     exposes [
-        Arg,
+        Opt,
         Base,
         Cli,
         ErrorFormatter,
-        Example,
         Help,
         Param,
         Subcommand,

@@ -1,4 +1,4 @@
-interface Arg
+interface Opt
     exposes [
         num,
         str,
@@ -93,40 +93,40 @@ num = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedType: Num, plurality: One, short, long, help }
     singleOption option (parseNumArgValue option)
 
-str : OptionConfigParams -> (CliBuilder (Str -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
-str = \{ short ? "", long ? "", help ? "" } ->
-    option = { expectedType: Str, plurality: One, short, long, help }
-    singleOption option Ok
-
-custom : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
-custom = \{ short ? "", long ? "", help ? "", typeName, parser } ->
-    option = { expectedType: Custom typeName, plurality: One, short, long, help }
-    singleOption option (parseCustomArgValue option parser)
-
 maybeNum : OptionConfigParams -> (CliBuilder (Result I64 [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 maybeNum = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedType: Num, plurality: Optional, short, long, help }
     maybeOption option (parseNumArgValue option)
-
-maybeStr : OptionConfigParams -> (CliBuilder (Result Str [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
-maybeStr = \{ short ? "", long ? "", help ? "" } ->
-    option = { expectedType: Str, plurality: Optional, short, long, help }
-    maybeOption option Ok
-
-maybeCustom : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
-maybeCustom = \{ short ? "", long ? "", help ? "", typeName, parser } ->
-    option = { expectedType: Custom typeName, plurality: Optional, short, long, help }
-    maybeOption option (parseCustomArgValue option parser)
 
 numList : OptionConfigParams -> (CliBuilder (List I64 -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 numList = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedType: Num, plurality: Many, short, long, help }
     listOption option (parseNumArgValue option)
 
+str : OptionConfigParams -> (CliBuilder (Str -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
+str = \{ short ? "", long ? "", help ? "" } ->
+    option = { expectedType: Str, plurality: One, short, long, help }
+    singleOption option Ok
+
+maybeStr : OptionConfigParams -> (CliBuilder (Result Str [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
+maybeStr = \{ short ? "", long ? "", help ? "" } ->
+    option = { expectedType: Str, plurality: Optional, short, long, help }
+    maybeOption option Ok
+
 strList : OptionConfigParams -> (CliBuilder (List Str -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 strList = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedType: Str, plurality: Many, short, long, help }
     listOption option Ok
+
+custom : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
+custom = \{ short ? "", long ? "", help ? "", typeName, parser } ->
+    option = { expectedType: Custom typeName, plurality: One, short, long, help }
+    singleOption option (parseCustomArgValue option parser)
+
+maybeCustom : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (Result a [NoValue] -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
+maybeCustom = \{ short ? "", long ? "", help ? "", typeName, parser } ->
+    option = { expectedType: Custom typeName, plurality: Optional, short, long, help }
+    maybeOption option (parseCustomArgValue option parser)
 
 customList : { typeName : Str, parser : Str -> Result a [InvalidValue Str] }OptionConfigParams -> (CliBuilder (List a -> state) GetOptionsAction -> CliBuilder state GetOptionsAction)
 customList = \{ short ? "", long ? "", help ? "", typeName, parser } ->

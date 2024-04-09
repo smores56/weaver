@@ -24,17 +24,17 @@ Documentation is the next thing on my ticket, so look out for that in the next f
 expect
     subcommandParser =
         Cli.weave {
-            d: <- Arg.num { short: "d", help: "A required number." },
-            f: <- Arg.maybeNum { short: "f", help: "An optional number." },
+            d: <- Opt.num { short: "d", help: "A required number." },
+            f: <- Opt.maybeNum { short: "f", help: "An optional number." },
         }
         |> Subcommand.finish { name: "sub", description: "A specific action to take.", mapper: Sub }
 
     { parser, config: _ } =
         Cli.weave {
-            alpha: <- Arg.num { short: "a", help: "Set the alpha level." },
-            beta: <- Arg.flag { short: "b", long: "beta" },
-            xyz: <- Arg.str { long: "xyz" },
-            verbosity: <- Arg.count { short: "v", long: "verbose" },
+            alpha: <- Opt.num { short: "a", help: "Set the alpha level." },
+            beta: <- Opt.flag { short: "b", long: "beta" },
+            xyz: <- Opt.str { long: "xyz" },
+            verbosity: <- Opt.count { short: "v", long: "verbose" },
             sc: <- Subcommand.field [subcommandParser],
         }
         |> Cli.finish { name: "app", version: "v0.0.1", authors: ["Some One <some.one@mail.com>"] }

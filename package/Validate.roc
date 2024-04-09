@@ -133,16 +133,22 @@ ensureOptionNamesDoNotOverlap = \left, right ->
         (left.option.short != "" && left.option.short == right.option.short)
         || (left.option.long != "" && left.option.long == right.option.long)
 
-    if eitherNameMatches then
-        matchesHelp =
-            left.option.short == helpOption.short || left.option.long == helpOption.long
-        matchesVersion =
-            left.option.short == versionOption.short || left.option.long == versionOption.long
+    matchesHelp =
+        left.option.short == helpOption.short || left.option.long == helpOption.long
+    matchesVersion =
+        left.option.short == versionOption.short || left.option.long == versionOption.long
 
-        if matchesHelp && sameCommand then
-            Err (OverrodeSpecialHelpFlag left)
-        else if matchesVersion && sameCommand then
-            Err (OverrodeSpecialVersionFlag right)
+    if eitherNameMatches then
+        if matchesHelp then
+            if sameCommand then
+                Err (OverrodeSpecialHelpFlag left)
+            else
+                Ok {}
+        else if matchesVersion then
+            if sameCommand then
+                Err (OverrodeSpecialVersionFlag right)
+            else
+                Ok {}
         else
             Err (OverlappingOptionNames left right)
     else

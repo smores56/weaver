@@ -25,7 +25,10 @@ interface Cli
         Parser.{ Arg, parseArgs },
         Builder.{ CliBuilder, GetOptionsAction },
         Validate.{ validateCli, CliValidationErr },
-        ErrorFormatter.{ formatArgExtractErr, formatCliValidationErr },
+        ErrorFormatter.{
+            formatArgExtractErr,
+            formatCliValidationErr,
+        },
         Help.{ helpText, usageHelp },
     ]
 
@@ -101,3 +104,8 @@ parseOrDisplayMessage = \parser, args ->
                 """
 
             Err incorrectUsageStr
+
+expect
+    weave {}
+    |> finish { name: "empty" }
+    |> Result.isOk

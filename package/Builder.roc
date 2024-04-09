@@ -112,10 +112,9 @@ flagWasPassed = \option, args ->
 
 checkForHelpAndVersion : CliBuilder state action -> CliBuilder state action
 checkForHelpAndVersion = \@CliBuilder builder ->
-    newParser : ArgParser state
     newParser = \{ args, subcommandPath } ->
         when builder.parser { args, subcommandPath } is
-            ShowHelp { subcommandPath: sp } -> ShowHelp { subcommandPath: sp }
+            ShowHelp sp -> ShowHelp sp
             ShowVersion -> ShowVersion
             other ->
                 if flagWasPassed helpOption args then
@@ -125,8 +124,44 @@ checkForHelpAndVersion = \@CliBuilder builder ->
                 else
                     other
 
-    @CliBuilder
-        { builder &
-            options: builder.options |> List.concat [helpOption, versionOption],
-            parser: newParser,
-        }
+    @CliBuilder {
+        options: builder.options |> List.concat [helpOption, versionOption],
+        parameters: builder.parameters,
+        subcommands: builder.subcommands,
+        parser: newParser,
+    }
+
+expect
+    { parser } =
+        fromState (\x -> { x })
+        |> updateParser \{ data, remainingArgs } -> Ok { data: data (Inspect.toStr remainingArgs), remainingArgs: [] }
+        |> intoParts
+
+    out = parser { args: [Parameter "123"], subcommandPath: [] }
+
+    out
+    == SuccessfullyParsed {
+        data: { x: "[(Parameter \"123\")]" },
+        remainingArgs: [],
+        subcommandPath: [],
+    }
+
+expect
+    args = [Parameter "-h"]
+
+    flagWasPassed helpOption args |> Bool.not
+
+expect
+    args = [Short "h"]
+
+    flagWasPassed helpOption args
+
+expect
+    args = [Long { name: "help", value: Err NoValue }]
+
+    flagWasPassed helpOption args
+
+expect
+    args = [Long { name: "help", value: Ok "123" }]
+
+    flagWasPassed helpOption args
