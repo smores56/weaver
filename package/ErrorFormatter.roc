@@ -1,3 +1,5 @@
+## Render errors we encounter in a human-readable format so that
+## they are readable for developers and users on failure.
 interface ErrorFormatter
     exposes [formatArgExtractErr, formatCliValidationErr]
     imports [
@@ -21,6 +23,9 @@ typeName = \expectedType ->
         Custom c -> c
         _other -> ""
 
+## Render [ArgExtractErr] errors as readable messages.
+##
+## Used in [Cli.parseOrDisplayMessage].
 formatArgExtractErr : ArgExtractErr -> Str
 formatArgExtractErr = \err ->
     when err is
@@ -65,6 +70,9 @@ formatArgExtractErr = \err ->
         ExtraParamProvided param ->
             "The parameter $(param) was not expected."
 
+## Render [CliValidationErr] errors as readable messages.
+##
+## Displayed as the crash message when [Cli.assertValid] fails.
 formatCliValidationErr : CliValidationErr -> Str
 formatCliValidationErr = \err ->
     valueAtSubcommandName = \{ name, subcommandPath } ->
@@ -112,4 +120,4 @@ formatCliValidationErr = \err ->
             "The $(optionAtSubcommandName { option, subcommandPath }) tried to overwrite the built-in -h/--help flag."
 
         OverrodeSpecialVersionFlag { option, subcommandPath } ->
-            "The $(optionAtSubcommandName { option, subcommandPath }) tried to overwrite the built-in -v/--version flag."
+            "The $(optionAtSubcommandName { option, subcommandPath }) tried to overwrite the built-in -V/--version flag."

@@ -11,6 +11,9 @@ interface Help
         Utils.{ toUpperCase, strLen },
     ]
 
+## Walks the subcommand tree from the root CLI config and either
+## returns the subcommand's config as if it were the root command if a
+## subcommand is found, or just the root command's config otherwise.
 findSubcommandOrDefault : CliConfig, List Str -> { config : CliConfig, subcommandPath : List Str }
 findSubcommandOrDefault = \config, subcommandPath ->
     baseCommand = {
@@ -36,6 +39,7 @@ findSubcommandOrDefault = \config, subcommandPath ->
                 subcommandPath,
             }
 
+## Searches a command's config for subcommands recursively.
 findSubcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
 findSubcommand = \command, path ->
     when path is
@@ -48,13 +52,44 @@ findSubcommand = \command, path ->
                     |> Result.try \sc ->
                         findSubcommand sc rest
 
-helpText : { config : CliConfig, subcommandPath : List Str } -> Str
-helpText = \{ config, subcommandPath } ->
-    { config: command, subcommandPath: path } = findSubcommandOrDefault config subcommandPath
-    helpTextForCommand command path
-
-helpTextForCommand : CliConfig, List Str -> Str
-helpTextForCommand = \config, subcommandPath ->
+## Render the help text for a command at or under the root config.
+##
+## The second argument should be a list of subcommand names, e.g.
+## `["example", "subcommand-1", "subcommand-2"]`. If the subcommand
+## isn't found, the root command's help page is rendered by default.
+##
+## ```roc
+## exampleCli =
+##     Cli.weave {
+##         verbosity: <- Opt.count { short: "v", help: "How verbose our logs should be." },
+##     }
+##     |> Cli.finish {
+##         name: "example",
+##         version: "v0.1.0",
+##         description: "An example CLI.",
+##     }
+##     |> Cli.assertValid
+##
+## expect
+##     helpText exampleCli.config ["example"]
+##     ==
+##         """
+##         example v0.1.0
+##
+##         An example CLI.
+##
+##         Usage:
+##           example [OPTIONS]
+##
+##         Options:
+##           -v             How verbose our logs should be.
+##           -h, --help     Show this help page.
+##           -V, --version  Show the version.
+##         """
+## ```
+helpText : CliConfig, List Str -> Str
+helpText = \baseConfig, path ->
+    { config, subcommandPath } = findSubcommandOrDefault baseConfig path
     { version, authors, description, options, parameters, subcommands } = config
 
     name = subcommandPath |> Str.joinWith " "
@@ -106,6 +141,33 @@ helpTextForCommand = \config, subcommandPath ->
     """
 
 # TODO: consider showing required arguments in the usage
+#
+## Render just the usage text for a command at or under the root config.
+##
+## The second argument should be a list of subcommand names, e.g.
+## `["example", "subcommand-1", "subcommand-2"]`. If the subcommand
+## isn't found, the root command's usage text is rendered by default.
+##
+## ```roc
+## exampleCli =
+##     Cli.weave {
+##         verbosity: <- Opt.count { short: "v", help: "How verbose our logs should be." },
+##     }
+##     |> Cli.finish {
+##         name: "example",
+##         version: "v0.1.0",
+##         description: "An example CLI.",
+##     }
+##     |> Cli.assertValid
+##
+## expect
+##     helpText exampleCli.config ["example"]
+##     ==
+##         """
+##         Usage:
+##           example [OPTIONS]
+##         """
+## ```
 usageHelp : CliConfig, List Str -> Str
 usageHelp = \config, path ->
     { config: { options, parameters, subcommands }, subcommandPath } = findSubcommandOrDefault config path

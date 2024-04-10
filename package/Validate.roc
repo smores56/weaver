@@ -15,6 +15,7 @@ interface Validate
 
 OptionAtSubcommand : { option : OptionConfig, subcommandPath : List Str }
 
+## The types of errors that might be found in a misconfigured CLI.
 CliValidationErr : [
     OverlappingParameterNames { first : Str, second : Str, subcommandPath : List Str },
     OverlappingOptionNames OptionAtSubcommand OptionAtSubcommand,
@@ -27,6 +28,27 @@ CliValidationErr : [
     OverrodeSpecialVersionFlag { option : OptionConfig, subcommandPath : List Str },
 ]
 
+## Ensure that a CLI's configuration is valid.
+##
+## Though the majority of the validation we'd need to do for type safety is
+## rendered unnecessary by the design of this library, there are some things
+## that the type system isn't able to prevent. Here are the checks we currently
+## perform after building your CLI parser:
+##
+## - All commands and subcommands must have kebab-case names.
+## - All options must have either:
+##   - A short flag which is a single character.
+##   - A long flag which is more than one character and kebab-case.
+##   - Both a short and a long flag with the above requirements.
+## - All parameters must be have kebab-case names.
+## - No options can overlap, even between different subcommands, so long
+##   as the options between the subcommands are ambiguous.
+##   - For example, a CLI with a `-t` option at the root level and also
+##     a `-t` option in the subcommand `sub` would fail validation since
+##     we wouldn't know who should get the `-t` option.
+##   - However, a CLI with two subcommands that each have a `-t` option
+##     would not fail validation since only one subcommand can be called
+##     at once.
 validateCli : CliConfig -> Result {} CliValidationErr
 validateCli = \{ name, options, parameters, subcommands } ->
     validateCommand {

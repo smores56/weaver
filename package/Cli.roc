@@ -1,12 +1,115 @@
+## Weave together a CLI parser using the `: <- ` builder notation!
+##
+## This module is the entry point for creating CLIs using Weaver.
+## To get started, call the [weave] method and pass a
+## [record builder](https://www.roc-lang.org/examples/RecordBuilder/README.html)
+## to it. You can pass `Opt`s, `Param`s, or `Subcommand`s as fields,
+## and Weaver will automatically register them in its config as
+## well as build a parser with the inferred types of the fields
+## you set.
+##
+## ```roc
+## Cli.weave {
+##     alpha: <- Opt.num { short: "a", help: "Set the alpha level" },
+##     verbosity: <- Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
+##     files: <- Param.strList { name: "files", help: "The files to process." },
+## }
+## |> Cli.finish {
+##     name: "example",
+##     version: "v1.0.0",
+##     authors: ["Some One <some.one@mail.com>"],
+##     description: "Do some work with some files."
+## }
+## |> Cli.assertValid
+## ```
+##
+## You can also add create subcommands in the same way:
+##
+## ```roc
+## fooSubcommand =
+##     Cli.weave {
+##         alpha: <- Opt.num {
+##             short: "a",
+##             help: "Set the alpha level",
+##         },
+##     }
+##     |> Subcommand.finish {
+##         name: "foo",
+##         description: "Foo some stuff."
+##         mapper: Foo,
+##     }
+##
+## barSubcommand =
+##     Cli.weave {
+##         # We allow two subcommands of the same parent to have overlapping
+##         # fields since only one can ever be parsed at a time.
+##         alpha: <- Opt.num {
+##             short: "a",
+##             help: "Set the alpha level",
+##         },
+##     }
+##     |> Subcommand.finish {
+##         name: "bar",
+##         description: "Bar some stuff."
+##         mapper: Bar,
+##     }
+##
+## Cli.weave {
+##     sc: <- Subcommand.field [fooSubcommand, barSubcommand],
+## }
+## ```
+##
+## And those subcommands can have their own subcommands! But anyway...
+##
+## Once you have a command with all of its fields configured, you can
+## turn it into a parser using the [finish] function, followed by
+## the [assertValid] function that asserts that the CLI is well configured.
+##
+## From there, you can take in command line arguments and use your
+## data if it parses correctly:
+##
+## ```roc
+## cliParser =
+##     Cli.weave {
+##         alpha: <- Opt.num { short: "a", help: "Set the alpha level" },
+##         verbosity: <- Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
+##         files: <- Param.strList { name: "files", help: "The files to process." },
+##     }
+##     |> Cli.finish {
+##         name: "example",
+##         version: "v1.0.0",
+##         authors: ["Some One <some.one@mail.com>"],
+##         description: "Do some work with some files."
+##     }
+##     |> Cli.assertValid
+##
+## expect
+##     cliParser
+##     |> Cli.parseOrDisplayMessage ["example", "-a", "123", "-vvv", "file.txt", "file-2.txt"]
+##     == Ok { alpha: 123, verbosity: 3, files: ["file.txt", "file-2.txt"] }
+## ```
+##
+## You're ready to start parsing arguments using Weaver!
+##
+## If you want to see more examples, check the [examples](https://github.com/smores56/weaver/tree/main/examples)
+## folder in the [repository](https://github.com/smores56/weaver).
+##
+## _note: `Opt`s must be set before an optional `Subcommand` field is given,_
+## _and the `Subcommand` field needs to be set before `Param`s are set._
+## _`Param` lists also cannot be followed by anything else including_
+## _themselves. These requirements ensure we parse arguments in the_
+## _right order. Luckily, all of this is ensured at the type level._
 interface Cli
     exposes [
         CliParser,
         weave,
         finish,
+        finishWithoutValidating,
         assertValid,
         parseOrDisplayMessage,
     ]
     imports [
+        Opt,
         Base.{
             ArgParser,
             ArgParserResult,
@@ -32,11 +135,29 @@ interface Cli
         Help.{ helpText, usageHelp },
     ]
 
+## A parser that interprets command line arguments and returns well-formed data.
 CliParser state : { config : CliConfig, parser : List Str -> ArgParserResult state }
 
+## Begin weaving together a CLI builder using the `: <- ` builder notation.
+##
+## Check the module-level documentation (TODO: not written) for general usage instructions.
+##
+## ```roc
+## expect
+##     { parser } =
+##         Cli.weave {
+##             verbosity: <- Opt.count { short: "v", long: "verbose" },
+##         }
+##         |> Cli.finish { name: "example" }
+##         |> Cli.assertValid
+##
+##    parser ["example", "-vvv"]
+##    == SuccessfullyParsed { verbosity: 3 }
+## ```
 weave : base -> CliBuilder base GetOptionsAction
 weave = \base -> Builder.fromState base
 
+## Fail the parsing process if any arguments are left over after parsing.
 ensureAllArgsWereParsed : List Arg -> Result {} ArgExtractErr
 ensureAllArgsWereParsed = \remainingArgs ->
     when remainingArgs is
@@ -53,8 +174,74 @@ ensureAllArgsWereParsed = \remainingArgs ->
 
             Err extraArgErr
 
+## Bundle a CLI builder into a parser, ensuring that its configuration is valid.
+##
+## Though the majority of the validation we'd need to do for type safety is
+## rendered unnecessary by the design of this library, there are some things
+## that the type system isn't able to prevent. Here are the checks we currently
+## perform after building your CLI parser:
+##
+## - All commands and subcommands must have kebab-case names.
+## - All options must have either:
+##   - A short flag which is a single character.
+##   - A long flag which is more than one character and kebab-case.
+##   - Both a short and a long flag with the above requirements.
+## - All parameters must be have kebab-case names.
+## - No options can overlap, even between different subcommands, so long
+##   as the options between the subcommands are ambiguous.
+##   - For example, a CLI with a `-t` option at the root level and also
+##     a `-t` option in the subcommand `sub` would fail validation since
+##     we wouldn't know who should get the `-t` option.
+##   - However, a CLI with two subcommands that each have a `-t` option
+##     would not fail validation since only one subcommand can be called
+##     at once.
+##
+## If you would like to avoid these validations, you can use [finishWithoutValidating]
+## instead, but you may receive some suprising results when parsing because
+## our parsing logic assumes the above validations have been made.
+##
+## ```roc
+## expect
+##     Cli.weave {
+##         verbosity: <- Opt.count { short: "v", long: "verbose" },
+##     }
+##     |> Cli.finish { name: "example" }
+##     |> Result.isOk
+##
+## expect
+##     Cli.weave {
+##         verbosity: <- Opt.count { short: "" },
+##     }
+##     |> Cli.finish { name: "example" }
+##     |> Result.isErr
+## ```
 finish : CliBuilder state action, CliConfigParams -> Result (CliParser state) CliValidationErr
-finish = \builder, { name, authors ? [], version ? "", description ? "" } ->
+finish = \builder, params ->
+    { parser, config } = finishWithoutValidating builder params
+
+    validateCli config
+    |> Result.map \{} -> { parser, config }
+
+## Bundle a CLI builder into a parser without validating its configuration.
+##
+## We recommend using the [finish] function to validate your parser as our
+## library's logic assumes said validation has taken place. However, this method
+## could be useful if you know better than our validations about the correctness
+## of your CLI.
+##
+## ```roc
+## expect
+##     { parser } =
+##         Cli.weave {
+##             verbosity: <- Opt.count { short: "v", long: "verbose" },
+##         }
+##         |> Cli.finishWithoutValidating { name: "example" }
+##
+##     parser ["example", "-v", "-v"]
+##     == SuccessfullyParsed { verbosity: 2 }
+## ```
+finishWithoutValidating : CliBuilder state action, CliConfigParams -> CliParser state
+finishWithoutValidating = \builder, { name, authors ? [], version ? "", description ? "" } ->
     { options, parameters, subcommands, parser } =
         builder
         |> Builder.checkForHelpAndVersion
@@ -73,25 +260,107 @@ finish = \builder, { name, authors ? [], version ? "", description ? "" } ->
         subcommands: HasSubcommands subcommands,
     }
 
-    validateCli config
-    |> Result.map \_ -> {
+    {
         config,
         parser: \args ->
             parser { args: parseArgs args, subcommandPath: [name] }
             |> mapSuccessfullyParsed \{ data } -> data,
     }
 
+## Assert that a CLI is properly configured, crashing your program if not.
+##
+## Given that there are some aspects of a CLI that we cannot ensure are
+## correct at compile time, the easiest way to ensure that your CLI is properly
+## configured is to validate it and crash immediately on failure, following the
+## Fail Fast principle.
+##
+## You can avoid making this assertion by handling the error yourself or
+## by finish your CLI with the [finishWithoutValidating] function, but
+## the validations we perform (detailed in [finish]'s docs) are important
+## for correct parsing.
+##
+## ```roc
+## Cli.weave {
+##     a: <- Opt.num { short: "a" }
+## }
+## |> Cli.finish { name: "example" }
+## |> Cli.assertValid
+## ```
 assertValid : Result (CliParser state) CliValidationErr -> CliParser state
 assertValid = \result ->
     when result is
         Ok cli -> cli
         Err err -> crash (formatCliValidationErr err)
 
+## Parse arguments using a CLI parser or show a useful message on failure.
+##
+## We have the following priorities in returning messages to the user:
+## 1) If the `-h/--help` flag is passed, the help page for the command/subcommand
+##    called will be displayed no matter if your arguments were correctly parsed.
+## 2) If the `-V/--version` flag is passed, the version for the app will
+##    be displayed no matter if your arguments were correctly parsed.
+## 3) If the provided arguments were parsed and neither of the above two
+##    built-in flags were passed, we return to you your data.
+## 4) If the provided arguments were not correct, we return a short message
+##    with which argument was not provided correctly, followed by the
+##    usage section of the relevant command/subcommand's help text.
+##
+## ```roc
+## exampleCli =
+##     Cli.weave {
+##         verbosity: <- Opt.count { short: "v", help: "How verbose our logs should be." },
+##     }
+##     |> Cli.finish {
+##         name: "example",
+##         version: "v0.1.0",
+##         description: "An example CLI.",
+##     }
+##     |> Cli.assertValid
+##
+## expect
+##     exampleCli
+##     |> Cli.parseOrDisplayMessage ["example", "-h"]
+##     == Err
+##         """
+##         example v0.1.0
+##
+##         An example CLI.
+##
+##         Usage:
+##           example [OPTIONS]
+##
+##         Options:
+##           -v             How verbose our logs should be.
+##           -h, --help     Show this help page.
+##           -V, --version  Show the version.
+##         """
+##
+## expect
+##     exampleCli
+##     |> Cli.parseOrDisplayMessage ["example", "-V"]
+##     == Err "v0.1.0"
+##
+## expect
+##     exampleCli
+##     |> Cli.parseOrDisplayMessage ["example", "-v"]
+##     == Ok { verbosity: 1 }
+##
+## expect
+##     exampleCli
+##     |> Cli.parseOrDisplayMessage ["example", "-x"]
+##     == Err
+##         """
+##         Error: The argument -x was not recognized.
+##
+##         Usage:
+##           example [OPTIONS]
+##         """
+## ```
 parseOrDisplayMessage : CliParser state, List Str -> Result state Str
 parseOrDisplayMessage = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
-        ShowHelp { subcommandPath } -> Err (helpText { config: parser.config, subcommandPath })
+        ShowHelp { subcommandPath } -> Err (helpText parser.config subcommandPath)
         ShowVersion -> Err parser.config.version
         IncorrectUsage err { subcommandPath } ->
             usageStr = usageHelp parser.config subcommandPath
@@ -105,6 +374,15 @@ parseOrDisplayMessage = \parser, args ->
             Err incorrectUsageStr
 
 expect
-    weave {}
-    |> finish { name: "empty" }
+    Cli.weave {
+        verbosity: <- Opt.count { short: "v" },
+    }
+    |> Cli.finish { name: "empty" }
     |> Result.isOk
+
+expect
+    Cli.weave {
+        verbosity: <- Opt.count { short: "" },
+    }
+    |> Cli.finish { name: "example" }
+    |> Result.isErr

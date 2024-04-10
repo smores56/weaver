@@ -1,3 +1,4 @@
+## An ergonomic CLI parsing library.
 package "weaver"
     exposes [
         Opt,

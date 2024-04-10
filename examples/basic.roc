@@ -62,8 +62,8 @@ cliParser =
     Cli.weave {
         force: <- Opt.flag { short: "f", help: "Force the task to complete." },
         sc: <- Subcommand.field [subcommandParser1, subcommandParser2],
-        file: <- Param.maybeStr { name: "file" },
-        files: <- Param.strList { name: "files" },
+        file: <- Param.maybeStr { name: "file", help: "The file to process." },
+        files: <- Param.strList { name: "files", help: "The rest of the files." },
     }
     |> Cli.finish {
         name: "basic",
