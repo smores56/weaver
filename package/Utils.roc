@@ -6,6 +6,7 @@ lowerAAsciiCode = 97
 lowerZAsciiCode = 122
 lowerToUpperCaseAsciiDelta = 32
 
+# TODO: this is a terrible way to check string length!
 strLen : Str -> U64
 strLen = \s -> List.len (Str.toUtf8 s)
 

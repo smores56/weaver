@@ -102,7 +102,7 @@ findOptionForExtraction = \state, arg, option ->
     when arg is
         Short short ->
             if short == option.short then
-                if option.expectedType == None then
+                if option.expectedValue == NothingExpected then
                     Ok { state & values: state.values |> List.append (Err NoValue) }
                 else
                     Ok { state & action: GetValue }
@@ -114,7 +114,7 @@ findOptionForExtraction = \state, arg, option ->
 
         Long long ->
             if long.name == option.long then
-                if option.expectedType == None then
+                if option.expectedValue == NothingExpected then
                     when long.value is
                         Ok _val -> Err (OptionDoesNotExpectValue option)
                         Err NoValue -> Ok { state & values: state.values |> List.append (Err NoValue) }
@@ -137,7 +137,7 @@ findOptionsInShortGroup = \state, option, shortGroup ->
                 GetValue -> Err (CannotUsePartialShortGroupAsValue option shortGroup.names)
                 FindOption ->
                     if name == option.short then
-                        if option.expectedType == None then
+                        if option.expectedValue == NothingExpected then
                             Ok { sgState & values: sgState.values |> List.append (Err NoValue) }
                         else
                             Ok { sgState & action: GetValue }

@@ -24,6 +24,8 @@ CliValidationErr : [
     InvalidCommandName { name : Str, subcommandPath : List Str },
     InvalidParameterName { name : Str, subcommandPath : List Str },
     OptionMustHaveShortOrLongName { subcommandPath : List Str },
+    InvalidOptionValueType { option : OptionConfig, subcommandPath : List Str },
+    InvalidParameterValueType { param : ParameterConfig, subcommandPath : List Str },
     OverrodeSpecialHelpFlag { option : OptionConfig, subcommandPath : List Str },
     OverrodeSpecialVersionFlag { option : OptionConfig, subcommandPath : List Str },
 ]
@@ -74,11 +76,25 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
     {} <- ensureCommandIsWellNamed { name, subcommandPath }
         |> Result.try
     _ <- options
-        |> List.mapTry \option -> ensureOptionIsWellNamed { option, subcommandPath }
+        |> List.mapTry \option ->
+            {} <- ensureOptionIsWellNamed { option, subcommandPath }
+                |> Result.try
+            {} <- ensureOptionValueTypeIsWellNamed { option, subcommandPath }
+                |> Result.try
+
+            Ok {}
         |> Result.try
+
     _ <- parameters
-        |> List.mapTry \param -> ensureParamIsWellNamed { name: param.name, subcommandPath }
+        |> List.mapTry \param ->
+            {} <- ensureParamIsWellNamed { name: param.name, subcommandPath }
+                |> Result.try
+            {} <- ensureParamValueTypeIsWellNamed { param, subcommandPath }
+                |> Result.try
+
+            Ok {}
         |> Result.try
+
     {} <- checkIfThereAreOverlappingParameters parameters subcommandPath
         |> Result.try
 
@@ -133,6 +149,25 @@ ensureOptionIsWellNamed = \{ option, subcommandPath } ->
         (short, long) ->
             ensureShortFlagIsWellNamed { name: short, subcommandPath }
             |> Result.try \{} -> ensureLongFlagIsWellNamed { name: long, subcommandPath }
+
+ensureOptionValueTypeIsWellNamed : { option : OptionConfig, subcommandPath : List Str } -> Result {} CliValidationErr
+ensureOptionValueTypeIsWellNamed = \{ option, subcommandPath } ->
+    when option.expectedValue is
+        ExpectsValue typeName ->
+            if isKebabCase typeName then
+                Ok {}
+            else
+                Err (InvalidOptionValueType { option, subcommandPath })
+
+        NothingExpected ->
+            Ok {}
+
+ensureParamValueTypeIsWellNamed : { param : ParameterConfig, subcommandPath : List Str } -> Result {} CliValidationErr
+ensureParamValueTypeIsWellNamed = \{ param, subcommandPath } ->
+    if isKebabCase param.type then
+        Ok {}
+    else
+        Err (InvalidParameterValueType { param, subcommandPath })
 
 ensureShortFlagIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
 ensureShortFlagIsWellNamed = \{ name, subcommandPath } ->

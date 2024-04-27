@@ -238,7 +238,7 @@ parametersHelp = \params ->
     """
 
 optionNameFormatter : OptionConfig -> Str
-optionNameFormatter = \{ short, long, expectedType } ->
+optionNameFormatter = \{ short, long, expectedValue } ->
     shortName =
         if short != "" then
             "-$(short)"
@@ -252,11 +252,9 @@ optionNameFormatter = \{ short, long, expectedType } ->
             ""
 
     typeName =
-        when expectedType is
-            None -> ""
-            Str -> " STR"
-            Num -> " NUM"
-            Custom c -> " $(toUpperCase c)"
+        when expectedValue is
+            NothingExpected -> ""
+            ExpectsValue name -> " $(toUpperCase name)"
 
     [shortName, longName]
     |> List.dropIf Str.isEmpty

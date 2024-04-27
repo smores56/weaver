@@ -4,7 +4,7 @@ interface CliTest
 
 basicCli =
     Cli.weave {
-        a: <- Opt.num { short: "a", help: "Set the alpha level." },
+        a: <- Opt.u64 { short: "a", help: "Set the alpha level." },
     }
     |> Cli.finish { name: "basic-cli", version: "v1.0.0" }
     |> Cli.assertValid

@@ -7,13 +7,19 @@ interface Base
         onSuccessfulArgParse,
         mapSuccessfullyParsed,
         ArgExtractErr,
-        ExpectedType,
+        strTypeName,
+        numTypeName,
+        ExpectedValue,
         Plurality,
         SpecialFlags,
+        InvalidValue,
+        ValueParser,
+        OptionConfigBaseParams,
         OptionConfigParams,
         OptionConfig,
         helpOption,
         versionOption,
+        ParameterConfigBaseParams,
         ParameterConfigParams,
         ParameterConfig,
         CliConfigParams,
@@ -77,21 +83,19 @@ ArgExtractErr : [
     NoValueProvidedForOption OptionConfig,
     OptionDoesNotExpectValue OptionConfig,
     CannotUsePartialShortGroupAsValue OptionConfig (List Str),
-    InvalidNumArg OptionConfig,
-    InvalidCustomArg OptionConfig Str,
-    InvalidNumParam ParameterConfig,
-    InvalidCustomParam ParameterConfig Str,
+    InvalidOptionValue InvalidValue OptionConfig,
+    InvalidParamValue InvalidValue ParameterConfig,
     MissingParam ParameterConfig,
     UnrecognizedShortArg Str,
     UnrecognizedLongArg Str,
     ExtraParamProvided Str,
 ]
 
-## The type of value that a parameter expects to parse.
-ExpectedType : [Str, Num, Custom Str]
+strTypeName = "str"
+numTypeName = "num"
 
 ## The type of value that an option expects to parse.
-MaybeExpectedType : [None, Str, Num, Custom Str]
+ExpectedValue : [ExpectsValue Str, NothingExpected]
 
 ## How many values an option/parameter can take.
 Plurality : [Optional, One, Many]
@@ -99,16 +103,29 @@ Plurality : [Optional, One, Many]
 ## The two built-in flags that we parse automatically.
 SpecialFlags : { help : Bool, version : Bool }
 
-## Default-value options for creating an option.
-OptionConfigParams : {
+InvalidValue : [InvalidNumStr, InvalidValue Str]
+
+## A parser that extracts an argument value from a string.
+ValueParser a : Str -> Result a InvalidValue
+
+OptionConfigBaseParams : {
     short ? Str,
     long ? Str,
     help ? Str,
 }
 
+## Default-value options for creating an option.
+OptionConfigParams a : OptionConfigBaseParams {
+    short ? Str,
+    long ? Str,
+    help ? Str,
+    type : Str,
+    parser : ValueParser a,
+}
+
 ## Metadata for options in our CLI building system.
 OptionConfig : {
-    expectedType : MaybeExpectedType,
+    expectedValue : ExpectedValue,
     plurality : Plurality,
     short : Str,
     long : Str,
@@ -121,7 +138,7 @@ helpOption = {
     short: "h",
     long: "help",
     help: "Show this help page.",
-    expectedType: None,
+    expectedValue: NothingExpected,
     plurality: Optional,
 }
 
@@ -131,21 +148,26 @@ versionOption = {
     short: "V",
     long: "version",
     help: "Show the version.",
-    expectedType: None,
+    expectedValue: NothingExpected,
     plurality: Optional,
 }
 
-## Default-value options for creating an parameter.
-ParameterConfigParams : {
+ParameterConfigBaseParams : {
     name : Str,
     help ? Str,
+}
+
+## Default-value options for creating an parameter.
+ParameterConfigParams a : ParameterConfigBaseParams {
+    type : Str,
+    parser : ValueParser a,
 }
 
 ## Metadata for parameters in our CLI building system.
 ParameterConfig : {
     name : Str,
     help : Str,
-    type : ExpectedType,
+    type : Str,
     plurality : Plurality,
 }
 

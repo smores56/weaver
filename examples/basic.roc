@@ -28,30 +28,30 @@ main =
 cliParser =
     subSubcommandParser1 =
         Cli.weave {
-            a: <- Opt.num { short: "a", help: "An example short flag for a sub-subcommand." },
-            b: <- Opt.num { short: "b", help: "Another example short flag for a sub-subcommand." },
+            a: <- Opt.u64 { short: "a", help: "An example short flag for a sub-subcommand." },
+            b: <- Opt.u64 { short: "b", help: "Another example short flag for a sub-subcommand." },
         }
         |> Subcommand.finish { name: "ss1", description: "A sub-subcommand.", mapper: SS1 }
 
     subSubcommandParser2 =
         Cli.weave {
-            a: <- Opt.num { short: "a", help: "Set the alpha level." },
-            c: <- Opt.num { short: "c", long: "create", help: "Create a doohickey." },
+            a: <- Opt.u64 { short: "a", help: "Set the alpha level." },
+            c: <- Opt.u64 { short: "c", long: "create", help: "Create a doohickey." },
             data: <- Param.str { name: "data", help: "Data to manipulate." },
         }
         |> Subcommand.finish { name: "ss2", description: "Another sub-subcommand.", mapper: SS2 }
 
     subcommandParser1 =
         Cli.weave {
-            d: <- Opt.maybeNum { short: "d", help: "A non-overlapping subcommand flag with s2." },
-            volume: <- Opt.maybeNum { short: "v", long: "volume", help: "How loud to grind the gears." },
+            d: <- Opt.maybeU64 { short: "d", help: "A non-overlapping subcommand flag with s2." },
+            volume: <- Opt.maybeU64 { short: "v", long: "volume", help: "How loud to grind the gears." },
             sc: <- Subcommand.field [subSubcommandParser1, subSubcommandParser2],
         }
         |> Subcommand.finish { name: "s1", description: "A first subcommand.", mapper: S1 }
 
     subcommandParser2 =
         Cli.weave {
-            d: <- Opt.maybeNum { short: "d", help: "This doesn't overlap with s1's -d flag." },
+            d: <- Opt.maybeU64 { short: "d", help: "This doesn't overlap with s1's -d flag." },
         }
         |> Subcommand.finish {
             name: "s2",

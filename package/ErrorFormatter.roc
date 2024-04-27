@@ -3,7 +3,14 @@
 interface ErrorFormatter
     exposes [formatArgExtractErr, formatCliValidationErr]
     imports [
-        Base.{ ArgExtractErr, OptionName, OptionConfig, MaybeExpectedType },
+        Base.{
+            ArgExtractErr,
+            OptionName,
+            OptionConfig,
+            ExpectedValue,
+            strTypeName,
+            numTypeName,
+        },
         Validate.{ CliValidationErr },
     ]
 
@@ -15,13 +22,20 @@ optionDisplayName = \option ->
         ("", long) -> "--$(long)"
         (short, long) -> "-$(short)/--$(long)"
 
-typeName : [Str, Num, Custom Str]* -> Str
-typeName = \expectedType ->
-    when expectedType is
-        Str -> "string"
-        Num -> "number"
-        Custom c -> c
-        _other -> ""
+optionTypeName : { expectedValue : ExpectedValue }* -> Str
+optionTypeName = \{ expectedValue } ->
+    when expectedValue is
+        ExpectsValue typeName -> fullTypeName typeName
+        NothingExpected -> ""
+
+fullTypeName : Str -> Str
+fullTypeName = \typeName ->
+    if typeName == strTypeName then
+        "string"
+    else if typeName == numTypeName then
+        "number"
+    else
+        typeName
 
 ## Render [ArgExtractErr] errors as readable messages.
 ##
@@ -36,7 +50,7 @@ formatArgExtractErr = \err ->
             "Option $(optionDisplayName option) can only be set once."
 
         NoValueProvidedForOption option ->
-            "Option $(optionDisplayName option) expects a $(option |> .expectedType |> typeName)."
+            "Option $(optionDisplayName option) expects a $(optionTypeName option)."
 
         OptionDoesNotExpectValue option ->
             "Option $(optionDisplayName option) does not expect a value."
@@ -44,22 +58,26 @@ formatArgExtractErr = \err ->
         CannotUsePartialShortGroupAsValue option partialGroup ->
             renderedGroup = "-$(Str.joinWith partialGroup "")"
 
-            "The short option group $(renderedGroup) was partially consumed and cannot be used as a value for $(option |> .expectedType |> typeName)."
+            "The short option group $(renderedGroup) was partially consumed and cannot be used as a value for $(optionDisplayName option)."
 
-        InvalidNumArg option ->
-            "The value provided to $(optionDisplayName option) was not a valid number."
+        InvalidOptionValue valueErr option ->
+            when valueErr is
+                InvalidNumStr ->
+                    "The value provided to $(optionDisplayName option) was not a valid number."
 
-        InvalidCustomArg option reason ->
-            "The value provided to $(optionDisplayName option) was not a valid $(option |> .expectedType |> typeName): $(reason)."
+                InvalidValue reason ->
+                    "The value provided to $(optionDisplayName option) was not a valid $(optionTypeName option): $(reason)"
 
-        InvalidNumParam param ->
-            "The value provided to the '$(param |> .name)' parameter was not a valid number."
+        InvalidParamValue valueErr param ->
+            when valueErr is
+                InvalidNumStr ->
+                    "The value provided to the '$(param |> .name)' parameter was not a valid number."
 
-        InvalidCustomParam param reason ->
-            "The value provided to the '$(param |> .name)' parameter was not a valid $(param |> .type |> typeName): $(reason)."
+                InvalidValue reason ->
+                    "The value provided to the '$(param |> .name)' parameter was not a valid $(param |> .type |> fullTypeName): $(reason)."
 
         MissingParam parameter ->
-            "The parameter $(parameter |> .name) did not receive a value."
+            "The '$(parameter |> .name)' parameter did not receive a value."
 
         UnrecognizedShortArg short ->
             "The argument -$(short) was not recognized."
@@ -68,7 +86,7 @@ formatArgExtractErr = \err ->
             "The argument --$(long) was not recognized."
 
         ExtraParamProvided param ->
-            "The parameter $(param) was not expected."
+            "The parameter \"$(param)\" was not expected."
 
 ## Render [CliValidationErr] errors as readable messages.
 ##
@@ -115,6 +133,18 @@ formatCliValidationErr = \err ->
 
         OptionMustHaveShortOrLongName { subcommandPath } ->
             "An $(valueAtSubcommandName { name: "option", subcommandPath }) has neither a short or long name."
+
+        InvalidOptionValueType { option, subcommandPath } ->
+            valueType =
+                when option.expectedValue is
+                    ExpectsValue typeName -> typeName
+                    NothingExpected -> ""
+
+            "The $(optionAtSubcommandName { option, subcommandPath }) has value type '$(valueType)', which is not kebab-case."
+
+        InvalidParameterValueType { param, subcommandPath } ->
+            valueName = "parameter '$(param |> .name)'"
+            "The $(valueAtSubcommandName { name: valueName, subcommandPath }) has value type '$(param |> .type)', which is not kebab-case."
 
         OverrodeSpecialHelpFlag { option, subcommandPath } ->
             "The $(optionAtSubcommandName { option, subcommandPath }) tried to overwrite the built-in -h/--help flag."

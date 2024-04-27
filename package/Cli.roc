@@ -10,7 +10,7 @@
 ##
 ## ```roc
 ## Cli.weave {
-##     alpha: <- Opt.num { short: "a", help: "Set the alpha level" },
+##     alpha: <- Opt.u64 { short: "a", help: "Set the alpha level" },
 ##     verbosity: <- Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
 ##     files: <- Param.strList { name: "files", help: "The files to process." },
 ## }
@@ -28,7 +28,7 @@
 ## ```roc
 ## fooSubcommand =
 ##     Cli.weave {
-##         alpha: <- Opt.num {
+##         alpha: <- Opt.u64 {
 ##             short: "a",
 ##             help: "Set the alpha level",
 ##         },
@@ -43,7 +43,7 @@
 ##     Cli.weave {
 ##         # We allow two subcommands of the same parent to have overlapping
 ##         # fields since only one can ever be parsed at a time.
-##         alpha: <- Opt.num {
+##         alpha: <- Opt.u64 {
 ##             short: "a",
 ##             help: "Set the alpha level",
 ##         },
@@ -71,7 +71,7 @@
 ## ```roc
 ## cliParser =
 ##     Cli.weave {
-##         alpha: <- Opt.num { short: "a", help: "Set the alpha level" },
+##         alpha: <- Opt.u64 { short: "a", help: "Set the alpha level" },
 ##         verbosity: <- Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
 ##         files: <- Param.strList { name: "files", help: "The files to process." },
 ##     }
@@ -140,7 +140,7 @@ CliParser state : { config : CliConfig, parser : List Str -> ArgParserResult sta
 
 ## Begin weaving together a CLI builder using the `: <- ` builder notation.
 ##
-## Check the module-level documentation (TODO: not written) for general usage instructions.
+## Check the module-level documentation for general usage instructions.
 ##
 ## ```roc
 ## expect
