@@ -99,41 +99,31 @@
 ## _`Param` lists also cannot be followed by anything else including_
 ## _themselves. These requirements ensure we parse arguments in the_
 ## _right order. Luckily, all of this is ensured at the type level._
-interface Cli
-    exposes [
-        CliParser,
-        weave,
-        finish,
-        finishWithoutValidating,
-        assertValid,
-        parseOrDisplayMessage,
-    ]
-    imports [
-        Opt,
-        Base.{
-            ArgParser,
-            ArgParserResult,
-            ArgExtractErr,
-            OptionConfigParams,
-            OptionConfig,
-            ParameterConfigParams,
-            ParameterConfig,
-            CliConfig,
-            CliConfigParams,
-            SubcommandConfig,
-            SubcommandsConfig,
-            SubcommandConfigParams,
-            mapSuccessfullyParsed,
-        },
-        Parser.{ Arg, parseArgs },
-        Builder.{ CliBuilder, GetOptionsAction },
-        Validate.{ validateCli, CliValidationErr },
-        ErrorFormatter.{
-            formatArgExtractErr,
-            formatCliValidationErr,
-        },
-        Help.{ helpText, usageHelp },
-    ]
+module [
+    CliParser,
+    weave,
+    finish,
+    finishWithoutValidating,
+    assertValid,
+    parseOrDisplayMessage,
+]
+
+import Opt
+import Base exposing [
+    ArgParserResult,
+    ArgExtractErr,
+    CliConfig,
+    CliConfigParams,
+    mapSuccessfullyParsed,
+]
+import Parser exposing [Arg, parseArgs]
+import Builder exposing [CliBuilder, GetOptionsAction]
+import Validate exposing [validateCli, CliValidationErr]
+import ErrorFormatter exposing [
+    formatArgExtractErr,
+    formatCliValidationErr,
+]
+import Help exposing [helpText, usageHelp]
 
 ## A parser that interprets command line arguments and returns well-formed data.
 CliParser state : { config : CliConfig, parser : List Str -> ArgParserResult state }

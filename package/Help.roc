@@ -1,15 +1,13 @@
-interface Help
-    exposes [helpText, usageHelp]
-    imports [
-        Base.{
-            CliConfig,
-            OptionConfig,
-            ParameterConfig,
-            SubcommandConfig,
-            SubcommandsConfig,
-        },
-        Utils.{ toUpperCase, strLen },
-    ]
+module [helpText, usageHelp]
+
+import Base exposing [
+    CliConfig,
+    OptionConfig,
+    ParameterConfig,
+    SubcommandConfig,
+    SubcommandsConfig,
+]
+import Utils exposing [toUpperCase, strLen]
 
 ## Walks the subcommand tree from the root CLI config and either
 ## returns the subcommand's config as if it were the root command if a

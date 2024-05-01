@@ -1,28 +1,17 @@
-interface Subcommand
-    exposes [finish, field]
-    imports [
-        Base.{
-            ArgParser,
-            ArgParserState,
-            ArgParserResult,
-            onSuccessfulArgParse,
-            ArgExtractErr,
-            OptionConfigParams,
-            OptionConfig,
-            ParameterConfigParams,
-            ParameterConfig,
-            CliConfig,
-            CliConfigParams,
-            SubcommandConfig,
-            SubcommandsConfig,
-            SubcommandConfigParams,
-        },
-        Builder.{
-            CliBuilder,
-            GetOptionsAction,
-            GetParamsAction,
-        },
-    ]
+module [finish, field]
+
+import Base exposing [
+    ArgParser,
+    ArgParserState,
+    ArgParserResult,
+    onSuccessfulArgParse,
+    SubcommandConfig,
+]
+import Builder exposing [
+    CliBuilder,
+    GetOptionsAction,
+    GetParamsAction,
+]
 
 ## Bundle a CLI builder into a subcommand.
 ##

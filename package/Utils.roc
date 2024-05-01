@@ -1,6 +1,4 @@
-interface Utils
-    exposes [strLen, isKebabCase, toUpperCase]
-    imports []
+module [strLen, isKebabCase, toUpperCase]
 
 lowerAAsciiCode = 97
 lowerZAsciiCode = 122

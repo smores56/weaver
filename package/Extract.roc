@@ -1,9 +1,7 @@
-interface Extract
-    exposes [extractParamValues, extractOptionValues]
-    imports [
-        Base.{ ArgExtractErr, OptionConfig, ParameterConfig },
-        Parser.{ Arg, ArgValue },
-    ]
+module [extractParamValues, extractOptionValues]
+
+import Base exposing [ArgExtractErr, OptionConfig, ParameterConfig]
+import Parser exposing [Arg, ArgValue]
 
 ExtractParamValuesParams : {
     args : List Arg,

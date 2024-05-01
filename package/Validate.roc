@@ -1,17 +1,14 @@
-interface Validate
-    exposes [validateCli, CliValidationErr]
-    imports [
-        Utils.{ strLen, isKebabCase },
-        Base.{
-            OptionName,
-            OptionConfig,
-            helpOption,
-            versionOption,
-            ParameterConfig,
-            SubcommandsConfig,
-            CliConfig,
-        },
-    ]
+module [validateCli, CliValidationErr]
+
+import Utils exposing [strLen, isKebabCase]
+import Base exposing [
+    OptionConfig,
+    helpOption,
+    versionOption,
+    ParameterConfig,
+    SubcommandsConfig,
+    CliConfig,
+]
 
 OptionAtSubcommand : { option : OptionConfig, subcommandPath : List Str }
 

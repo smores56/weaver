@@ -1,6 +1,7 @@
-interface CliTest
-    exposes []
-    imports [Opt, Cli]
+module []
+
+import Opt
+import Cli
 
 basicCli =
     Cli.weave {

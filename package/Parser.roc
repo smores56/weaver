@@ -1,6 +1,4 @@
-interface Parser
-    exposes [parseArgs, Arg, ArgValue]
-    imports []
+module [parseArgs, Arg, ArgValue]
 
 Arg : [
     Short Str,

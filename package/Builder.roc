@@ -1,34 +1,31 @@
-interface Builder
-    exposes [
-        GetOptionsAction,
-        GetParamsAction,
-        StopCollectingAction,
-        CliBuilder,
-        fromState,
-        addOptions,
-        addParameters,
-        addSubcommands,
-        updateParser,
-        bindParser,
-        intoParts,
-        checkForHelpAndVersion,
-    ]
-    imports [
-        Base.{
-            ArgParser,
-            ArgParserParams,
-            ArgParserState,
-            ArgParserResult,
-            onSuccessfulArgParse,
-            ArgExtractErr,
-            OptionConfig,
-            helpOption,
-            versionOption,
-            ParameterConfig,
-            SubcommandConfig,
-        },
-        Parser.{ Arg },
-    ]
+module [
+    GetOptionsAction,
+    GetParamsAction,
+    StopCollectingAction,
+    CliBuilder,
+    fromState,
+    addOptions,
+    addParameters,
+    addSubcommands,
+    updateParser,
+    bindParser,
+    intoParts,
+    checkForHelpAndVersion,
+]
+
+import Base exposing [
+    ArgParser,
+    ArgParserState,
+    ArgParserResult,
+    onSuccessfulArgParse,
+    ArgExtractErr,
+    OptionConfig,
+    helpOption,
+    versionOption,
+    ParameterConfig,
+    SubcommandConfig,
+]
+import Parser exposing [Arg]
 
 GetOptionsAction : { getOptions : {} }
 GetParamsAction : { getParams : {} }

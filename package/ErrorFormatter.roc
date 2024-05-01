@@ -1,18 +1,14 @@
 ## Render errors we encounter in a human-readable format so that
 ## they are readable for developers and users on failure.
-interface ErrorFormatter
-    exposes [formatArgExtractErr, formatCliValidationErr]
-    imports [
-        Base.{
-            ArgExtractErr,
-            OptionName,
-            OptionConfig,
-            ExpectedValue,
-            strTypeName,
-            numTypeName,
-        },
-        Validate.{ CliValidationErr },
-    ]
+module [formatArgExtractErr, formatCliValidationErr]
+
+import Base exposing [
+    ArgExtractErr,
+    ExpectedValue,
+    strTypeName,
+    numTypeName,
+]
+import Validate exposing [CliValidationErr]
 
 optionDisplayName : { short : Str, long : Str }* -> Str
 optionDisplayName = \option ->
