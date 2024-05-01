@@ -51,6 +51,7 @@ main =
 
 cliParser =
     Cli.weave {
+        alpha: <- Opt.u64 { short: "a", help: "Set the alpha level." },
         force: <- Opt.flag { short: "f", help: "Force the task to complete." },
         file: <- Param.maybeStr { name: "file", help: "The file to process." },
         files: <- Param.strList { name: "files", help: "The rest of the files." },
@@ -67,10 +68,10 @@ cliParser =
 And here's us calling the above example from the command line:
 
 ```console
-$ roc readme.roc -- file1.txt file2.txt -f
+$ roc examples/basic.roc -- file1.txt file2.txt -f -a 123
 Successfully parsed! Here's what I got:
 
-{file: (Ok "file1.txt"), files: ["file2.txt"], force: Bool.true, sc: (Err NoSubcommand)}
+{alpha: 123, file: (Ok "file1.txt"), files: ["file2.txt"], force: Bool.true}
 
 $ roc readme.roc -- --help
 basic v0.0.1
@@ -80,18 +81,14 @@ This is a basic example of what you can build with Weaver. You get safe parsing,
 
 Usage:
   basic [OPTIONS] [file] [files]...
-  basic <COMMAND>
-
-Commands:
-  s1  A first subcommand.
-  s2  Another subcommand.
 
 Arguments:
   [file]      The file to process.
   [files]...  The rest of the files.
 
 Options:
-  -f, --force    Force the task to complete.
+  -a NUM         Set the alpha level.
+  -f             Force the task to complete.
   -h, --help     Show this help page.
   -V, --version  Show the version.
 ```

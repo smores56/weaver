@@ -26,6 +26,7 @@ main =
 
 cliParser =
     Cli.weave {
+        alpha: <- Opt.u64 { short: "a", help: "Set the alpha level." },
         force: <- Opt.flag { short: "f", help: "Force the task to complete." },
         file: <- Param.maybeStr { name: "file", help: "The file to process." },
         files: <- Param.strList { name: "files", help: "The rest of the files." },

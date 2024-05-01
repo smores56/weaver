@@ -111,7 +111,7 @@ getMaybeValue = \values, option ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             color: <- Opt.custom { short: "c", typeName: "Color", parser: parseColor },
+##             color: <- Opt.custom { short: "c", parser: parseColor, type: "color" },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
@@ -124,15 +124,15 @@ single = \{ parser, type, short ? "", long ? "", help ? "" } ->
     option = { expectedValue: ExpectsValue type, plurality: One, short, long, help }
 
     \builder ->
-        values <- updateBuilderWithOptionParser builder option
-        value <- getSingleValue values option
-            |> Result.try
+        updateBuilderWithOptionParser builder option \values ->
+            argValue <- getSingleValue values option
+                |> Result.try
+            value <- argValue
+                |> Result.mapErr \NoValue -> NoValueProvidedForOption option
+                |> Result.try
 
-        when value is
-            Err NoValue -> Err (NoValueProvidedForOption option)
-            Ok val ->
-                parser val
-                |> Result.mapErr \err -> InvalidOptionValue err option
+            parser value
+            |> Result.mapErr \err -> InvalidOptionValue err option
 
 ## Add an optional option that takes a custom type to your CLI builder.
 ##

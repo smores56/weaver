@@ -115,7 +115,7 @@ OptionConfigBaseParams : {
 }
 
 ## Default-value options for creating an option.
-OptionConfigParams a : OptionConfigBaseParams {
+OptionConfigParams a : {
     short ? Str,
     long ? Str,
     help ? Str,
@@ -158,7 +158,9 @@ ParameterConfigBaseParams : {
 }
 
 ## Default-value options for creating an parameter.
-ParameterConfigParams a : ParameterConfigBaseParams {
+ParameterConfigParams a : {
+    name : Str,
+    help ? Str,
     type : Str,
     parser : ValueParser a,
 }
