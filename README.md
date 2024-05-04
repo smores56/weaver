@@ -13,19 +13,16 @@ Read the documentation at <https://smores56.github.io/weaver/Cli/>.
 
 ## Status
 
-An initial release has been made, so you can use Weaver right now! Just grab the download
-URL from the [latest GitHub release](https://github.com/smores56/weaver/releases/latest)
-and import it into your app.
-
-More niceties will be added in the next few weeks, but the general structure of the library
-is unlikely to change much unless I find a big improvement from a different parsing strategy.
+This library should be ready for usage already, but I'm always looking for more testing
+from the community! Feel free to open a GitHub issue if there's a feature you're missing
+from another CLI parsing library that you think would fit well in Weaver's nest.
 
 ## Example
 
 ```roc
 app [main] {
     pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
-    weaver: "https://github.com/smores56/weaver/releases/download/0.1.0/MnJi0GTNzOI77qDnH99iuBNsM5ZKnc-gZTLFj7sIdqo.tar.br",
+    weaver: "https://github.com/smores56/weaver/releases/download/0.2.0/BBDPvzgGrYp-AhIDw0qmwxT0pWZIQP_7KOrUrZfp_xw.tar.br",
 }
 
 import pf.Stdout
@@ -58,7 +55,7 @@ cliParser =
     }
     |> Cli.finish {
         name: "basic",
-        version: "v0.0.1",
+        version: "v0.1.0",
         authors: ["Some One <some.one@mail.com>"],
         description: "This is a basic example of what you can build with Weaver. You get safe parsing, useful error messages, and help pages all for free!",
     }
@@ -80,11 +77,11 @@ Some One <some.one@mail.com>
 This is a basic example of what you can build with Weaver. You get safe parsing, useful error messages, and help pages all for free!
 
 Usage:
-  basic [OPTIONS] [file] [files]...
+  basic -a NUM [options] <file> <files...>
 
 Arguments:
-  [file]      The file to process.
-  [files]...  The rest of the files.
+  <file>      The file to process.
+  <files...>  The rest of the files.
 
 Options:
   -a NUM         Set the alpha level.
@@ -101,10 +98,9 @@ with more to come as this library matures.
 Now that an initial release has happened, these are some ideas I have for future development:
 
 - [ ] Set default values in the arguments themselves
-- [ ] Nested option records that all parse under a single command for better modularity
 - [ ] Optionally set `{ group : Str }` per option so they are visually grouped in the help page
 - [ ] Completion generation for popular shells (e.g. Bash, Zsh, Fish, etc.)
-- [ ] Add terminal escape sequences to generated messages for prettier help/usage text formatting
+- [X] Add terminal escape sequences to generated messages for prettier help/usage text formatting
 - [ ] add convenient `Task` helpers (e.g. parse or print help and exit) once [module params](https://docs.google.com/document/u/0/d/110MwQi7Dpo1Y69ECFXyyvDWzF4OYv1BLojIm08qDTvg) land
-- [ ] Clean up default parameter code if we can elide different fields on the same record type in different places (not currently allowed)
+- [X] Clean up default parameter code if we can elide different fields on the same record type in different places (not currently allowed)
 - [ ] Add more testing (always)
