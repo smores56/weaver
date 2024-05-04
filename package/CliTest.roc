@@ -7,7 +7,7 @@ basicCli =
     Cli.weave {
         a: <- Opt.u64 { short: "a", help: "Set the alpha level." },
     }
-    |> Cli.finish { name: "basic-cli", version: "v1.0.0" }
+    |> Cli.finish { name: "basic-cli", version: "v1.0.0", textStyle: Plain }
     |> Cli.assertValid
 
 expect
@@ -20,10 +20,8 @@ expect
         """
         basic-cli v1.0.0
 
-        No description.
-
         Usage:
-          basic-cli [OPTIONS]
+          basic-cli -a NUM [options]
 
         Options:
           -a NUM         Set the alpha level.

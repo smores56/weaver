@@ -55,7 +55,7 @@
 ##     }
 ##
 ## Cli.weave {
-##     sc: <- Subcommand.field [fooSubcommand, barSubcommand],
+##     sc: <- Subcommand.optional [fooSubcommand, barSubcommand],
 ## }
 ## ```
 ##
@@ -110,6 +110,7 @@ module [
 
 import Opt
 import Base exposing [
+    TextStyle,
     ArgParserResult,
     ArgExtractErr,
     CliConfig,
@@ -126,7 +127,11 @@ import ErrorFormatter exposing [
 import Help exposing [helpText, usageHelp]
 
 ## A parser that interprets command line arguments and returns well-formed data.
-CliParser state : { config : CliConfig, parser : List Str -> ArgParserResult state }
+CliParser state : {
+    config : CliConfig,
+    parser : List Str -> ArgParserResult state,
+    textStyle : TextStyle,
+}
 
 ## Begin weaving together a CLI builder using the `: <- ` builder notation.
 ##
@@ -177,6 +182,7 @@ ensureAllArgsWereParsed = \remainingArgs ->
 ##   - A long flag which is more than one character and kebab-case.
 ##   - Both a short and a long flag with the above requirements.
 ## - All parameters must be have kebab-case names.
+## - All custom option/parameter types are have kebab-case names.
 ## - No options can overlap, even between different subcommands, so long
 ##   as the options between the subcommands are ambiguous.
 ##   - For example, a CLI with a `-t` option at the root level and also
@@ -207,10 +213,10 @@ ensureAllArgsWereParsed = \remainingArgs ->
 ## ```
 finish : CliBuilder state action, CliConfigParams -> Result (CliParser state) CliValidationErr
 finish = \builder, params ->
-    { parser, config } = finishWithoutValidating builder params
+    { parser, config, textStyle } = finishWithoutValidating builder params
 
     validateCli config
-    |> Result.map \{} -> { parser, config }
+    |> Result.map \{} -> { parser, config, textStyle }
 
 ## Bundle a CLI builder into a parser without validating its configuration.
 ##
@@ -231,7 +237,7 @@ finish = \builder, params ->
 ##     == SuccessfullyParsed { verbosity: 2 }
 ## ```
 finishWithoutValidating : CliBuilder state action, CliConfigParams -> CliParser state
-finishWithoutValidating = \builder, { name, authors ? [], version ? "", description ? "" } ->
+finishWithoutValidating = \builder, { name, authors ? [], version ? "", description ? "", textStyle ? Color } ->
     { options, parameters, subcommands, parser } =
         builder
         |> Builder.checkForHelpAndVersion
@@ -252,6 +258,7 @@ finishWithoutValidating = \builder, { name, authors ? [], version ? "", descript
 
     {
         config,
+        textStyle,
         parser: \args ->
             parser { args: parseArgs args, subcommandPath: [name] }
             |> mapSuccessfullyParsed \{ data } -> data,
@@ -350,10 +357,10 @@ parseOrDisplayMessage : CliParser state, List Str -> Result state Str
 parseOrDisplayMessage = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
-        ShowHelp { subcommandPath } -> Err (helpText parser.config subcommandPath)
+        ShowHelp { subcommandPath } -> Err (helpText parser.config subcommandPath parser.textStyle)
         ShowVersion -> Err parser.config.version
         IncorrectUsage err { subcommandPath } ->
-            usageStr = usageHelp parser.config subcommandPath
+            usageStr = usageHelp parser.config subcommandPath parser.textStyle
             incorrectUsageStr =
                 """
                 Error: $(formatArgExtractErr err)

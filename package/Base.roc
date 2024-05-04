@@ -8,6 +8,7 @@ module [
     ArgExtractErr,
     strTypeName,
     numTypeName,
+    TextStyle,
     ExpectedValue,
     Plurality,
     SpecialFlags,
@@ -95,6 +96,9 @@ ArgExtractErr : [
 strTypeName = "str"
 numTypeName = "num"
 
+## Whether help text should have fancy styling.
+TextStyle : [Color, Plain]
+
 ## The type of value that an option expects to parse.
 ExpectedValue : [ExpectsValue Str, NothingExpected]
 
@@ -180,6 +184,7 @@ CliConfigParams : {
     authors ? List Str,
     version ? Str,
     description ? Str,
+    textStyle ? TextStyle,
 }
 
 ## Metadata for a root-level CLI.
