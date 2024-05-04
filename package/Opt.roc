@@ -89,7 +89,7 @@ getMaybeValue = \values, option ->
 
 ## Add a required option that takes a custom type to your CLI builder.
 ##
-## You need to provide a type name for your help messages as well as a
+## You need to provide a kebab-case type name for your help messages as well as a
 ## parser for said type. The parser needs to return an `Err (InvalidValue Str)`
 ## on failure, where the `Str` is the reason the parsing failed that will
 ## get displayed in the incorrect usage message.
@@ -111,7 +111,7 @@ getMaybeValue = \values, option ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             color: <- Opt.custom { short: "c", parser: parseColor, type: "color" },
+##             color: <- Opt.single { short: "c", parser: parseColor, type: "color" },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
@@ -136,7 +136,7 @@ single = \{ parser, type, short ? "", long ? "", help ? "" } ->
 
 ## Add an optional option that takes a custom type to your CLI builder.
 ##
-## You need to provide a type name for your help messages as well as a
+## You need to provide a kebab-case type name for your help messages as well as a
 ## parser for said type. The parser needs to return an `Err (InvalidValue Str)`
 ## on failure, where the `Str` is the reason the parsing failed that will
 ## get displayed in the incorrect usage message.
@@ -159,7 +159,7 @@ single = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             color: <- Opt.maybeCustom { short: "c", typeName: "Color", parser: parseColor },
+##             color: <- Opt.maybe { short: "c", type: "color", parser: parseColor },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
@@ -187,7 +187,7 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ## Add an option that takes a custom type and can be given multiple times
 ## to your CLI builder.
 ##
-## You need to provide a type name for your help messages as well as a
+## You need to provide a kebab-case type name for your help messages as well as a
 ## parser for said type. The parser needs to return an `Err (InvalidValue Str)`
 ## on failure, where the `Str` is the reason the parsing failed that will
 ## get displayed in the incorrect usage message.
@@ -209,7 +209,7 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             color: <- Opt.customList { short: "c", typeName: "Color", parser: parseColor },
+##             color: <- Opt.list { short: "c", type: "color", parser: parseColor },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid

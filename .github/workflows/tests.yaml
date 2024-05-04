@@ -33,4 +33,4 @@ jobs:
       - run: ./roc_nightly/roc version
 
       # run all tests 
-      - run: for f in package/*.roc; do ./roc_nightly/roc test $f; done
+      - run: for f in **/*.roc; do ./roc_nightly/roc test $f; done

@@ -76,7 +76,7 @@ updateBuilderWithParameterParser = \builder, param, valueParser ->
 
 ## Add a required parameter of a custom type to your CLI builder.
 ##
-## You need to provide a type name for your help messages as well as a
+## You need to provide a kebab-case type name for your help messages as well as a
 ## parser for said type. The parser needs to return an `Err (InvalidValue Str)`
 ## on failure, where the `Str` is the reason the parsing failed that will
 ## get displayed in the incorrect usage message.
@@ -105,7 +105,7 @@ updateBuilderWithParameterParser = \builder, param, valueParser ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             answer: <- Param.single { name: "answer", typeName: "Color", parser: parseColor },
+##             answer: <- Param.single { name: "answer", type: "color", parser: parseColor },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
@@ -127,7 +127,7 @@ single = \{ parser, type, name, help ? "" } ->
 
 ## Add an optional parameter of a custom type to your CLI builder.
 ##
-## You need to provide a type name for your help messages as well as a
+## You need to provide a kebab-case type name for your help messages as well as a
 ## parser for said type. The parser needs to return an `Err (InvalidValue Str)`
 ## on failure, where the `Str` is the reason the parsing failed that will
 ## get displayed in the incorrect usage message.
@@ -155,7 +155,7 @@ single = \{ parser, type, name, help ? "" } ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             answer: <- Param.maybeCustom { name: "answer", typeName: "Color", parser: parseColor },
+##             answer: <- Param.maybe { name: "answer", type: "color", parser: parseColor },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
@@ -179,7 +179,7 @@ maybe = \{ parser, type, name, help ? "" } ->
 ## Add a parameter of a custom type that can be provided
 ## multiple times to your CLI builder.
 ##
-## You need to provide a type name for your help messages as well as a
+## You need to provide a kebab-case type name for your help messages as well as a
 ## parser for said type. The parser needs to return an `Err (InvalidValue Str)`
 ## on failure, where the `Str` is the reason the parsing failed that will
 ## get displayed in the incorrect usage message.
@@ -207,7 +207,7 @@ maybe = \{ parser, type, name, help ? "" } ->
 ##
 ##     { parser } =
 ##         Cli.weave {
-##             answer: <- Param.customList { name: "answer", typeName: "Color", parser: parseColor },
+##             answer: <- Param.list { name: "answer", type: "color", parser: parseColor },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid

@@ -78,6 +78,7 @@ mapSuccessfullyParsed = \result, mapper ->
 
 ## Errors that can occur while extracting values from command line arguments.
 ArgExtractErr : [
+    NoSubcommandCalled,
     MissingOption OptionConfig,
     OptionCanOnlyBeSetOnce OptionConfig,
     NoValueProvidedForOption OptionConfig,

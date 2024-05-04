@@ -77,32 +77,32 @@ constructSetOfOptions = \combined ->
 expect
     parsed = parseArg "-"
 
-    parsed == (Parameter "-")
+    parsed == Parameter "-"
 
 expect
     parsed = parseArg "-a"
 
-    parsed == (Short "a")
+    parsed == Short "a"
 
 expect
     parsed = parseArg "-abc"
 
-    parsed == (ShortGroup { names: ["a", "b", "c"], complete: Complete })
+    parsed == ShortGroup { names: ["a", "b", "c"], complete: Complete }
 
 expect
     parsed = parseArg "--abc"
 
-    parsed == (Long { name: "abc", value: Err NoValue })
+    parsed == Long { name: "abc", value: Err NoValue }
 
 expect
     parsed = parseArg "--abc=xyz"
 
-    parsed == (Long { name: "abc", value: Ok "xyz" })
+    parsed == Long { name: "abc", value: Ok "xyz" }
 
 expect
     parsed = parseArg "123"
 
-    parsed == (Parameter "123")
+    parsed == Parameter "123"
 
 expect
     parsed = parseArgs ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]

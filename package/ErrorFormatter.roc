@@ -39,6 +39,9 @@ fullTypeName = \typeName ->
 formatArgExtractErr : ArgExtractErr -> Str
 formatArgExtractErr = \err ->
     when err is
+        NoSubcommandCalled ->
+            "A subcommand must be called."
+
         MissingOption option ->
             "Required option $(optionDisplayName option) is missing."
 

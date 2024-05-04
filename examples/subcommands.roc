@@ -1,5 +1,5 @@
 app [main] {
-    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.8.1/x8URkvfyi9I0QhmVG98roKBUs_AZRkLFwFJVJ3942YA.tar.br",
+    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
     weaver: "../package/main.roc",
 }
 
@@ -28,7 +28,7 @@ main =
 cliParser =
     Cli.weave {
         force: <- Opt.flag { short: "f", help: "Force the task to complete." },
-        sc: <- Subcommand.field [subcommandParser1, subcommandParser2],
+        sc: <- Subcommand.optional [subcommandParser1, subcommandParser2],
         file: <- Param.maybeStr { name: "file", help: "The file to process." },
         files: <- Param.strList { name: "files", help: "The rest of the files." },
     }
@@ -44,7 +44,7 @@ subcommandParser1 =
     Cli.weave {
         d: <- Opt.maybeU64 { short: "d", help: "A non-overlapping subcommand flag with s2." },
         volume: <- Opt.maybeU64 { short: "v", long: "volume", help: "How loud to grind the gears." },
-        sc: <- Subcommand.field [subSubcommandParser1, subSubcommandParser2],
+        sc: <- Subcommand.optional [subSubcommandParser1, subSubcommandParser2],
     }
     |> Subcommand.finish { name: "s1", description: "A first subcommand.", mapper: S1 }
 
