@@ -4,16 +4,15 @@ import Opt
 import Cli
 
 basicCli =
-    Cli.weave {
-        a: <- Opt.u64 { short: "a", help: "Set the alpha level." },
-    }
+    Opt.u64 { short: "a", help: "Set the alpha level." }
+    |> Cli.map Alpha
     |> Cli.finish { name: "basic-cli", version: "v1.0.0", textStyle: Plain }
     |> Cli.assertValid
 
 expect
     basicCli
     |> Cli.parseOrDisplayMessage ["basic-cli", "-a", "123"]
-    == Ok { a: 123 }
+    == Ok (Alpha 123)
 
 expect
     helpMessage =

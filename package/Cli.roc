@@ -101,6 +101,7 @@
 ## _right order. Luckily, all of this is ensured at the type level._
 module [
     CliParser,
+    map,
     weave,
     finish,
     finishWithoutValidating,
@@ -109,6 +110,7 @@ module [
 ]
 
 import Opt
+# import Param
 import Base exposing [
     TextStyle,
     ArgParserResult,
@@ -118,7 +120,7 @@ import Base exposing [
     mapSuccessfullyParsed,
 ]
 import Parser exposing [Arg, parseArgs]
-import Builder exposing [CliBuilder, GetOptionsAction]
+import Builder exposing [CliBuilder]
 import Validate exposing [validateCli, CliValidationErr]
 import ErrorFormatter exposing [
     formatArgExtractErr,
@@ -132,6 +134,10 @@ CliParser state : {
     parser : List Str -> ArgParserResult state,
     textStyle : TextStyle,
 }
+
+map : CliBuilder a fromAction toAction, (a -> b) -> CliBuilder b fromAction toAction
+map = \builder, mapper ->
+    Builder.map builder mapper
 
 ## Begin weaving together a CLI builder using the `: <- ` builder notation.
 ##
@@ -149,8 +155,9 @@ CliParser state : {
 ##    parser ["example", "-vvv"]
 ##    == SuccessfullyParsed { verbosity: 3 }
 ## ```
-weave : base -> CliBuilder base GetOptionsAction
-weave = \base -> Builder.fromState base
+weave : CliBuilder a action1 action2, CliBuilder b action2 action3, (a, b -> c) -> CliBuilder c action1 action3
+weave = \left, right, combiner ->
+    Builder.combine left right combiner
 
 ## Fail the parsing process if any arguments are left over after parsing.
 ensureAllArgsWereParsed : List Arg -> Result {} ArgExtractErr
@@ -211,7 +218,7 @@ ensureAllArgsWereParsed = \remainingArgs ->
 ##     |> Cli.finish { name: "example" }
 ##     |> Result.isErr
 ## ```
-finish : CliBuilder state action, CliConfigParams -> Result (CliParser state) CliValidationErr
+finish : CliBuilder data fromAction toAction, CliConfigParams -> Result (CliParser data) CliValidationErr
 finish = \builder, params ->
     { parser, config, textStyle } = finishWithoutValidating builder params
 
@@ -236,7 +243,7 @@ finish = \builder, params ->
 ##     parser ["example", "-v", "-v"]
 ##     == SuccessfullyParsed { verbosity: 2 }
 ## ```
-finishWithoutValidating : CliBuilder state action, CliConfigParams -> CliParser state
+finishWithoutValidating : CliBuilder data fromAction toAction, CliConfigParams -> CliParser data
 finishWithoutValidating = \builder, { name, authors ? [], version ? "", description ? "", textStyle ? Color } ->
     { options, parameters, subcommands, parser } =
         builder
@@ -283,7 +290,7 @@ finishWithoutValidating = \builder, { name, authors ? [], version ? "", descript
 ## |> Cli.finish { name: "example" }
 ## |> Cli.assertValid
 ## ```
-assertValid : Result (CliParser state) CliValidationErr -> CliParser state
+assertValid : Result (CliParser data) CliValidationErr -> CliParser data
 assertValid = \result ->
     when result is
         Ok cli -> cli
@@ -353,7 +360,7 @@ assertValid = \result ->
 ##           example [OPTIONS]
 ##         """
 ## ```
-parseOrDisplayMessage : CliParser state, List Str -> Result state Str
+parseOrDisplayMessage : CliParser data, List Str -> Result data Str
 parseOrDisplayMessage = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
@@ -371,15 +378,21 @@ parseOrDisplayMessage = \parser, args ->
             Err incorrectUsageStr
 
 expect
-    Cli.weave {
-        verbosity: <- Opt.count { short: "v" },
-    }
+    Opt.count { short: "v" }
+    |> Cli.map Verbosity
     |> Cli.finish { name: "empty" }
     |> Result.isOk
 
 expect
-    Cli.weave {
-        verbosity: <- Opt.count { short: "" },
-    }
+    Opt.count { short: "" }
+    |> Cli.map Verbosity
     |> Cli.finish { name: "example" }
     |> Result.isErr
+
+expect
+    { Cli.weave <-
+        verbosity: Opt.count { short: "v" },
+        points: Param.str { name: "points" },
+    }
+    |> Cli.finish { name: "test" }
+    |> Result.isOk

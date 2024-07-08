@@ -8,7 +8,6 @@ import pf.Arg
 import pf.Task exposing [Task]
 import weaver.Opt
 import weaver.Cli
-import weaver.Param
 
 main =
     args = Arg.list!
@@ -25,12 +24,8 @@ main =
             Task.err (Exit 1 "")
 
 cliParser =
-    { Cli.weave <-
-        alpha: Opt.u64 { short: "a", help: "Set the alpha level." },
-        force: Opt.flag { short: "f", help: "Force the task to complete." },
-        file: Param.maybeStr { name: "file", help: "The file to process." },
-        files: Param.strList { name: "files", help: "The rest of the files." },
-    }
+    Opt.u64 { short: "a", long: "alpha", help: "Set the alpha level." }
+    |> Cli.map Alpha
     |> Cli.finish {
         name: "basic",
         version: "v0.0.1",

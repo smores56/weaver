@@ -62,17 +62,18 @@ import Base exposing [
 import Parser exposing [ArgValue]
 import Extract exposing [extractParamValues]
 
-updateBuilderWithParameterParser : CliBuilder (a -> state) action, ParameterConfig, (List Str -> Result a ArgExtractErr) -> CliBuilder state nextAction
-updateBuilderWithParameterParser = \builder, param, valueParser ->
-    builder
-    |> Builder.addParameters [param]
-    |> Builder.updateParser \{ data, remainingArgs } ->
-        { values, remainingArgs: restOfArgs } <- extractParamValues { args: remainingArgs, param }
+builderWithParameterParser : ParameterConfig, (List Str -> Result data ArgExtractErr) -> CliBuilder data fromAction toAction
+builderWithParameterParser = \param, valueParser ->
+    argParser = \args ->
+        { values, remainingArgs } <- extractParamValues { args, param }
             |> Result.try
-        value <- valueParser values
+        data <- valueParser values
             |> Result.try
 
-        Ok { data: data value, remainingArgs: restOfArgs }
+        Ok { data, remainingArgs }
+
+    Builder.fromArgParser argParser
+    |> Builder.addParameter param
 
 ## Add a required parameter of a custom type to your CLI builder.
 ##
@@ -113,17 +114,18 @@ updateBuilderWithParameterParser = \builder, param, valueParser ->
 ##     parser ["example", "blue"]
 ##     == SuccessfullyParsed { answer: Blue }
 ## ```
-single : ParameterConfigParams a -> (CliBuilder (a -> state) {}action -> CliBuilder state GetParamsAction)
+single : ParameterConfigParams state -> CliBuilder state {}action GetParamsAction
 single = \{ parser, type, name, help ? "" } ->
     param = { name, type, help, plurality: One }
 
-    \builder ->
-        values <- updateBuilderWithParameterParser builder param
+    valueParser = \values ->
         when List.first values is
             Err ListWasEmpty -> Err (MissingParam param)
             Ok singleValue ->
                 parser singleValue
                 |> Result.mapErr \err -> InvalidParamValue err param
+
+    builderWithParameterParser param valueParser
 
 ## Add an optional parameter of a custom type to your CLI builder.
 ##
@@ -163,18 +165,19 @@ single = \{ parser, type, name, help ? "" } ->
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybe : ParameterConfigParams a -> (CliBuilder (Result a [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybe : ParameterConfigParams data -> CliBuilder (Result data [NoValue]) {}action GetParamsAction
 maybe = \{ parser, type, name, help ? "" } ->
     param = { name, type, help, plurality: Optional }
 
-    \builder ->
-        values <- updateBuilderWithParameterParser builder param
+    valueParser = \values ->
         when List.first values is
             Err ListWasEmpty -> Ok (Err NoValue)
             Ok singleValue ->
                 parser singleValue
                 |> Result.map Ok
                 |> Result.mapErr \err -> InvalidParamValue err param
+
+    builderWithParameterParser param valueParser
 
 ## Add a parameter of a custom type that can be provided
 ## multiple times to your CLI builder.
@@ -215,15 +218,15 @@ maybe = \{ parser, type, name, help ? "" } ->
 ##     parser ["example", "blue", "red", "green"]
 ##     == SuccessfullyParsed { answer: [Blue, Red, Green] }
 ## ```
-list : ParameterConfigParams a -> (CliBuilder (List a -> state) {}action -> CliBuilder state StopCollectingAction)
+list : ParameterConfigParams data -> CliBuilder (List data) {}action StopCollectingAction
 list = \{ parser, type, name, help ? "" } ->
     param = { name, type, help, plurality: Many }
 
-    \builder ->
-        values <- updateBuilderWithParameterParser builder param
-        values
-        |> List.mapTry parser
+    valueParser = \values ->
+        List.mapTry values parser
         |> Result.mapErr \err -> InvalidParamValue err param
+
+    builderWithParameterParser param valueParser
 
 ## Add a required string parameter to your CLI builder.
 ##
@@ -241,7 +244,7 @@ list = \{ parser, type, name, help ? "" } ->
 ##     parser ["example", "abc"]
 ##     == SuccessfullyParsed { answer: "abc" }
 ## ```
-str : ParameterConfigBaseParams -> (CliBuilder (Str -> state) {}action -> CliBuilder state GetParamsAction)
+str : ParameterConfigBaseParams -> CliBuilder Str {}action GetParamsAction
 str = \{ name, help ? "" } -> single { parser: Ok, type: strTypeName, name, help }
 
 ## Add an optional string parameter to your CLI builder.
@@ -260,7 +263,7 @@ str = \{ name, help ? "" } -> single { parser: Ok, type: strTypeName, name, help
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeStr : ParameterConfigBaseParams -> (CliBuilder (ArgValue -> state) {}action -> CliBuilder state GetParamsAction)
+maybeStr : ParameterConfigBaseParams -> CliBuilder ArgValue {}action GetParamsAction
 maybeStr = \{ name, help ? "" } -> maybe { parser: Ok, type: strTypeName, name, help }
 
 ## Add a string parameter that can be provided multiple times
@@ -280,7 +283,7 @@ maybeStr = \{ name, help ? "" } -> maybe { parser: Ok, type: strTypeName, name, 
 ##     parser ["example", "abc", "def", "ghi"]
 ##     == SuccessfullyParsed { answer: ["abc", "def", "ghi"] }
 ## ```
-strList : ParameterConfigBaseParams -> (CliBuilder (List Str -> state) {}action -> CliBuilder state StopCollectingAction)
+strList : ParameterConfigBaseParams -> CliBuilder (List Str) {}action StopCollectingAction
 strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, help }
 
 ## Add a required `Dec` parameter to your CLI builder.
@@ -300,7 +303,7 @@ strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, he
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed { answer: 42.5 }
 ## ```
-dec : ParameterConfigBaseParams -> (CliBuilder (Dec -> state) {}action -> CliBuilder state GetParamsAction)
+dec : ParameterConfigBaseParams -> CliBuilder Dec {}action GetParamsAction
 dec = \{ name, help ? "" } -> single { parser: Str.toDec, type: numTypeName, name, help }
 
 ## Add an optional `Dec` parameter to your CLI builder.
@@ -319,7 +322,7 @@ dec = \{ name, help ? "" } -> single { parser: Str.toDec, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeDec : ParameterConfigBaseParams -> (CliBuilder (Result Dec [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeDec : ParameterConfigBaseParams -> CliBuilder (Result Dec [NoValue]) {}action GetParamsAction
 maybeDec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, name, help }
 
 ## Add a `Dec` parameter that can be provided multiple times
@@ -340,7 +343,7 @@ maybeDec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: numTypeName,
 ##     parser ["example", "12", "34", "--", "-56.0"]
 ##     == SuccessfullyParsed { answer: [12.0, 34.0, -56.0] }
 ## ```
-decList : ParameterConfigBaseParams -> (CliBuilder (List Dec -> state) {}action -> CliBuilder state StopCollectingAction)
+decList : ParameterConfigBaseParams -> CliBuilder (List Dec) {}action StopCollectingAction
 decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, name, help }
 
 ## Add a required `F32` parameter to your CLI builder.
@@ -360,7 +363,7 @@ decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, n
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed { answer: 42.5 }
 ## ```
-f32 : ParameterConfigBaseParams -> (CliBuilder (F32 -> state) {}action -> CliBuilder state GetParamsAction)
+f32 : ParameterConfigBaseParams -> CliBuilder F32 {}action GetParamsAction
 f32 = \{ name, help ? "" } -> single { parser: Str.toF32, type: numTypeName, name, help }
 
 ## Add an optional `F32` parameter to your CLI builder.
@@ -379,7 +382,7 @@ f32 = \{ name, help ? "" } -> single { parser: Str.toF32, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeF32 : ParameterConfigBaseParams -> (CliBuilder (Result F32 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeF32 : ParameterConfigBaseParams -> CliBuilder (Result F32 [NoValue]) {}action GetParamsAction
 maybeF32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, name, help }
 
 ## Add a `F32` parameter that can be provided multiple times
@@ -400,7 +403,7 @@ maybeF32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: numTypeName,
 ##     parser ["example", "12", "34", "--", "-56.0"]
 ##     == SuccessfullyParsed { answer: [12.0, 34.0, -56.0] }
 ## ```
-f32List : ParameterConfigBaseParams -> (CliBuilder (List F32 -> state) {}action -> CliBuilder state StopCollectingAction)
+f32List : ParameterConfigBaseParams -> CliBuilder (List F32) {}action StopCollectingAction
 f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, name, help }
 
 ## Add a required `F64` parameter to your CLI builder.
@@ -420,7 +423,7 @@ f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, n
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed { answer: 42.5 }
 ## ```
-f64 : ParameterConfigBaseParams -> (CliBuilder (F64 -> state) {}action -> CliBuilder state GetParamsAction)
+f64 : ParameterConfigBaseParams -> CliBuilder F64 {}action GetParamsAction
 f64 = \{ name, help ? "" } -> single { parser: Str.toF64, type: numTypeName, name, help }
 
 ## Add an optional `F64` parameter to your CLI builder.
@@ -439,7 +442,7 @@ f64 = \{ name, help ? "" } -> single { parser: Str.toF64, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeF64 : ParameterConfigBaseParams -> (CliBuilder (Result F64 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeF64 : ParameterConfigBaseParams -> CliBuilder (Result F64 [NoValue]) {}action GetParamsAction
 maybeF64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, name, help }
 
 ## Add a `F64` parameter that can be provided multiple times
@@ -460,7 +463,7 @@ maybeF64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: numTypeName,
 ##     parser ["example", "12", "34", "--", "-56.0"]
 ##     == SuccessfullyParsed { answer: [12, 34, -56.0] }
 ## ```
-f64List : ParameterConfigBaseParams -> (CliBuilder (List F64 -> state) {}action -> CliBuilder state StopCollectingAction)
+f64List : ParameterConfigBaseParams -> CliBuilder (List F64) {}action StopCollectingAction
 f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, name, help }
 
 ## Add a required `U8` parameter to your CLI builder.
@@ -480,7 +483,7 @@ f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-u8 : ParameterConfigBaseParams -> (CliBuilder (U8 -> state) {}action -> CliBuilder state GetParamsAction)
+u8 : ParameterConfigBaseParams -> CliBuilder U8 {}action GetParamsAction
 u8 = \{ name, help ? "" } -> single { parser: Str.toU8, type: numTypeName, name, help }
 
 ## Add an optional `U8` parameter to your CLI builder.
@@ -499,7 +502,7 @@ u8 = \{ name, help ? "" } -> single { parser: Str.toU8, type: numTypeName, name,
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeU8 : ParameterConfigBaseParams -> (CliBuilder (Result U8 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeU8 : ParameterConfigBaseParams -> CliBuilder (Result U8 [NoValue]) {}action GetParamsAction
 maybeU8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, name, help }
 
 ## Add a `U8` parameter that can be provided multiple times
@@ -520,7 +523,7 @@ maybeU8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, n
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed { answer: [12, 34, 56] }
 ## ```
-u8List : ParameterConfigBaseParams -> (CliBuilder (List U8 -> state) {}action -> CliBuilder state StopCollectingAction)
+u8List : ParameterConfigBaseParams -> CliBuilder (List U8) {}action StopCollectingAction
 u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, name, help }
 
 ## Add a required `U16` parameter to your CLI builder.
@@ -540,7 +543,7 @@ u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, nam
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-u16 : ParameterConfigBaseParams -> (CliBuilder (U16 -> state) {}action -> CliBuilder state GetParamsAction)
+u16 : ParameterConfigBaseParams -> CliBuilder U16 {}action GetParamsAction
 u16 = \{ name, help ? "" } -> single { parser: Str.toU16, type: numTypeName, name, help }
 
 ## Add an optional `U16` parameter to your CLI builder.
@@ -559,7 +562,7 @@ u16 = \{ name, help ? "" } -> single { parser: Str.toU16, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeU16 : ParameterConfigBaseParams -> (CliBuilder (Result U16 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeU16 : ParameterConfigBaseParams -> CliBuilder (Result U16 [NoValue]) {}action GetParamsAction
 maybeU16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, name, help }
 
 ## Add a `U16` parameter that can be provided multiple times
@@ -580,7 +583,7 @@ maybeU16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: numTypeName,
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed { answer: [12, 34, 56] }
 ## ```
-u16List : ParameterConfigBaseParams -> (CliBuilder (List U16 -> state) {}action -> CliBuilder state StopCollectingAction)
+u16List : ParameterConfigBaseParams -> CliBuilder (List U16) {}action StopCollectingAction
 u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, name, help }
 
 ## Add a required `U32` parameter to your CLI builder.
@@ -600,7 +603,7 @@ u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-u32 : ParameterConfigBaseParams -> (CliBuilder (U32 -> state) {}action -> CliBuilder state GetParamsAction)
+u32 : ParameterConfigBaseParams -> CliBuilder U32 {}action GetParamsAction
 u32 = \{ name, help ? "" } -> single { parser: Str.toU32, type: numTypeName, name, help }
 
 ## Add an optional `U32` parameter to your CLI builder.
@@ -619,7 +622,7 @@ u32 = \{ name, help ? "" } -> single { parser: Str.toU32, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeU32 : ParameterConfigBaseParams -> (CliBuilder (Result U32 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeU32 : ParameterConfigBaseParams -> CliBuilder (Result U32 [NoValue]) {}action GetParamsAction
 maybeU32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, name, help }
 
 ## Add a `U32` parameter that can be provided multiple times
@@ -640,7 +643,7 @@ maybeU32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: numTypeName,
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed { answer: [12, 34, 56] }
 ## ```
-u32List : ParameterConfigBaseParams -> (CliBuilder (List U32 -> state) {}action -> CliBuilder state StopCollectingAction)
+u32List : ParameterConfigBaseParams -> CliBuilder (List U32) {}action StopCollectingAction
 u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, name, help }
 
 ## Add a required `U64` parameter to your CLI builder.
@@ -660,7 +663,7 @@ u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-u64 : ParameterConfigBaseParams -> (CliBuilder (U64 -> state) {}action -> CliBuilder state GetParamsAction)
+u64 : ParameterConfigBaseParams -> CliBuilder U64 {}action GetParamsAction
 u64 = \{ name, help ? "" } -> single { parser: Str.toU64, type: numTypeName, name, help }
 
 ## Add an optional `U64` parameter to your CLI builder.
@@ -679,7 +682,7 @@ u64 = \{ name, help ? "" } -> single { parser: Str.toU64, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeU64 : ParameterConfigBaseParams -> (CliBuilder (Result U64 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeU64 : ParameterConfigBaseParams -> CliBuilder (Result U64 [NoValue]) {}action GetParamsAction
 maybeU64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, name, help }
 
 ## Add a `U64` parameter that can be provided multiple times
@@ -700,7 +703,7 @@ maybeU64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: numTypeName,
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed { answer: [12, 34, 56] }
 ## ```
-u64List : ParameterConfigBaseParams -> (CliBuilder (List U64 -> state) {}action -> CliBuilder state StopCollectingAction)
+u64List : ParameterConfigBaseParams -> CliBuilder (List U64) {}action StopCollectingAction
 u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, name, help }
 
 ## Add a required `U128` parameter to your CLI builder.
@@ -720,7 +723,7 @@ u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-u128 : ParameterConfigBaseParams -> (CliBuilder (U128 -> state) {}action -> CliBuilder state GetParamsAction)
+u128 : ParameterConfigBaseParams -> CliBuilder U128 {}action GetParamsAction
 u128 = \{ name, help ? "" } -> single { parser: Str.toU128, type: numTypeName, name, help }
 
 ## Add an optional `U128` parameter to your CLI builder.
@@ -739,7 +742,7 @@ u128 = \{ name, help ? "" } -> single { parser: Str.toU128, type: numTypeName, n
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeU128 : ParameterConfigBaseParams -> (CliBuilder (Result U128 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeU128 : ParameterConfigBaseParams -> CliBuilder (Result U128 [NoValue]) {}action GetParamsAction
 maybeU128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, name, help }
 
 ## Add a `U128` parameter that can be provided multiple times
@@ -760,7 +763,7 @@ maybeU128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: numTypeNam
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed { answer: [12, 34, 56] }
 ## ```
-u128List : ParameterConfigBaseParams -> (CliBuilder (List U128 -> state) {}action -> CliBuilder state StopCollectingAction)
+u128List : ParameterConfigBaseParams -> CliBuilder (List U128) {}action StopCollectingAction
 u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName, name, help }
 
 ## Add a required `I8` parameter to your CLI builder.
@@ -780,7 +783,7 @@ u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName,
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-i8 : ParameterConfigBaseParams -> (CliBuilder (I8 -> state) {}action -> CliBuilder state GetParamsAction)
+i8 : ParameterConfigBaseParams -> CliBuilder I8 {}action GetParamsAction
 i8 = \{ name, help ? "" } -> single { parser: Str.toI8, type: numTypeName, name, help }
 
 ## Add an optional `I8` parameter to your CLI builder.
@@ -799,7 +802,7 @@ i8 = \{ name, help ? "" } -> single { parser: Str.toI8, type: numTypeName, name,
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeI8 : ParameterConfigBaseParams -> (CliBuilder (Result I8 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeI8 : ParameterConfigBaseParams -> CliBuilder (Result I8 [NoValue]) {}action GetParamsAction
 maybeI8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, name, help }
 
 ## Add an `I8` parameter that can be provided multiple times
@@ -820,7 +823,7 @@ maybeI8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, n
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed { answer: [12, 34, -56] }
 ## ```
-i8List : ParameterConfigBaseParams -> (CliBuilder (List I8 -> state) {}action -> CliBuilder state StopCollectingAction)
+i8List : ParameterConfigBaseParams -> CliBuilder (List I8) {}action StopCollectingAction
 i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, name, help }
 
 ## Add a required `I16` parameter to your CLI builder.
@@ -840,7 +843,7 @@ i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, nam
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-i16 : ParameterConfigBaseParams -> (CliBuilder (I16 -> state) {}action -> CliBuilder state GetParamsAction)
+i16 : ParameterConfigBaseParams -> CliBuilder I16 {}action GetParamsAction
 i16 = \{ name, help ? "" } -> single { parser: Str.toI16, type: numTypeName, name, help }
 
 ## Add an optional `I16` parameter to your CLI builder.
@@ -859,7 +862,7 @@ i16 = \{ name, help ? "" } -> single { parser: Str.toI16, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeI16 : ParameterConfigBaseParams -> (CliBuilder (Result I16 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeI16 : ParameterConfigBaseParams -> CliBuilder (Result I16 [NoValue]) {}action GetParamsAction
 maybeI16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, name, help }
 
 ## Add an `I16` parameter that can be provided multiple times
@@ -880,7 +883,7 @@ maybeI16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: numTypeName,
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed { answer: [12, 34, -56] }
 ## ```
-i16List : ParameterConfigBaseParams -> (CliBuilder (List I16 -> state) {}action -> CliBuilder state StopCollectingAction)
+i16List : ParameterConfigBaseParams -> CliBuilder (List I16) {}action StopCollectingAction
 i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, name, help }
 
 ## Add a required `I32` parameter to your CLI builder.
@@ -900,7 +903,7 @@ i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-i32 : ParameterConfigBaseParams -> (CliBuilder (I32 -> state) {}action -> CliBuilder state GetParamsAction)
+i32 : ParameterConfigBaseParams -> CliBuilder I32 {}action GetParamsAction
 i32 = \{ name, help ? "" } -> single { parser: Str.toI32, type: numTypeName, name, help }
 
 ## Add an optional `I32` parameter to your CLI builder.
@@ -919,7 +922,7 @@ i32 = \{ name, help ? "" } -> single { parser: Str.toI32, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeI32 : ParameterConfigBaseParams -> (CliBuilder (Result I32 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeI32 : ParameterConfigBaseParams -> CliBuilder (Result I32 [NoValue]) {}action GetParamsAction
 maybeI32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, name, help }
 
 ## Add an `I32` parameter that can be provided multiple times
@@ -940,7 +943,7 @@ maybeI32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: numTypeName,
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed { answer: [12, 34, -56] }
 ## ```
-i32List : ParameterConfigBaseParams -> (CliBuilder (List I32 -> state) {}action -> CliBuilder state StopCollectingAction)
+i32List : ParameterConfigBaseParams -> CliBuilder (List I32) {}action StopCollectingAction
 i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, name, help }
 
 ## Add a required `I64` parameter to your CLI builder.
@@ -960,7 +963,7 @@ i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-i64 : ParameterConfigBaseParams -> (CliBuilder (I64 -> state) {}action -> CliBuilder state GetParamsAction)
+i64 : ParameterConfigBaseParams -> CliBuilder I64 {}action GetParamsAction
 i64 = \{ name, help ? "" } -> single { parser: Str.toI64, type: numTypeName, name, help }
 
 ## Add an optional `I64` parameter to your CLI builder.
@@ -979,7 +982,7 @@ i64 = \{ name, help ? "" } -> single { parser: Str.toI64, type: numTypeName, nam
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeI64 : ParameterConfigBaseParams -> (CliBuilder (Result I64 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeI64 : ParameterConfigBaseParams -> CliBuilder (Result I64 [NoValue]) {}action GetParamsAction
 maybeI64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, name, help }
 
 ## Add an `I64` parameter that can be provided multiple times
@@ -1000,7 +1003,7 @@ maybeI64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: numTypeName,
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed { answer: [12, 34, -56] }
 ## ```
-i64List : ParameterConfigBaseParams -> (CliBuilder (List I64 -> state) {}action -> CliBuilder state StopCollectingAction)
+i64List : ParameterConfigBaseParams -> CliBuilder (List I64) {}action StopCollectingAction
 i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, name, help }
 
 ## Add a required `I128` parameter to your CLI builder.
@@ -1020,7 +1023,7 @@ i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed { answer: 42 }
 ## ```
-i128 : ParameterConfigBaseParams -> (CliBuilder (I128 -> state) {}action -> CliBuilder state GetParamsAction)
+i128 : ParameterConfigBaseParams -> CliBuilder I128 {}action GetParamsAction
 i128 = \{ name, help ? "" } -> single { parser: Str.toI128, type: numTypeName, name, help }
 
 ## Add an optional `I128` parameter to your CLI builder.
@@ -1039,7 +1042,7 @@ i128 = \{ name, help ? "" } -> single { parser: Str.toI128, type: numTypeName, n
 ##     parser ["example"]
 ##     == SuccessfullyParsed { answer: Err NoValue }
 ## ```
-maybeI128 : ParameterConfigBaseParams -> (CliBuilder (Result I128 [NoValue] -> state) {}action -> CliBuilder state GetParamsAction)
+maybeI128 : ParameterConfigBaseParams -> CliBuilder (Result I128 [NoValue]) {}action GetParamsAction
 maybeI128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, name, help }
 
 ## Add an `I128` parameter that can be provided multiple times
@@ -1060,5 +1063,5 @@ maybeI128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: numTypeNam
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed { answer: [12, 34, -56] }
 ## ```
-i128List : ParameterConfigBaseParams -> (CliBuilder (List I128 -> state) {}action -> CliBuilder state StopCollectingAction)
+i128List : ParameterConfigBaseParams -> CliBuilder (List I128) {}action StopCollectingAction
 i128List = \{ name, help ? "" } -> list { parser: Str.toI128, type: numTypeName, name, help }
