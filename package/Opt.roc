@@ -111,14 +111,12 @@ getMaybeValue = \values, option ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Cli.weave {
-##             color: <- Opt.single { short: "c", parser: parseColor, type: "color" },
-##         }
+##         Opt.single { short: "c", parser: parseColor, type: "color" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-c", "green"]
-##     == SuccessfullyParsed { answer: Green }
+##     == SuccessfullyParsed Green
 ## ```
 single : OptionConfigParams a -> CliBuilder a GetOptionsAction GetOptionsAction
 single = \{ parser, type, short ? "", long ? "", help ? "" } ->
@@ -160,14 +158,12 @@ single = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Cli.weave {
-##             color: <- Opt.maybe { short: "c", type: "color", parser: parseColor },
-##         }
+##         Opt.maybe { short: "c", type: "color", parser: parseColor },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybe : OptionConfigParams data -> CliBuilder (Result data [NoValue]) GetOptionsAction GetOptionsAction
 maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
@@ -211,14 +207,12 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Cli.weave {
-##             color: <- Opt.list { short: "c", type: "color", parser: parseColor },
-##         }
+##         Opt.list { short: "c", type: "color", parser: parseColor },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-c", "green", "--color=red"]
-##     == SuccessfullyParsed { answer: [Green, Red] }
+##     == SuccessfullyParsed [Green, Red]
 ## ```
 list : OptionConfigParams data -> CliBuilder (List data) GetOptionsAction GetOptionsAction
 list = \{ parser, type, short ? "", long ? "", help ? "" } ->
@@ -242,14 +236,12 @@ list = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             force: <- Opt.flag { short: "f", long: "force" },
-##         }
+##         Opt.flag { short: "f", long: "force" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-f"]
-##     == SuccessfullyParsed { force: Bool.true }
+##     == SuccessfullyParsed Bool.true
 ## ```
 flag : OptionConfigBaseParams -> CliBuilder Bool GetOptionsAction GetOptionsAction
 flag = \{ short ? "", long ? "", help ? "" } ->
@@ -274,14 +266,12 @@ flag = \{ short ? "", long ? "", help ? "" } ->
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             force: <- Opt.count { short: "f", long: "force" },
-##         }
+##         Opt.count { short: "f", long: "force" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-f", "--force", "-fff"]
-##     == SuccessfullyParsed { force: 5 }
+##     == SuccessfullyParsed 5
 ## ```
 count : OptionConfigBaseParams -> CliBuilder U64 GetOptionsAction GetOptionsAction
 count = \{ short ? "", long ? "", help ? "" } ->
@@ -303,14 +293,12 @@ count = \{ short ? "", long ? "", help ? "" } ->
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.str { long: "answer" },
-##         }
+##         Opt.str { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=abc"]
-##     == SuccessfullyParsed { answer: "abc" }
+##     == SuccessfullyParsed "abc"
 ## ```
 str : OptionConfigBaseParams -> CliBuilder Str GetOptionsAction GetOptionsAction
 str = \{ short ? "", long ? "", help ? "" } -> single { parser: Ok, type: strTypeName, short, long, help }
@@ -323,14 +311,12 @@ str = \{ short ? "", long ? "", help ? "" } -> single { parser: Ok, type: strTyp
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeStr { long: "answer" },
-##         }
+##         Opt.maybeStr { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeStr : OptionConfigBaseParams -> CliBuilder (Result Str [NoValue]) GetOptionsAction GetOptionsAction
 maybeStr = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: strTypeName, short, long, help }
@@ -344,14 +330,12 @@ maybeStr = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: st
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.strList { long: "answer" },
-##         }
+##         Opt.strList { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "abc", "--answer", "def", "--answer=ghi"]
-##     == SuccessfullyParsed { answer: ["abc", "def", "ghi"] }
+##     == SuccessfullyParsed ["abc", "def", "ghi"]
 ## ```
 strList : OptionConfigBaseParams -> CliBuilder (List Str) GetOptionsAction GetOptionsAction
 strList = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: strTypeName, short, long, help }
@@ -364,14 +348,12 @@ strList = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: strT
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.dec { long: "answer" },
-##         }
+##         Opt.dec { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42.5"]
-##     == SuccessfullyParsed { answer: 42.5 }
+##     == SuccessfullyParsed 42.5
 ## ```
 dec : OptionConfigBaseParams -> CliBuilder Dec GetOptionsAction GetOptionsAction
 dec = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toDec, type: numTypeName, short, long, help }
@@ -384,14 +366,12 @@ dec = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toDec, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeDec { long: "answer" },
-##         }
+##         Opt.maybeDec { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeDec : OptionConfigBaseParams -> CliBuilder (Result Dec [NoValue]) GetOptionsAction GetOptionsAction
 maybeDec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, short, long, help }
@@ -405,14 +385,12 @@ maybeDec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.decList { long: "answer" },
-##         }
+##         Opt.decList { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
-##     == SuccessfullyParsed { answer: [1.0, 2.0, -3.0] }
+##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
 decList : OptionConfigBaseParams -> CliBuilder (List Dec) GetOptionsAction GetOptionsAction
 decList = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, type: numTypeName, short, long, help }
@@ -425,14 +403,12 @@ decList = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.f32 { long: "answer" },
-##         }
+##         Opt.f32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42.5"]
-##     == SuccessfullyParsed { answer: 42.5 }
+##     == SuccessfullyParsed 42.5
 ## ```
 f32 : OptionConfigBaseParams -> CliBuilder F32 GetOptionsAction GetOptionsAction
 f32 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toF32, type: numTypeName, short, long, help }
@@ -445,14 +421,12 @@ f32 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toF32, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeF32 { long: "answer" },
-##         }
+##         Opt.maybeF32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeF32 : OptionConfigBaseParams -> CliBuilder (Result F32 [NoValue]) GetOptionsAction GetOptionsAction
 maybeF32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, short, long, help }
@@ -466,14 +440,12 @@ maybeF32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.f32List { long: "answer" },
-##         }
+##         Opt.f32List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
-##     == SuccessfullyParsed { answer: [1.0, 2.0, -3.0] }
+##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
 f32List : OptionConfigBaseParams -> CliBuilder (List F32) GetOptionsAction GetOptionsAction
 f32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, type: numTypeName, short, long, help }
@@ -486,14 +458,12 @@ f32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.f64 { long: "answer" },
-##         }
+##         Opt.f64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42.5"]
-##     == SuccessfullyParsed { answer: 42.5 }
+##     == SuccessfullyParsed 42.5
 ## ```
 f64 : OptionConfigBaseParams -> CliBuilder F64 GetOptionsAction GetOptionsAction
 f64 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toF64, type: numTypeName, short, long, help }
@@ -506,14 +476,12 @@ f64 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toF64, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeF64 { long: "answer" },
-##         }
+##         Opt.maybeF64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeF64 : OptionConfigBaseParams -> CliBuilder (Result F64 [NoValue]) GetOptionsAction GetOptionsAction
 maybeF64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, short, long, help }
@@ -527,14 +495,12 @@ maybeF64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.f64List { long: "answer" },
-##         }
+##         Opt.f64List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
-##     == SuccessfullyParsed { answer: [1.0, 2.0, -3.0] }
+##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
 f64List : OptionConfigBaseParams -> CliBuilder (List F64) GetOptionsAction GetOptionsAction
 f64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, type: numTypeName, short, long, help }
@@ -547,14 +513,12 @@ f64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u8 { long: "answer" },
-##         }
+##         Opt.u8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u8 : OptionConfigBaseParams -> CliBuilder U8 GetOptionsAction GetOptionsAction
 u8 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU8, type: numTypeName, short, long, help }
@@ -567,14 +531,12 @@ u8 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU8, type: n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeU8 { long: "answer" },
-##         }
+##         Opt.maybeU8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU8 : OptionConfigBaseParams -> CliBuilder (Result U8 [NoValue]) GetOptionsAction GetOptionsAction
 maybeU8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, short, long, help }
@@ -588,14 +550,12 @@ maybeU8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u8List { long: "answer" },
-##         }
+##         Opt.u8List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 u8List : OptionConfigBaseParams -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
 u8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type: numTypeName, short, long, help }
@@ -608,14 +568,12 @@ u8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u16 { long: "answer" },
-##         }
+##         Opt.u16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u16 : OptionConfigBaseParams -> CliBuilder U16 GetOptionsAction GetOptionsAction
 u16 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU16, type: numTypeName, short, long, help }
@@ -628,14 +586,12 @@ u16 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU16, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeU16 { long: "answer" },
-##         }
+##         Opt.maybeU16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU16 : OptionConfigBaseParams -> CliBuilder (Result U16 [NoValue]) GetOptionsAction GetOptionsAction
 maybeU16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, short, long, help }
@@ -649,14 +605,12 @@ maybeU16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u16List { long: "answer" },
-##         }
+##         Opt.u16List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 u16List : OptionConfigBaseParams -> CliBuilder (List U16) GetOptionsAction GetOptionsAction
 u16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, type: numTypeName, short, long, help }
@@ -669,14 +623,12 @@ u16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u32 { long: "answer" },
-##         }
+##         Opt.u32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u32 : OptionConfigBaseParams -> CliBuilder U32 GetOptionsAction GetOptionsAction
 u32 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU32, type: numTypeName, short, long, help }
@@ -689,14 +641,12 @@ u32 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU32, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeU32 { long: "answer" },
-##         }
+##         Opt.maybeU32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU32 : OptionConfigBaseParams -> CliBuilder (Result U32 [NoValue]) GetOptionsAction GetOptionsAction
 maybeU32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, short, long, help }
@@ -710,14 +660,12 @@ maybeU32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u32List { long: "answer" },
-##         }
+##         Opt.u32List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 u32List : OptionConfigBaseParams -> CliBuilder (List U32) GetOptionsAction GetOptionsAction
 u32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, type: numTypeName, short, long, help }
@@ -730,14 +678,12 @@ u32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u64 { long: "answer" },
-##         }
+##         Opt.u64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u64 : OptionConfigBaseParams -> CliBuilder U64 GetOptionsAction GetOptionsAction
 u64 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU64, type: numTypeName, short, long, help }
@@ -750,14 +696,12 @@ u64 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU64, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeU64 { long: "answer" },
-##         }
+##         Opt.maybeU64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU64 : OptionConfigBaseParams -> CliBuilder (Result U64 [NoValue]) GetOptionsAction GetOptionsAction
 maybeU64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, short, long, help }
@@ -771,14 +715,12 @@ maybeU64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u64List { long: "answer" },
-##         }
+##         Opt.u64List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 u64List : OptionConfigBaseParams -> CliBuilder (List U64) GetOptionsAction GetOptionsAction
 u64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, type: numTypeName, short, long, help }
@@ -791,14 +733,12 @@ u64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u128 { long: "answer" },
-##         }
+##         Opt.u128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u128 : OptionConfigBaseParams -> CliBuilder U128 GetOptionsAction GetOptionsAction
 u128 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU128, type: numTypeName, short, long, help }
@@ -811,14 +751,12 @@ u128 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toU128, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeU128 { long: "answer" },
-##         }
+##         Opt.maybeU128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU128 : OptionConfigBaseParams -> CliBuilder (Result U128 [NoValue]) GetOptionsAction GetOptionsAction
 maybeU128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, short, long, help }
@@ -832,14 +770,12 @@ maybeU128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.u128List { long: "answer" },
-##         }
+##         Opt.u128List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 u128List : OptionConfigBaseParams -> CliBuilder (List U128) GetOptionsAction GetOptionsAction
 u128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, type: numTypeName, short, long, help }
@@ -852,14 +788,12 @@ u128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i8 { long: "answer" },
-##         }
+##         Opt.i8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i8 : OptionConfigBaseParams -> CliBuilder I8 GetOptionsAction GetOptionsAction
 i8 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI8, type: numTypeName, short, long, help }
@@ -872,14 +806,12 @@ i8 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI8, type: n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeI8 { long: "answer" },
-##         }
+##         Opt.maybeI8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI8 : OptionConfigBaseParams -> CliBuilder (Result I8 [NoValue]) GetOptionsAction GetOptionsAction
 maybeI8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, short, long, help }
@@ -893,14 +825,12 @@ maybeI8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i8List { long: "answer" },
-##         }
+##         Opt.i8List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 i8List : OptionConfigBaseParams -> CliBuilder (List I8) GetOptionsAction GetOptionsAction
 i8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type: numTypeName, short, long, help }
@@ -913,14 +843,12 @@ i8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i16 { long: "answer" },
-##         }
+##         Opt.i16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i16 : OptionConfigBaseParams -> CliBuilder I16 GetOptionsAction GetOptionsAction
 i16 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI16, type: numTypeName, short, long, help }
@@ -933,14 +861,12 @@ i16 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI16, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeI16 { long: "answer" },
-##         }
+##         Opt.maybeI16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI16 : OptionConfigBaseParams -> CliBuilder (Result I16 [NoValue]) GetOptionsAction GetOptionsAction
 maybeI16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, short, long, help }
@@ -954,14 +880,12 @@ maybeI16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i16List { long: "answer" },
-##         }
+##         Opt.i16List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 i16List : OptionConfigBaseParams -> CliBuilder (List I16) GetOptionsAction GetOptionsAction
 i16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, type: numTypeName, short, long, help }
@@ -974,14 +898,12 @@ i16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i32 { long: "answer" },
-##         }
+##         Opt.i32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i32 : OptionConfigBaseParams -> CliBuilder I32 GetOptionsAction GetOptionsAction
 i32 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI32, type: numTypeName, short, long, help }
@@ -994,14 +916,12 @@ i32 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI32, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeI32 { long: "answer" },
-##         }
+##         Opt.maybeI32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI32 : OptionConfigBaseParams -> CliBuilder (Result I32 [NoValue]) GetOptionsAction GetOptionsAction
 maybeI32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, short, long, help }
@@ -1015,14 +935,12 @@ maybeI32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i32List { long: "answer" },
-##         }
+##         Opt.i32List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 i32List : OptionConfigBaseParams -> CliBuilder (List I32) GetOptionsAction GetOptionsAction
 i32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, type: numTypeName, short, long, help }
@@ -1035,14 +953,12 @@ i32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i64 { long: "answer" },
-##         }
+##         Opt.i64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i64 : OptionConfigBaseParams -> CliBuilder I64 GetOptionsAction GetOptionsAction
 i64 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI64, type: numTypeName, short, long, help }
@@ -1055,14 +971,12 @@ i64 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI64, type:
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeI64 { long: "answer" },
-##         }
+##         Opt.maybeI64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI64 : OptionConfigBaseParams -> CliBuilder (Result I64 [NoValue]) GetOptionsAction GetOptionsAction
 maybeI64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, short, long, help }
@@ -1076,14 +990,12 @@ maybeI64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i64List { long: "answer" },
-##         }
+##         Opt.i64List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 i64List : OptionConfigBaseParams -> CliBuilder (List I64) GetOptionsAction GetOptionsAction
 i64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, type: numTypeName, short, long, help }
@@ -1096,14 +1008,12 @@ i64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i128 { long: "answer" },
-##         }
+##         Opt.i128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "--answer=42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i128 : OptionConfigBaseParams -> CliBuilder I128 GetOptionsAction GetOptionsAction
 i128 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI128, type: numTypeName, short, long, help }
@@ -1116,14 +1026,12 @@ i128 = \{ short ? "", long ? "", help ? "" } -> single { parser: Str.toI128, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.maybeI128 { long: "answer" },
-##         }
+##         Opt.maybeI128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI128 : OptionConfigBaseParams -> CliBuilder (Result I128 [NoValue]) GetOptionsAction GetOptionsAction
 maybeI128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, short, long, help }
@@ -1137,14 +1045,12 @@ maybeI128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Opt.i128List { long: "answer" },
-##         }
+##         Opt.i128List { long: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
-##     == SuccessfullyParsed { answer: [1, 2, 3] }
+##     == SuccessfullyParsed [1, 2, 3]
 ## ```
 i128List : OptionConfigBaseParams -> CliBuilder (List I128) GetOptionsAction GetOptionsAction
 i128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI128, type: numTypeName, short, long, help }

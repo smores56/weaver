@@ -32,10 +32,11 @@ SubcommandParserConfig subState : {
 ##
 ## ```roc
 ## fooSubcommand =
-##     Cli.weave {
-##         foo: <- Opt.str { short: "f" },
+##     { Cli.weave <-
+##         foo: Opt.str { short: "f" },
+##         bar: Opt.str { short: "b" },
 ##     }
-##     |> Subcommand.finish { name: "foo", description: "Foo subcommand", mapper: Foo }
+##     |> Subcommand.finish { name: "foobar", description: "Foo and bar subcommand", mapper: FooBar }
 ## ```
 finish : CliBuilder state fromAction toAction, { name : Str, description ? Str, mapper : state -> commonState } -> { name : Str, parser : ArgParser commonState, config : SubcommandConfig }
 finish = \builder, { name, description ? "", mapper } ->
@@ -93,24 +94,20 @@ getFirstArgToCheckForSubcommandCall = \{ remainingArgs, subcommandPath }, subcom
 ## ```roc
 ## expect
 ##     fooSubcommand =
-##         Cli.weave {
-##             foo: <- Opt.str { short: "f" },
-##         }
+##         Opt.str { short: "f" }
 ##         |> Subcommand.finish { name: "foo", description: "Foo subcommand", mapper: Foo }
 ##
 ##     barSubcommand =
-##         Cli.weave {
-##             bar: <- Opt.str { short: "b" },
-##         }
+##         Opt.str { short: "b" }
 ##         |> Subcommand.finish { name: "bar", description: "Bar subcommand", mapper: Bar }
 ##
-##     Cli.weave {
-##         sc: <- Subcommand.optional [fooSubcommand, barSubcommand],
-##     }
-##     |> Cli.finish { name: "example" }
-##     |> Cli.assertValid
-##     |> Cli.parseOrDisplayMessage ["example", "bar", "-b", "abc"]
-##     == Ok { sc: Ok (Bar { b: "abc" }) }
+##     { parser } =
+##         Subcommand.optional [fooSubcommand, barSubcommand],
+##         |> Cli.finish { name: "example" }
+##         |> Cli.assertValid
+##
+##     parser ["example", "bar", "-b", "abc"]
+##     == SuccessfullyParsed (Ok (Bar "abc"))
 ## ```
 optional : List (SubcommandParserConfig subState) -> CliBuilder (Result subState [NoSubcommand]) GetOptionsAction GetParamsAction
 optional = \subcommandConfigs ->
@@ -156,24 +153,20 @@ optional = \subcommandConfigs ->
 ## ```roc
 ## expect
 ##     fooSubcommand =
-##         Cli.weave {
-##             foo: <- Opt.str { short: "f" },
-##         }
+##         Opt.str { short: "f" }
 ##         |> Subcommand.finish { name: "foo", description: "Foo subcommand", mapper: Foo }
 ##
 ##     barSubcommand =
-##         Cli.weave {
-##             bar: <- Opt.str { short: "b" },
-##         }
+##         Opt.str { short: "b" }
 ##         |> Subcommand.finish { name: "bar", description: "Bar subcommand", mapper: Bar }
 ##
-##     Cli.weave {
-##         sc: <- Subcommand.required [fooSubcommand, barSubcommand],
-##     }
-##     |> Cli.finish { name: "example" }
-##     |> Cli.assertValid
-##     |> Cli.parseOrDisplayMessage ["example", "bar", "-b", "abc"]
-##     == Ok { sc: Bar { b: "abc" } }
+##     { parser } =
+##         Subcommand.required [fooSubcommand, barSubcommand],
+##         |> Cli.finish { name: "example" }
+##         |> Cli.assertValid
+##
+##     parser ["example", "bar", "-b", "abc"]
+##     == SuccessfullyParsed (Bar "abc")
 ## ```
 required : List (SubcommandParserConfig subData) -> CliBuilder subData GetOptionsAction GetParamsAction
 required = \subcommandConfigs ->

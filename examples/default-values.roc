@@ -8,6 +8,7 @@ import pf.Arg
 import pf.Task exposing [Task]
 import weaver.Opt
 import weaver.Cli
+import weaver.Param
 
 main =
     args = Arg.list!
@@ -24,10 +25,14 @@ main =
             Task.err (Exit 1 "")
 
 cliParser =
-    Opt.u64 { short: "a", long: "alpha", help: "Set the alpha level." }
-    |> Cli.map Alpha
+    { Cli.weave <-
+        alpha: Opt.maybeU64 { short: "a", long: "alpha", help: "Set the alpha level. [default: 123]" }
+        |> Cli.map \a -> Result.withDefault a 123,,
+        file: Param.maybeStr { name: "file", help: "The file to process. [default: NONE]" }
+        |> Cli.map \f -> Result.withDefault f "NONE",
+    }
     |> Cli.finish {
-        name: "single-arg",
+        name: "default-values",
         version: "v0.0.1",
     }
     |> Cli.assertValid

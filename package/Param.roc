@@ -105,14 +105,12 @@ builderWithParameterParser = \param, valueParser ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.single { name: "answer", type: "color", parser: parseColor },
-##         }
+##         Param.single { name: "answer", type: "color", parser: parseColor },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "blue"]
-##     == SuccessfullyParsed { answer: Blue }
+##     == SuccessfullyParsed Blue
 ## ```
 single : ParameterConfigParams state -> CliBuilder state {}action GetParamsAction
 single = \{ parser, type, name, help ? "" } ->
@@ -156,14 +154,12 @@ single = \{ parser, type, name, help ? "" } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybe { name: "answer", type: "color", parser: parseColor },
-##         }
+##         Param.maybe { name: "answer", type: "color", parser: parseColor },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybe : ParameterConfigParams data -> CliBuilder (Result data [NoValue]) {}action GetParamsAction
 maybe = \{ parser, type, name, help ? "" } ->
@@ -209,14 +205,12 @@ maybe = \{ parser, type, name, help ? "" } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.list { name: "answer", type: "color", parser: parseColor },
-##         }
+##         Param.list { name: "answer", type: "color", parser: parseColor },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "blue", "red", "green"]
-##     == SuccessfullyParsed { answer: [Blue, Red, Green] }
+##     == SuccessfullyParsed [Blue, Red, Green]
 ## ```
 list : ParameterConfigParams data -> CliBuilder (List data) {}action StopCollectingAction
 list = \{ parser, type, name, help ? "" } ->
@@ -235,14 +229,12 @@ list = \{ parser, type, name, help ? "" } ->
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.str { name: "answer" },
-##         }
+##         Param.str { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "abc"]
-##     == SuccessfullyParsed { answer: "abc" }
+##     == SuccessfullyParsed "abc"
 ## ```
 str : ParameterConfigBaseParams -> CliBuilder Str {}action GetParamsAction
 str = \{ name, help ? "" } -> single { parser: Ok, type: strTypeName, name, help }
@@ -254,14 +246,12 @@ str = \{ name, help ? "" } -> single { parser: Ok, type: strTypeName, name, help
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeStr { name: "answer" },
-##         }
+##         Param.maybeStr { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeStr : ParameterConfigBaseParams -> CliBuilder ArgValue {}action GetParamsAction
 maybeStr = \{ name, help ? "" } -> maybe { parser: Ok, type: strTypeName, name, help }
@@ -274,14 +264,12 @@ maybeStr = \{ name, help ? "" } -> maybe { parser: Ok, type: strTypeName, name, 
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.strList { name: "answer" },
-##         }
+##         Param.strList { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "abc", "def", "ghi"]
-##     == SuccessfullyParsed { answer: ["abc", "def", "ghi"] }
+##     == SuccessfullyParsed ["abc", "def", "ghi"]
 ## ```
 strList : ParameterConfigBaseParams -> CliBuilder (List Str) {}action StopCollectingAction
 strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, help }
@@ -294,14 +282,12 @@ strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, he
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.dec { name: "answer" },
-##         }
+##         Param.dec { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42.5"]
-##     == SuccessfullyParsed { answer: 42.5 }
+##     == SuccessfullyParsed 42.5
 ## ```
 dec : ParameterConfigBaseParams -> CliBuilder Dec {}action GetParamsAction
 dec = \{ name, help ? "" } -> single { parser: Str.toDec, type: numTypeName, name, help }
@@ -313,14 +299,12 @@ dec = \{ name, help ? "" } -> single { parser: Str.toDec, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeDec { name: "answer" },
-##         }
+##         Param.maybeDec { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeDec : ParameterConfigBaseParams -> CliBuilder (Result Dec [NoValue]) {}action GetParamsAction
 maybeDec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, name, help }
@@ -334,14 +318,12 @@ maybeDec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.decList { name: "answer" },
-##         }
+##         Param.decList { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56.0"]
-##     == SuccessfullyParsed { answer: [12.0, 34.0, -56.0] }
+##     == SuccessfullyParsed [12.0, 34.0, -56.0]
 ## ```
 decList : ParameterConfigBaseParams -> CliBuilder (List Dec) {}action StopCollectingAction
 decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, name, help }
@@ -354,14 +336,12 @@ decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.f32 { name: "answer" },
-##         }
+##         Param.f32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42.5"]
-##     == SuccessfullyParsed { answer: 42.5 }
+##     == SuccessfullyParsed 42.5
 ## ```
 f32 : ParameterConfigBaseParams -> CliBuilder F32 {}action GetParamsAction
 f32 = \{ name, help ? "" } -> single { parser: Str.toF32, type: numTypeName, name, help }
@@ -373,14 +353,12 @@ f32 = \{ name, help ? "" } -> single { parser: Str.toF32, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeF32 { name: "answer" },
-##         }
+##         Param.maybeF32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeF32 : ParameterConfigBaseParams -> CliBuilder (Result F32 [NoValue]) {}action GetParamsAction
 maybeF32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, name, help }
@@ -394,14 +372,12 @@ maybeF32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.f32List { name: "answer" },
-##         }
+##         Param.f32List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56.0"]
-##     == SuccessfullyParsed { answer: [12.0, 34.0, -56.0] }
+##     == SuccessfullyParsed [12.0, 34.0, -56.0]
 ## ```
 f32List : ParameterConfigBaseParams -> CliBuilder (List F32) {}action StopCollectingAction
 f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, name, help }
@@ -414,14 +390,12 @@ f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.f64 { name: "answer" },
-##         }
+##         Param.f64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42.5"]
-##     == SuccessfullyParsed { answer: 42.5 }
+##     == SuccessfullyParsed 42.5
 ## ```
 f64 : ParameterConfigBaseParams -> CliBuilder F64 {}action GetParamsAction
 f64 = \{ name, help ? "" } -> single { parser: Str.toF64, type: numTypeName, name, help }
@@ -433,14 +407,12 @@ f64 = \{ name, help ? "" } -> single { parser: Str.toF64, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeF64 { name: "answer" },
-##         }
+##         Param.maybeF64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeF64 : ParameterConfigBaseParams -> CliBuilder (Result F64 [NoValue]) {}action GetParamsAction
 maybeF64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, name, help }
@@ -454,14 +426,12 @@ maybeF64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.f64List { name: "answer" },
-##         }
+##         Param.f64List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56.0"]
-##     == SuccessfullyParsed { answer: [12, 34, -56.0] }
+##     == SuccessfullyParsed [12, 34, -56.0]
 ## ```
 f64List : ParameterConfigBaseParams -> CliBuilder (List F64) {}action StopCollectingAction
 f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, name, help }
@@ -474,14 +444,12 @@ f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u8 { name: "answer" },
-##         }
+##         Param.u8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u8 : ParameterConfigBaseParams -> CliBuilder U8 {}action GetParamsAction
 u8 = \{ name, help ? "" } -> single { parser: Str.toU8, type: numTypeName, name, help }
@@ -493,14 +461,12 @@ u8 = \{ name, help ? "" } -> single { parser: Str.toU8, type: numTypeName, name,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeU8 { name: "answer" },
-##         }
+##         Param.maybeU8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU8 : ParameterConfigBaseParams -> CliBuilder (Result U8 [NoValue]) {}action GetParamsAction
 maybeU8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, name, help }
@@ -514,14 +480,12 @@ maybeU8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u8List { name: "answer" },
-##         }
+##         Param.u8List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "56"]
-##     == SuccessfullyParsed { answer: [12, 34, 56] }
+##     == SuccessfullyParsed [12, 34, 56]
 ## ```
 u8List : ParameterConfigBaseParams -> CliBuilder (List U8) {}action StopCollectingAction
 u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, name, help }
@@ -534,14 +498,12 @@ u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u16 { name: "answer" },
-##         }
+##         Param.u16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u16 : ParameterConfigBaseParams -> CliBuilder U16 {}action GetParamsAction
 u16 = \{ name, help ? "" } -> single { parser: Str.toU16, type: numTypeName, name, help }
@@ -553,14 +515,12 @@ u16 = \{ name, help ? "" } -> single { parser: Str.toU16, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeU16 { name: "answer" },
-##         }
+##         Param.maybeU16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU16 : ParameterConfigBaseParams -> CliBuilder (Result U16 [NoValue]) {}action GetParamsAction
 maybeU16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, name, help }
@@ -574,14 +534,12 @@ maybeU16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u16List { name: "answer" },
-##         }
+##         Param.u16List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "56"]
-##     == SuccessfullyParsed { answer: [12, 34, 56] }
+##     == SuccessfullyParsed [12, 34, 56]
 ## ```
 u16List : ParameterConfigBaseParams -> CliBuilder (List U16) {}action StopCollectingAction
 u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, name, help }
@@ -594,14 +552,12 @@ u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u32 { name: "answer" },
-##         }
+##         Param.u32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u32 : ParameterConfigBaseParams -> CliBuilder U32 {}action GetParamsAction
 u32 = \{ name, help ? "" } -> single { parser: Str.toU32, type: numTypeName, name, help }
@@ -613,14 +569,12 @@ u32 = \{ name, help ? "" } -> single { parser: Str.toU32, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeU32 { name: "answer" },
-##         }
+##         Param.maybeU32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU32 : ParameterConfigBaseParams -> CliBuilder (Result U32 [NoValue]) {}action GetParamsAction
 maybeU32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, name, help }
@@ -634,14 +588,12 @@ maybeU32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u32List { name: "answer" },
-##         }
+##         Param.u32List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "56"]
-##     == SuccessfullyParsed { answer: [12, 34, 56] }
+##     == SuccessfullyParsed [12, 34, 56]
 ## ```
 u32List : ParameterConfigBaseParams -> CliBuilder (List U32) {}action StopCollectingAction
 u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, name, help }
@@ -654,14 +606,12 @@ u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u64 { name: "answer" },
-##         }
+##         Param.u64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u64 : ParameterConfigBaseParams -> CliBuilder U64 {}action GetParamsAction
 u64 = \{ name, help ? "" } -> single { parser: Str.toU64, type: numTypeName, name, help }
@@ -673,14 +623,12 @@ u64 = \{ name, help ? "" } -> single { parser: Str.toU64, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeU64 { name: "answer" },
-##         }
+##         Param.maybeU64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU64 : ParameterConfigBaseParams -> CliBuilder (Result U64 [NoValue]) {}action GetParamsAction
 maybeU64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, name, help }
@@ -694,14 +642,12 @@ maybeU64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u64List { name: "answer" },
-##         }
+##         Param.u64List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "56"]
-##     == SuccessfullyParsed { answer: [12, 34, 56] }
+##     == SuccessfullyParsed [12, 34, 56]
 ## ```
 u64List : ParameterConfigBaseParams -> CliBuilder (List U64) {}action StopCollectingAction
 u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, name, help }
@@ -714,14 +660,12 @@ u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u128 { name: "answer" },
-##         }
+##         Param.u128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 u128 : ParameterConfigBaseParams -> CliBuilder U128 {}action GetParamsAction
 u128 = \{ name, help ? "" } -> single { parser: Str.toU128, type: numTypeName, name, help }
@@ -733,14 +677,12 @@ u128 = \{ name, help ? "" } -> single { parser: Str.toU128, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeU128 { name: "answer" },
-##         }
+##         Param.maybeU128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeU128 : ParameterConfigBaseParams -> CliBuilder (Result U128 [NoValue]) {}action GetParamsAction
 maybeU128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, name, help }
@@ -754,14 +696,12 @@ maybeU128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: numTypeNam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.u128List { name: "answer" },
-##         }
+##         Param.u128List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "56"]
-##     == SuccessfullyParsed { answer: [12, 34, 56] }
+##     == SuccessfullyParsed [12, 34, 56]
 ## ```
 u128List : ParameterConfigBaseParams -> CliBuilder (List U128) {}action StopCollectingAction
 u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName, name, help }
@@ -774,14 +714,12 @@ u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i8 { name: "answer" },
-##         }
+##         Param.i8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i8 : ParameterConfigBaseParams -> CliBuilder I8 {}action GetParamsAction
 i8 = \{ name, help ? "" } -> single { parser: Str.toI8, type: numTypeName, name, help }
@@ -793,14 +731,12 @@ i8 = \{ name, help ? "" } -> single { parser: Str.toI8, type: numTypeName, name,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeI8 { name: "answer" },
-##         }
+##         Param.maybeI8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI8 : ParameterConfigBaseParams -> CliBuilder (Result I8 [NoValue]) {}action GetParamsAction
 maybeI8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, name, help }
@@ -814,14 +750,12 @@ maybeI8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i8List { name: "answer" },
-##         }
+##         Param.i8List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
-##     == SuccessfullyParsed { answer: [12, 34, -56] }
+##     == SuccessfullyParsed [12, 34, -56]
 ## ```
 i8List : ParameterConfigBaseParams -> CliBuilder (List I8) {}action StopCollectingAction
 i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, name, help }
@@ -834,14 +768,12 @@ i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i16 { name: "answer" },
-##         }
+##         Param.i16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i16 : ParameterConfigBaseParams -> CliBuilder I16 {}action GetParamsAction
 i16 = \{ name, help ? "" } -> single { parser: Str.toI16, type: numTypeName, name, help }
@@ -853,14 +785,12 @@ i16 = \{ name, help ? "" } -> single { parser: Str.toI16, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeI16 { name: "answer" },
-##         }
+##         Param.maybeI16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI16 : ParameterConfigBaseParams -> CliBuilder (Result I16 [NoValue]) {}action GetParamsAction
 maybeI16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, name, help }
@@ -874,14 +804,12 @@ maybeI16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i16List { name: "answer" },
-##         }
+##         Param.i16List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
-##     == SuccessfullyParsed { answer: [12, 34, -56] }
+##     == SuccessfullyParsed [12, 34, -56]
 ## ```
 i16List : ParameterConfigBaseParams -> CliBuilder (List I16) {}action StopCollectingAction
 i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, name, help }
@@ -894,14 +822,12 @@ i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i32 { name: "answer" },
-##         }
+##         Param.i32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i32 : ParameterConfigBaseParams -> CliBuilder I32 {}action GetParamsAction
 i32 = \{ name, help ? "" } -> single { parser: Str.toI32, type: numTypeName, name, help }
@@ -913,14 +839,12 @@ i32 = \{ name, help ? "" } -> single { parser: Str.toI32, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeI32 { name: "answer" },
-##         }
+##         Param.maybeI32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI32 : ParameterConfigBaseParams -> CliBuilder (Result I32 [NoValue]) {}action GetParamsAction
 maybeI32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, name, help }
@@ -934,14 +858,12 @@ maybeI32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i32List { name: "answer" },
-##         }
+##         Param.i32List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
-##     == SuccessfullyParsed { answer: [12, 34, -56] }
+##     == SuccessfullyParsed [12, 34, -56]
 ## ```
 i32List : ParameterConfigBaseParams -> CliBuilder (List I32) {}action StopCollectingAction
 i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, name, help }
@@ -954,14 +876,12 @@ i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i64 { name: "answer" },
-##         }
+##         Param.i64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i64 : ParameterConfigBaseParams -> CliBuilder I64 {}action GetParamsAction
 i64 = \{ name, help ? "" } -> single { parser: Str.toI64, type: numTypeName, name, help }
@@ -973,14 +893,12 @@ i64 = \{ name, help ? "" } -> single { parser: Str.toI64, type: numTypeName, nam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeI64 { name: "answer" },
-##         }
+##         Param.maybeI64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI64 : ParameterConfigBaseParams -> CliBuilder (Result I64 [NoValue]) {}action GetParamsAction
 maybeI64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, name, help }
@@ -994,14 +912,12 @@ maybeI64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i64List { name: "answer" },
-##         }
+##         Param.i64List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
-##     == SuccessfullyParsed { answer: [12, 34, -56] }
+##     == SuccessfullyParsed [12, 34, -56]
 ## ```
 i64List : ParameterConfigBaseParams -> CliBuilder (List I64) {}action StopCollectingAction
 i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, name, help }
@@ -1014,14 +930,12 @@ i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i128 { name: "answer" },
-##         }
+##         Param.i128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "42"]
-##     == SuccessfullyParsed { answer: 42 }
+##     == SuccessfullyParsed 42
 ## ```
 i128 : ParameterConfigBaseParams -> CliBuilder I128 {}action GetParamsAction
 i128 = \{ name, help ? "" } -> single { parser: Str.toI128, type: numTypeName, name, help }
@@ -1033,14 +947,12 @@ i128 = \{ name, help ? "" } -> single { parser: Str.toI128, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.maybeI128 { name: "answer" },
-##         }
+##         Param.maybeI128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example"]
-##     == SuccessfullyParsed { answer: Err NoValue }
+##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybeI128 : ParameterConfigBaseParams -> CliBuilder (Result I128 [NoValue]) {}action GetParamsAction
 maybeI128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, name, help }
@@ -1054,14 +966,12 @@ maybeI128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: numTypeNam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             answer: <- Param.i128List { name: "answer" },
-##         }
+##         Param.i128List { name: "answer" },
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
-##     == SuccessfullyParsed { answer: [12, 34, -56] }
+##     == SuccessfullyParsed [12, 34, -56]
 ## ```
 i128List : ParameterConfigBaseParams -> CliBuilder (List I128) {}action StopCollectingAction
 i128List = \{ name, help ? "" } -> list { parser: Str.toI128, type: numTypeName, name, help }
