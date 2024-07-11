@@ -64,9 +64,7 @@ findSubcommand = \command, path ->
 ##
 ## ```roc
 ## exampleCli =
-##     Cli.weave {
-##         verbosity: <- Opt.count { short: "v", help: "How verbose our logs should be." },
-##     }
+##     Opt.count { short: "v", help: "How verbose our logs should be." }
 ##     |> Cli.finish {
 ##         name: "example",
 ##         version: "v0.1.0",
@@ -160,9 +158,7 @@ helpText = \baseConfig, path, textStyle ->
 ##
 ## ```roc
 ## exampleCli =
-##     Cli.weave {
-##         verbosity: <- Opt.count { short: "v", help: "How verbose our logs should be." },
-##     }
+##     Opt.count { short: "v", help: "How verbose our logs should be." }
 ##     |> Cli.finish {
 ##         name: "example",
 ##         version: "v0.1.0",

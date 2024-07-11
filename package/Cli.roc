@@ -1,4 +1,4 @@
-## Weave together a CLI parser using the `: <- ` builder notation!
+## Weave together a CLI parser using the `<- ` builder notation!
 ##
 ## This module is the entry point for creating CLIs using Weaver.
 ## To get started, call the [weave] method and pass a
@@ -9,10 +9,10 @@
 ## you set.
 ##
 ## ```roc
-## Cli.weave {
-##     alpha: <- Opt.u64 { short: "a", help: "Set the alpha level" },
-##     verbosity: <- Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
-##     files: <- Param.strList { name: "files", help: "The files to process." },
+## { Cli.weave <-
+##     alpha: Opt.u64 { short: "a", help: "Set the alpha level" },
+##     verbosity: Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
+##     files: Param.strList { name: "files", help: "The files to process." },
 ## }
 ## |> Cli.finish {
 ##     name: "example",
@@ -27,12 +27,7 @@
 ##
 ## ```roc
 ## fooSubcommand =
-##     Cli.weave {
-##         alpha: <- Opt.u64 {
-##             short: "a",
-##             help: "Set the alpha level",
-##         },
-##     }
+##     Opt.u64 { short: "a", help: "Set the alpha level" }
 ##     |> Subcommand.finish {
 ##         name: "foo",
 ##         description: "Foo some stuff."
@@ -40,22 +35,18 @@
 ##     }
 ##
 ## barSubcommand =
-##     Cli.weave {
-##         # We allow two subcommands of the same parent to have overlapping
-##         # fields since only one can ever be parsed at a time.
-##         alpha: <- Opt.u64 {
-##             short: "a",
-##             help: "Set the alpha level",
-##         },
-##     }
+##     # We allow two subcommands of the same parent to have overlapping
+##     # fields since only one can ever be parsed at a time.
+##     Opt.u64 { short: "a", help: "Set the alpha level" }
 ##     |> Subcommand.finish {
 ##         name: "bar",
 ##         description: "Bar some stuff."
 ##         mapper: Bar,
 ##     }
 ##
-## Cli.weave {
-##     sc: <- Subcommand.optional [fooSubcommand, barSubcommand],
+## { Cli.weave <-
+##     verbosity: Opt.count { short: "v", long: "verbose" },
+##     sc: Subcommand.optional [fooSubcommand, barSubcommand],
 ## }
 ## ```
 ##
@@ -70,10 +61,10 @@
 ##
 ## ```roc
 ## cliParser =
-##     Cli.weave {
-##         alpha: <- Opt.u64 { short: "a", help: "Set the alpha level" },
-##         verbosity: <- Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
-##         files: <- Param.strList { name: "files", help: "The files to process." },
+##     { Cli.weave <-
+##         alpha: Opt.u64 { short: "a", help: "Set the alpha level" },
+##         verbosity: Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
+##         files: Param.strList { name: "files", help: "The files to process." },
 ##     }
 ##     |> Cli.finish {
 ##         name: "example",
@@ -101,6 +92,7 @@
 ## _right order. Luckily, all of this is ensured at the type level._
 module [
     CliParser,
+    map,
     weave,
     finish,
     finishWithoutValidating,
@@ -109,6 +101,7 @@ module [
 ]
 
 import Opt
+import Param
 import Base exposing [
     TextStyle,
     ArgParserResult,
@@ -118,7 +111,7 @@ import Base exposing [
     mapSuccessfullyParsed,
 ]
 import Parser exposing [Arg, parseArgs]
-import Builder exposing [CliBuilder, GetOptionsAction]
+import Builder exposing [CliBuilder]
 import Validate exposing [validateCli, CliValidationErr]
 import ErrorFormatter exposing [
     formatArgExtractErr,
@@ -133,24 +126,49 @@ CliParser state : {
     textStyle : TextStyle,
 }
 
-## Begin weaving together a CLI builder using the `: <- ` builder notation.
+## Map over the parsed value of a Weaver field.
+##
+## Useful for naming bare fields, or handling default values.
+##
+## ```roc
+## expect
+##     { parser } =
+##         { Cli.weave <-
+##             verbosity: Opt.count { short: "v", long: "verbose" }
+##                 |> Cli.map Verbosity,
+##             file: Param.maybeStr { name: "file" }
+##                 |> Cli.map \f -> Result.withDefault f "NO_FILE",
+##         }
+##         |> Cli.finish { name: "example" }
+##         |> Cli.assertValid
+##
+##    parser ["example", "-vvv"]
+##    == SuccessfullyParsed { verbosity: Verbosity 3, file: "NO_FILE" }
+## ```
+map : CliBuilder a fromAction toAction, (a -> b) -> CliBuilder b fromAction toAction
+map = \builder, mapper ->
+    Builder.map builder mapper
+
+## Begin weaving together a CLI builder using the `<- ` builder notation.
 ##
 ## Check the module-level documentation for general usage instructions.
 ##
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             verbosity: <- Opt.count { short: "v", long: "verbose" },
+##         { Cli.weave <-
+##             verbosity: Opt.count { short: "v", long: "verbose" },
+##             file: Param.str { name: "file" },
 ##         }
 ##         |> Cli.finish { name: "example" }
 ##         |> Cli.assertValid
 ##
-##    parser ["example", "-vvv"]
-##    == SuccessfullyParsed { verbosity: 3 }
+##    parser ["example", "file.txt", "-vvv"]
+##    == SuccessfullyParsed { verbosity: 3, file: "file.txt" }
 ## ```
-weave : base -> CliBuilder base GetOptionsAction
-weave = \base -> Builder.fromState base
+weave : CliBuilder a action1 action2, CliBuilder b action2 action3, (a, b -> c) -> CliBuilder c action1 action3
+weave = \left, right, combiner ->
+    Builder.combine left right combiner
 
 ## Fail the parsing process if any arguments are left over after parsing.
 ensureAllArgsWereParsed : List Arg -> Result {} ArgExtractErr
@@ -198,20 +216,22 @@ ensureAllArgsWereParsed = \remainingArgs ->
 ##
 ## ```roc
 ## expect
-##     Cli.weave {
-##         verbosity: <- Opt.count { short: "v", long: "verbose" },
+##     { Cli.weave <-
+##         verbosity: Opt.count { short: "v", long: "verbose" },
+##         file: Param.str { name: "file" },
 ##     }
 ##     |> Cli.finish { name: "example" }
 ##     |> Result.isOk
 ##
 ## expect
-##     Cli.weave {
-##         verbosity: <- Opt.count { short: "" },
+##     { Cli.weave <-
+##         verbosity: Opt.count { short: "" },
+##         file: Param.str { name: "" },
 ##     }
 ##     |> Cli.finish { name: "example" }
 ##     |> Result.isErr
 ## ```
-finish : CliBuilder state action, CliConfigParams -> Result (CliParser state) CliValidationErr
+finish : CliBuilder data fromAction toAction, CliConfigParams -> Result (CliParser data) CliValidationErr
 finish = \builder, params ->
     { parser, config, textStyle } = finishWithoutValidating builder params
 
@@ -228,15 +248,16 @@ finish = \builder, params ->
 ## ```roc
 ## expect
 ##     { parser } =
-##         Cli.weave {
-##             verbosity: <- Opt.count { short: "v", long: "verbose" },
+##         { Cli.weave <-
+##             verbosity: Opt.count { short: "v", long: "verbose" },
+##             file: Param.maybeStr { name: "file" },
 ##         }
 ##         |> Cli.finishWithoutValidating { name: "example" }
 ##
 ##     parser ["example", "-v", "-v"]
-##     == SuccessfullyParsed { verbosity: 2 }
+##     == SuccessfullyParsed { verbosity: 2, file: Err NoValue }
 ## ```
-finishWithoutValidating : CliBuilder state action, CliConfigParams -> CliParser state
+finishWithoutValidating : CliBuilder data fromAction toAction, CliConfigParams -> CliParser data
 finishWithoutValidating = \builder, { name, authors ? [], version ? "", description ? "", textStyle ? Color } ->
     { options, parameters, subcommands, parser } =
         builder
@@ -277,13 +298,11 @@ finishWithoutValidating = \builder, { name, authors ? [], version ? "", descript
 ## for correct parsing.
 ##
 ## ```roc
-## Cli.weave {
-##     a: <- Opt.num { short: "a" }
-## }
+## Opt.num { short: "a" }
 ## |> Cli.finish { name: "example" }
 ## |> Cli.assertValid
 ## ```
-assertValid : Result (CliParser state) CliValidationErr -> CliParser state
+assertValid : Result (CliParser data) CliValidationErr -> CliParser data
 assertValid = \result ->
     when result is
         Ok cli -> cli
@@ -304,8 +323,9 @@ assertValid = \result ->
 ##
 ## ```roc
 ## exampleCli =
-##     Cli.weave {
-##         verbosity: <- Opt.count { short: "v", help: "How verbose our logs should be." },
+##     { Cli.weave <-
+##         verbosity: Opt.count { short: "v", long: "verbose" },
+##         alpha: Opt.maybeNum { short: "a", long: "alpha" },
 ##     }
 ##     |> Cli.finish {
 ##         name: "example",
@@ -328,6 +348,7 @@ assertValid = \result ->
 ##
 ##         Options:
 ##           -v             How verbose our logs should be.
+##           -a, --alpha    Set the alpha level.
 ##           -h, --help     Show this help page.
 ##           -V, --version  Show the version.
 ##         """
@@ -353,7 +374,7 @@ assertValid = \result ->
 ##           example [OPTIONS]
 ##         """
 ## ```
-parseOrDisplayMessage : CliParser state, List Str -> Result state Str
+parseOrDisplayMessage : CliParser data, List Str -> Result data Str
 parseOrDisplayMessage = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
@@ -371,15 +392,21 @@ parseOrDisplayMessage = \parser, args ->
             Err incorrectUsageStr
 
 expect
-    Cli.weave {
-        verbosity: <- Opt.count { short: "v" },
-    }
+    Opt.count { short: "v" }
+    |> Cli.map Verbosity
     |> Cli.finish { name: "empty" }
     |> Result.isOk
 
 expect
-    Cli.weave {
-        verbosity: <- Opt.count { short: "" },
-    }
+    Opt.count { short: "" }
+    |> Cli.map Verbosity
     |> Cli.finish { name: "example" }
     |> Result.isErr
+
+expect
+    { Cli.weave <-
+        verbosity: Opt.count { short: "v" },
+        points: Param.str { name: "points" },
+    }
+    |> Cli.finish { name: "test" }
+    |> Result.isOk
