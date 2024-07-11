@@ -22,7 +22,7 @@ from another CLI parsing library that you think would fit well in Weaver's nest.
 ```roc
 app [main] {
     pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
-    weaver: "https://github.com/smores56/weaver/releases/download/0.2.0/BBDPvzgGrYp-AhIDw0qmwxT0pWZIQP_7KOrUrZfp_xw.tar.br",
+    weaver: "https://github.com/smores56/weaver/releases/download/0.3.0/GJtHjepVuDUSzWogFflwMiqPnCV5FKR81722WVmUC5E.tar.br",
 }
 
 import pf.Stdout
@@ -97,7 +97,7 @@ with more to come as this library matures.
 
 Now that an initial release has happened, these are some ideas I have for future development:
 
-- [ ] Set default values in the arguments themselves
+- [X] Set default values in the arguments themselves (Handled with Cli.map and Result.withDefault)
 - [ ] Optionally set `{ group : Str }` per option so they are visually grouped in the help page
 - [ ] Completion generation for popular shells (e.g. Bash, Zsh, Fish, etc.)
 - [X] Add terminal escape sequences to generated messages for prettier help/usage text formatting
