@@ -89,11 +89,11 @@ setParser = \@CliBuilder builder, parser ->
 updateParser : CliBuilder state fromAction toAction, ({ data : state, remainingArgs : List Arg } -> Result { data : nextState, remainingArgs : List Arg } ArgExtractErr) -> CliBuilder nextState fromAction toAction
 updateParser = \@CliBuilder builder, updater ->
     newParser =
-        { data, remainingArgs, subcommandPath } <- onSuccessfulArgParse builder.parser
-        when updater { data, remainingArgs } is
-            Err err -> IncorrectUsage err { subcommandPath }
-            Ok { data: updatedData, remainingArgs: restOfArgs } ->
-                SuccessfullyParsed { data: updatedData, remainingArgs: restOfArgs, subcommandPath }
+        onSuccessfulArgParse builder.parser \{ data, remainingArgs, subcommandPath } ->
+            when updater { data, remainingArgs } is
+                Err err -> IncorrectUsage err { subcommandPath }
+                Ok { data: updatedData, remainingArgs: restOfArgs } ->
+                    SuccessfullyParsed { data: updatedData, remainingArgs: restOfArgs, subcommandPath }
 
     setParser (@CliBuilder builder) newParser
 
@@ -101,8 +101,8 @@ bindParser : CliBuilder state fromAction toAction, (ArgParserState state -> ArgP
 bindParser = \@CliBuilder builder, updater ->
     newParser : ArgParser nextState
     newParser =
-        { data, remainingArgs, subcommandPath } <- onSuccessfulArgParse builder.parser
-        updater { data, remainingArgs, subcommandPath }
+        onSuccessfulArgParse builder.parser \{ data, remainingArgs, subcommandPath } ->
+            updater { data, remainingArgs, subcommandPath }
 
     setParser (@CliBuilder builder) newParser
 

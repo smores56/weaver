@@ -1,9 +1,9 @@
-## Weave together a CLI parser using the `<- ` builder notation!
+## Weave together a CLI parser using the `<-` builder notation!
 ##
 ## This module is the entry point for creating CLIs using Weaver.
 ## To get started, call the [weave] method and pass a
 ## [record builder](https://www.roc-lang.org/examples/RecordBuilder/README.html)
-## to it. You can pass `Opt`s, `Param`s, or `Subcommand`s as fields,
+## to it. You can pass `Opt`s, `Param`s, or `SubCmd`s as fields,
 ## and Weaver will automatically register them in its config as
 ## well as build a parser with the inferred types of the fields
 ## you set.
@@ -28,7 +28,7 @@
 ## ```roc
 ## fooSubcommand =
 ##     Opt.u64 { short: "a", help: "Set the alpha level" }
-##     |> Subcommand.finish {
+##     |> SubCmd.finish {
 ##         name: "foo",
 ##         description: "Foo some stuff."
 ##         mapper: Foo,
@@ -38,7 +38,7 @@
 ##     # We allow two subcommands of the same parent to have overlapping
 ##     # fields since only one can ever be parsed at a time.
 ##     Opt.u64 { short: "a", help: "Set the alpha level" }
-##     |> Subcommand.finish {
+##     |> SubCmd.finish {
 ##         name: "bar",
 ##         description: "Bar some stuff."
 ##         mapper: Bar,
@@ -46,7 +46,7 @@
 ##
 ## { Cli.weave <-
 ##     verbosity: Opt.count { short: "v", long: "verbose" },
-##     sc: Subcommand.optional [fooSubcommand, barSubcommand],
+##     sc: SubCmd.optional [fooSubcommand, barSubcommand],
 ## }
 ## ```
 ##
@@ -85,8 +85,8 @@
 ## If you want to see more examples, check the [examples](https://github.com/smores56/weaver/tree/main/examples)
 ## folder in the [repository](https://github.com/smores56/weaver).
 ##
-## _note: `Opt`s must be set before an optional `Subcommand` field is given,_
-## _and the `Subcommand` field needs to be set before `Param`s are set._
+## _note: `Opt`s must be set before an optional `SubCmd` field is given,_
+## _and the `SubCmd` field needs to be set before `Param`s are set._
 ## _`Param` lists also cannot be followed by anything else including_
 ## _themselves. These requirements ensure we parse arguments in the_
 ## _right order. Luckily, all of this is ensured at the type level._
@@ -149,7 +149,7 @@ map : CliBuilder a fromAction toAction, (a -> b) -> CliBuilder b fromAction toAc
 map = \builder, mapper ->
     Builder.map builder mapper
 
-## Begin weaving together a CLI builder using the `<- ` builder notation.
+## Begin weaving together a CLI builder using the `<-` builder notation.
 ##
 ## Check the module-level documentation for general usage instructions.
 ##

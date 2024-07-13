@@ -26,9 +26,22 @@ main =
 
 cliParser =
     { Cli.weave <-
-        alpha: Opt.maybeU64 { short: "a", long: "alpha", help: "Set the alpha level. [default: 123]" }
-        |> Cli.map \a -> Result.withDefault a 123,,
-        file: Param.maybeStr { name: "file", help: "The file to process. [default: NONE]" }
+        alpha: Opt.u64 {
+            short: "a",
+            long: "alpha",
+            help: "Set the alpha level. [default: 123]",
+            default: Value 123,
+        },
+        beta: Opt.dec {
+            short: "b",
+            long: "beta",
+            help: "Set the beta level. [default: PI]",
+            default: Generate (\{} -> Num.pi),
+        },
+        file: Param.maybeStr {
+            name: "file",
+            help: "The file to process. [default: NONE]",
+        }
         |> Cli.map \f -> Result.withDefault f "NONE",
     }
     |> Cli.finish {

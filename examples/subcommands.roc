@@ -9,7 +9,7 @@ import pf.Task exposing [Task]
 import weaver.Opt
 import weaver.Cli
 import weaver.Param
-import weaver.Subcommand
+import weaver.SubCmd
 
 main =
     args = Arg.list!
@@ -28,7 +28,7 @@ main =
 cliParser =
     { Cli.weave <-
         force: Opt.flag { short: "f", help: "Force the task to complete." },
-        sc: Subcommand.optional [subcommandParser1, subcommandParser2],
+        sc: SubCmd.optional [subcommandParser1, subcommandParser2],
         file: Param.maybeStr { name: "file", help: "The file to process." },
         files: Param.strList { name: "files", help: "The rest of the files." },
     }
@@ -44,14 +44,14 @@ subcommandParser1 =
     { Cli.weave <-
         d: Opt.maybeU64 { short: "d", help: "A non-overlapping subcommand flag with s2." },
         volume: Opt.maybeU64 { short: "v", long: "volume", help: "How loud to grind the gears." },
-        sc: Subcommand.optional [subSubcommandParser1, subSubcommandParser2],
+        sc: SubCmd.optional [subSubcommandParser1, subSubcommandParser2],
     }
-    |> Subcommand.finish { name: "s1", description: "A first subcommand.", mapper: S1 }
+    |> SubCmd.finish { name: "s1", description: "A first subcommand.", mapper: S1 }
 
 subcommandParser2 =
     Opt.maybeU64 { short: "d", help: "This doesn't overlap with s1's -d flag." }
     |> Cli.map DFlag
-    |> Subcommand.finish {
+    |> SubCmd.finish {
         name: "s2",
         description: "Another subcommand.",
         mapper: S2,
@@ -62,7 +62,7 @@ subSubcommandParser1 =
         a: Opt.u64 { short: "a", help: "An example short flag for a sub-subcommand." },
         b: Opt.u64 { short: "b", help: "Another example short flag for a sub-subcommand." },
     }
-    |> Subcommand.finish { name: "ss1", description: "A sub-subcommand.", mapper: SS1 }
+    |> SubCmd.finish { name: "ss1", description: "A sub-subcommand.", mapper: SS1 }
 
 subSubcommandParser2 =
     { Cli.weave <-
@@ -70,4 +70,4 @@ subSubcommandParser2 =
         c: Opt.u64 { short: "c", long: "create", help: "Create a doohickey." },
         data: Param.str { name: "data", help: "Data to manipulate." },
     }
-    |> Subcommand.finish { name: "ss2", description: "Another sub-subcommand.", mapper: SS2 }
+    |> SubCmd.finish { name: "ss2", description: "Another sub-subcommand.", mapper: SS2 }
