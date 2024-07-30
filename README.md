@@ -22,7 +22,7 @@ from another CLI parsing library that you think would fit well in Weaver's nest.
 ```roc
 app [main] {
     pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
-    weaver: "https://github.com/smores56/weaver/releases/download/0.3.0/GJtHjepVuDUSzWogFflwMiqPnCV5FKR81722WVmUC5E.tar.br",
+    weaver: "https://github.com/smores56/weaver/releases/download/0.3.1/CZWzZ3WIfkG5_rxdcwPQ0PqgrlZQFwKQUi2zyMYddXc.tar.br",
 }
 
 import pf.Stdout
