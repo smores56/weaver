@@ -13,14 +13,19 @@ module [
     Plurality,
     SpecialFlags,
     InvalidValue,
+    DefaultValue,
     ValueParser,
     OptionConfigBaseParams,
+    DefaultableOptionConfigBaseParams,
     OptionConfigParams,
+    DefaultableOptionConfigParams,
     OptionConfig,
     helpOption,
     versionOption,
     ParameterConfigBaseParams,
+    DefaultableParameterConfigBaseParams,
     ParameterConfigParams,
+    DefaultableParameterConfigParams,
     ParameterConfig,
     CliConfigParams,
     CliConfig,
@@ -110,6 +115,8 @@ SpecialFlags : { help : Bool, version : Bool }
 
 InvalidValue : [InvalidNumStr, InvalidValue Str]
 
+DefaultValue a : [NoDefault, Value a, Generate ({} -> a)]
+
 ## A parser that extracts an argument value from a string.
 ValueParser a : Str -> Result a InvalidValue
 
@@ -119,6 +126,13 @@ OptionConfigBaseParams : {
     help ? Str,
 }
 
+DefaultableOptionConfigBaseParams a : {
+    short ? Str,
+    long ? Str,
+    help ? Str,
+    default ? DefaultValue a,
+}
+
 ## Default-value options for creating an option.
 OptionConfigParams a : {
     short ? Str,
@@ -126,6 +140,16 @@ OptionConfigParams a : {
     help ? Str,
     type : Str,
     parser : ValueParser a,
+}
+
+## Default-value options for creating an option.
+DefaultableOptionConfigParams a : {
+    short ? Str,
+    long ? Str,
+    help ? Str,
+    type : Str,
+    parser : ValueParser a,
+    default ? DefaultValue a,
 }
 
 ## Metadata for options in our CLI building system.
@@ -162,12 +186,27 @@ ParameterConfigBaseParams : {
     help ? Str,
 }
 
+DefaultableParameterConfigBaseParams a : {
+    name : Str,
+    help ? Str,
+    default ? DefaultValue a,
+}
+
 ## Default-value options for creating an parameter.
 ParameterConfigParams a : {
     name : Str,
     help ? Str,
     type : Str,
     parser : ValueParser a,
+}
+
+## Default-value options for creating an parameter.
+DefaultableParameterConfigParams a : {
+    name : Str,
+    help ? Str,
+    type : Str,
+    parser : ValueParser a,
+    default ? DefaultValue a,
 }
 
 ## Metadata for parameters in our CLI building system.

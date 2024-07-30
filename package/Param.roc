@@ -54,7 +54,9 @@ import Builder exposing [
 import Base exposing [
     ArgExtractErr,
     ParameterConfigBaseParams,
+    DefaultableParameterConfigBaseParams,
     ParameterConfigParams,
+    DefaultableParameterConfigParams,
     ParameterConfig,
     strTypeName,
     numTypeName,
@@ -112,13 +114,19 @@ builderWithParameterParser = \param, valueParser ->
 ##     parser ["example", "blue"]
 ##     == SuccessfullyParsed Blue
 ## ```
-single : ParameterConfigParams state -> CliBuilder state {}action GetParamsAction
-single = \{ parser, type, name, help ? "" } ->
+single : DefaultableParameterConfigParams data -> CliBuilder data {}action GetParamsAction
+single = \{ parser, type, name, help ? "", default ? NoDefault } ->
     param = { name, type, help, plurality: One }
+
+    defaultGenerator = \{} ->
+        when default is
+            Value defaultValue -> Ok defaultValue
+            Generate generator -> Ok (generator {})
+            NoDefault -> Err (MissingParam param)
 
     valueParser = \values ->
         when List.first values is
-            Err ListWasEmpty -> Err (MissingParam param)
+            Err ListWasEmpty -> defaultGenerator {}
             Ok singleValue ->
                 parser singleValue
                 |> Result.mapErr \err -> InvalidParamValue err param
@@ -236,8 +244,8 @@ list = \{ parser, type, name, help ? "" } ->
 ##     parser ["example", "abc"]
 ##     == SuccessfullyParsed "abc"
 ## ```
-str : ParameterConfigBaseParams -> CliBuilder Str {}action GetParamsAction
-str = \{ name, help ? "" } -> single { parser: Ok, type: strTypeName, name, help }
+str : DefaultableParameterConfigBaseParams Str -> CliBuilder Str {}action GetParamsAction
+str = \{ name, help ? "", default ? NoDefault } -> single { parser: Ok, type: strTypeName, name, help, default }
 
 ## Add an optional string parameter to your CLI builder.
 ##
@@ -289,8 +297,8 @@ strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, he
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
-dec : ParameterConfigBaseParams -> CliBuilder Dec {}action GetParamsAction
-dec = \{ name, help ? "" } -> single { parser: Str.toDec, type: numTypeName, name, help }
+dec : DefaultableParameterConfigBaseParams Dec -> CliBuilder Dec {}action GetParamsAction
+dec = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toDec, type: numTypeName, name, help, default }
 
 ## Add an optional `Dec` parameter to your CLI builder.
 ##
@@ -343,8 +351,8 @@ decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, n
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
-f32 : ParameterConfigBaseParams -> CliBuilder F32 {}action GetParamsAction
-f32 = \{ name, help ? "" } -> single { parser: Str.toF32, type: numTypeName, name, help }
+f32 : DefaultableParameterConfigBaseParams F32 -> CliBuilder F32 {}action GetParamsAction
+f32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF32, type: numTypeName, name, help, default }
 
 ## Add an optional `F32` parameter to your CLI builder.
 ##
@@ -397,8 +405,8 @@ f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, n
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
-f64 : ParameterConfigBaseParams -> CliBuilder F64 {}action GetParamsAction
-f64 = \{ name, help ? "" } -> single { parser: Str.toF64, type: numTypeName, name, help }
+f64 : DefaultableParameterConfigBaseParams F64 -> CliBuilder F64 {}action GetParamsAction
+f64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF64, type: numTypeName, name, help, default }
 
 ## Add an optional `F64` parameter to your CLI builder.
 ##
@@ -451,8 +459,8 @@ f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-u8 : ParameterConfigBaseParams -> CliBuilder U8 {}action GetParamsAction
-u8 = \{ name, help ? "" } -> single { parser: Str.toU8, type: numTypeName, name, help }
+u8 : DefaultableParameterConfigBaseParams U8 -> CliBuilder U8 {}action GetParamsAction
+u8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU8, type: numTypeName, name, help, default }
 
 ## Add an optional `U8` parameter to your CLI builder.
 ##
@@ -505,8 +513,8 @@ u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, nam
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-u16 : ParameterConfigBaseParams -> CliBuilder U16 {}action GetParamsAction
-u16 = \{ name, help ? "" } -> single { parser: Str.toU16, type: numTypeName, name, help }
+u16 : DefaultableParameterConfigBaseParams U16 -> CliBuilder U16 {}action GetParamsAction
+u16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU16, type: numTypeName, name, help, default }
 
 ## Add an optional `U16` parameter to your CLI builder.
 ##
@@ -559,8 +567,8 @@ u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-u32 : ParameterConfigBaseParams -> CliBuilder U32 {}action GetParamsAction
-u32 = \{ name, help ? "" } -> single { parser: Str.toU32, type: numTypeName, name, help }
+u32 : DefaultableParameterConfigBaseParams U32 -> CliBuilder U32 {}action GetParamsAction
+u32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU32, type: numTypeName, name, help, default }
 
 ## Add an optional `U32` parameter to your CLI builder.
 ##
@@ -613,8 +621,8 @@ u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-u64 : ParameterConfigBaseParams -> CliBuilder U64 {}action GetParamsAction
-u64 = \{ name, help ? "" } -> single { parser: Str.toU64, type: numTypeName, name, help }
+u64 : DefaultableParameterConfigBaseParams U64 -> CliBuilder U64 {}action GetParamsAction
+u64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU64, type: numTypeName, name, help, default }
 
 ## Add an optional `U64` parameter to your CLI builder.
 ##
@@ -667,8 +675,8 @@ u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-u128 : ParameterConfigBaseParams -> CliBuilder U128 {}action GetParamsAction
-u128 = \{ name, help ? "" } -> single { parser: Str.toU128, type: numTypeName, name, help }
+u128 : DefaultableParameterConfigBaseParams U128 -> CliBuilder U128 {}action GetParamsAction
+u128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU128, type: numTypeName, name, help, default }
 
 ## Add an optional `U128` parameter to your CLI builder.
 ##
@@ -721,8 +729,8 @@ u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName,
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-i8 : ParameterConfigBaseParams -> CliBuilder I8 {}action GetParamsAction
-i8 = \{ name, help ? "" } -> single { parser: Str.toI8, type: numTypeName, name, help }
+i8 : DefaultableParameterConfigBaseParams I8 -> CliBuilder I8 {}action GetParamsAction
+i8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI8, type: numTypeName, name, help, default }
 
 ## Add an optional `I8` parameter to your CLI builder.
 ##
@@ -775,8 +783,8 @@ i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, nam
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-i16 : ParameterConfigBaseParams -> CliBuilder I16 {}action GetParamsAction
-i16 = \{ name, help ? "" } -> single { parser: Str.toI16, type: numTypeName, name, help }
+i16 : DefaultableParameterConfigBaseParams I16 -> CliBuilder I16 {}action GetParamsAction
+i16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI16, type: numTypeName, name, help, default }
 
 ## Add an optional `I16` parameter to your CLI builder.
 ##
@@ -829,8 +837,8 @@ i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-i32 : ParameterConfigBaseParams -> CliBuilder I32 {}action GetParamsAction
-i32 = \{ name, help ? "" } -> single { parser: Str.toI32, type: numTypeName, name, help }
+i32 : DefaultableParameterConfigBaseParams I32 -> CliBuilder I32 {}action GetParamsAction
+i32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI32, type: numTypeName, name, help, default }
 
 ## Add an optional `I32` parameter to your CLI builder.
 ##
@@ -883,8 +891,8 @@ i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-i64 : ParameterConfigBaseParams -> CliBuilder I64 {}action GetParamsAction
-i64 = \{ name, help ? "" } -> single { parser: Str.toI64, type: numTypeName, name, help }
+i64 : DefaultableParameterConfigBaseParams I64 -> CliBuilder I64 {}action GetParamsAction
+i64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI64, type: numTypeName, name, help, default }
 
 ## Add an optional `I64` parameter to your CLI builder.
 ##
@@ -937,8 +945,8 @@ i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, n
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
-i128 : ParameterConfigBaseParams -> CliBuilder I128 {}action GetParamsAction
-i128 = \{ name, help ? "" } -> single { parser: Str.toI128, type: numTypeName, name, help }
+i128 : DefaultableParameterConfigBaseParams I128 -> CliBuilder I128 {}action GetParamsAction
+i128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI128, type: numTypeName, name, help, default }
 
 ## Add an optional `I128` parameter to your CLI builder.
 ##

@@ -5,6 +5,6 @@ package [
     ErrorFormatter,
     Help,
     Param,
-    Subcommand,
+    SubCmd,
     Validate,
 ] {}
