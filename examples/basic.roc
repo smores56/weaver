@@ -11,9 +11,7 @@ import weaver.Cli
 import weaver.Param
 
 main =
-    args = Arg.list!
-
-    when Cli.parseOrDisplayMessage cliParser args is
+    when Cli.parseOrDisplayMessage cliParser (Arg.list!) is
         Ok data ->
             Stdout.line! "Successfully parsed! Here's what I got:"
             Stdout.line! ""

@@ -182,9 +182,10 @@ usageHelp = \config, path, textStyle ->
 
     requiredOptions =
         options
-        |> List.dropIf \opt -> opt.expectedValue == NothingExpected
+        |> List.keepIf \opt -> opt.plurality == One
         |> List.map optionSimpleNameFormatter
 
+    # TODO: don't include --help or --version
     otherOptions =
         if List.len requiredOptions == List.len options then
             []
