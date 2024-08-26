@@ -1,4 +1,4 @@
-on: 
+on:
   pull_request:
   workflow_dispatch:
 
@@ -7,14 +7,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
+env:
+  ROC: ./roc_nightly/roc
 
+jobs:
   test-examples:
     runs-on: [ubuntu-20.04]
     steps:
       - uses: actions/checkout@v3
 
-      # get roc cli 
+      # get roc cli
       - name: get latest roc nightly
         run: |
           curl -fOL https://github.com/roc-lang/roc/releases/download/nightly/roc_nightly-linux_x86_64-latest.tar.gz
@@ -32,5 +34,9 @@ jobs:
 
       - run: ./roc_nightly/roc version
 
-      # run all tests 
-      - run: ./roc_nightly/roc test package/main.roc
+      # expect for testing
+      # - run: sudo apt install -y expect
+      # - run: expect -v
+
+      # run all tests
+      - run: ./ci/all_tests.sh
