@@ -66,10 +66,9 @@ import Parser exposing [ArgValue]
 builderWithOptionParser : OptionConfig, (List ArgValue -> Result data ArgExtractErr) -> CliBuilder data fromAction toAction
 builderWithOptionParser = \option, valueParser ->
     argParser = \args ->
-        { values, remainingArgs } <- extractOptionValues { args, option }
-            |> Result.try
-        data <- valueParser values
-            |> Result.try
+        { values, remainingArgs } = extractOptionValues? { args, option }
+
+        data = valueParser? values
 
         Ok { data, remainingArgs }
 
@@ -124,10 +123,7 @@ single = \{ parser, type, short ? "", long ? "", help ? "", default ? NoDefault 
             NoDefault -> Err (MissingOption option)
 
     valueParser = \values ->
-        value <- getMaybeValue values option
-            |> Result.try
-
-        when value is
+        when getMaybeValue? values option is
             Err NoValue -> defaultGenerator {}
             Ok (Err NoValue) -> Err (NoValueProvidedForOption option)
             Ok (Ok val) ->
@@ -172,10 +168,7 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
     option = { expectedValue: ExpectsValue type, plurality: Optional, short, long, help }
 
     valueParser = \values ->
-        value <- getMaybeValue values option
-            |> Result.try
-
-        when value is
+        when getMaybeValue? values option is
             Err NoValue -> Ok (Err NoValue)
             Ok (Err NoValue) -> Err (NoValueProvidedForOption option)
             Ok (Ok val) ->
@@ -250,10 +243,7 @@ flag = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedValue: NothingExpected, plurality: Optional, short, long, help }
 
     valueParser = \values ->
-        value <- getMaybeValue values option
-            |> Result.try
-
-        when value is
+        when getMaybeValue? values option is
             Err NoValue -> Ok Bool.false
             Ok (Err NoValue) -> Ok Bool.true
             Ok (Ok _val) -> Err (OptionDoesNotExpectValue option)
