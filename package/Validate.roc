@@ -70,58 +70,47 @@ validateCommand :
     }
     -> Result {} CliValidationErr
 validateCommand = \{ name, options, parentOptions, parameters, subcommands, subcommandPath } ->
-    {} <- ensureCommandIsWellNamed { name, subcommandPath }
-        |> Result.try
-    _ <- options
-        |> List.mapTry \option ->
-            {} <- ensureOptionIsWellNamed { option, subcommandPath }
-                |> Result.try
-            {} <- ensureOptionValueTypeIsWellNamed { option, subcommandPath }
-                |> Result.try
+    ensureCommandIsWellNamed { name, subcommandPath }
+    |> Result.try \{} ->
+        List.mapTry options \option ->
+            ensureOptionIsWellNamed { option, subcommandPath }
+            |> Result.try \{} ->
+                ensureOptionValueTypeIsWellNamed { option, subcommandPath }
+        |> Result.try \_ ->
+            List.mapTry parameters \param ->
+                ensureParamIsWellNamed { name: param.name, subcommandPath }
+                |> Result.try \{} ->
+                    ensureParamValueTypeIsWellNamed { param, subcommandPath }
+            |> Result.try \_ ->
+                checkIfThereAreOverlappingParameters parameters subcommandPath
+                |> Result.try \{} ->
+                    when subcommands is
+                        HasSubcommands subcommandConfigs if !(Dict.isEmpty subcommandConfigs) ->
+                            subcommandConfigs
+                            |> Dict.toList
+                            |> List.mapTry \(subcommandName, subcommand) ->
+                                updatedParentOptions =
+                                    options
+                                    |> List.map \option -> { option, subcommandPath }
+                                    |> List.concat parentOptions
 
-            Ok {}
-        |> Result.try
+                                validateCommand {
+                                    name: subcommandName,
+                                    options: subcommand.options,
+                                    parentOptions: updatedParentOptions,
+                                    parameters: subcommand.parameters,
+                                    subcommands: subcommand.subcommands,
+                                    subcommandPath: subcommandPath |> List.append subcommandName,
+                                }
+                            |> Result.map \_successes -> {}
 
-    _ <- parameters
-        |> List.mapTry \param ->
-            {} <- ensureParamIsWellNamed { name: param.name, subcommandPath }
-                |> Result.try
-            {} <- ensureParamValueTypeIsWellNamed { param, subcommandPath }
-                |> Result.try
+                        _noSubcommands ->
+                            allOptionsToCheck =
+                                options
+                                |> List.map \option -> { option, subcommandPath }
+                                |> List.concat parentOptions
 
-            Ok {}
-        |> Result.try
-
-    {} <- checkIfThereAreOverlappingParameters parameters subcommandPath
-        |> Result.try
-
-    when subcommands is
-        HasSubcommands subcommandConfigs if !(Dict.isEmpty subcommandConfigs) ->
-            subcommandConfigs
-            |> Dict.toList
-            |> List.mapTry \(subcommandName, subcommand) ->
-                updatedParentOptions =
-                    options
-                    |> List.map \option -> { option, subcommandPath }
-                    |> List.concat parentOptions
-
-                validateCommand {
-                    name: subcommandName,
-                    options: subcommand.options,
-                    parentOptions: updatedParentOptions,
-                    parameters: subcommand.parameters,
-                    subcommands: subcommand.subcommands,
-                    subcommandPath: subcommandPath |> List.append subcommandName,
-                }
-            |> Result.map \_successes -> {}
-
-        _noSubcommands ->
-            allOptionsToCheck =
-                options
-                |> List.map \option -> { option, subcommandPath }
-                |> List.concat parentOptions
-
-            checkIfThereAreOverlappingOptions allOptionsToCheck
+                            checkIfThereAreOverlappingOptions allOptionsToCheck
 
 ensureCommandIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
 ensureCommandIsWellNamed = \{ name, subcommandPath } ->

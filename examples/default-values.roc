@@ -1,17 +1,16 @@
-app [main] {
-    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
+app [main!] {
+    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.17.0/lZFLstMUCUvd5bjnnpYromZJXkQUrdhbva4xdBInicE.tar.br",
     weaver: "../package/main.roc",
 }
 
-import pf.Stdout
 import pf.Arg
-import pf.Task exposing [Task]
+import pf.Stdout
 import weaver.Opt
 import weaver.Cli
 import weaver.Param
 
-main =
-    args = Arg.list!
+main! = \{} ->
+    args = Arg.list! {}
 
     when Cli.parseOrDisplayMessage cliParser args is
         Ok data ->
@@ -22,7 +21,7 @@ main =
         Err message ->
             Stdout.line! message
 
-            Task.err (Exit 1 "")
+            Err (Exit 1 "")
 
 cliParser =
     { Cli.weave <-
