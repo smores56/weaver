@@ -13,27 +13,26 @@ Read the documentation at <https://smores56.github.io/weaver/Cli/>.
 
 ## Status
 
-This library should be ready for usage already, but I'm always looking for more testing
+This library is ready to parse your args today, but I'm always looking for more testing
 from the community! Feel free to open a GitHub issue if there's a feature you're missing
 from another CLI parsing library that you think would fit well in Weaver's nest.
 
 ## Example
 
 ```roc
-app [main] {
-    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
-    weaver: "https://github.com/smores56/weaver/releases/download/0.3.1/CZWzZ3WIfkG5_rxdcwPQ0PqgrlZQFwKQUi2zyMYddXc.tar.br",
+app [main!] {
+    pf: platform "<latest from https://github.com/roc-lang/basic-cli/releases>",
+    weaver: "<latest from https://github.com/smores56/weaver/releases>",
 }
 
-import pf.Stdout
 import pf.Arg
-import pf.Task exposing [Task]
+import pf.Stdout
 import weaver.Opt
 import weaver.Cli
 import weaver.Param
 
-main =
-    args = Arg.list!
+main! = \{} ->
+    args = Arg.list! {}
 
     when Cli.parseOrDisplayMessage cliParser args is
         Ok data ->
@@ -44,7 +43,7 @@ main =
         Err message ->
             Stdout.line! message
 
-            Task.err (Exit 1 "")
+            Err (Exit 1 "")
 
 cliParser =
     { Cli.weave <-
@@ -90,17 +89,16 @@ Options:
   -V, --version  Show the version.
 ```
 
-There are also some examples in the [examples](./examples) directory that are more feature-complete,
-with more to come as this library matures.
+There are also some examples in the [examples](./examples) directory that are more
+feature-complete, with more to come as this library matures.
 
 ## Roadmap
 
 Now that an initial release has happened, these are some ideas I have for future development:
 
-- [X] Set default values in the arguments themselves (Handled with Cli.map and Result.withDefault)
-- [ ] Optionally set `{ group : Str }` per option so they are visually grouped in the help page
+- [ ] Optionally set `{ group ? Str }` per option so they are visually grouped in the help page
 - [ ] Completion generation for popular shells (e.g. Bash, Zsh, Fish, etc.)
-- [X] Add terminal escape sequences to generated messages for prettier help/usage text formatting
-- [ ] add convenient `Task` helpers (e.g. parse or print help and exit) once [module params](https://docs.google.com/document/u/0/d/110MwQi7Dpo1Y69ECFXyyvDWzF4OYv1BLojIm08qDTvg) land
+- [X] Add terminal escape sequences to generated messages for prettier help/usage text formatting (currently working, but could be nicer/more configurable)
+- [ ] add convenient CLI platform wrappers (e.g. parse, or print help and exit) for use with module params
 - [X] Clean up default parameter code if we can elide different fields on the same record type in different places (not currently allowed)
 - [ ] Add more testing (always)
