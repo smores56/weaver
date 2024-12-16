@@ -10,22 +10,22 @@ import Base exposing [
 ]
 import Validate exposing [CliValidationErr]
 
-optionDisplayName : { short : Str, long : Str }* -> Str
-optionDisplayName = \option ->
+option_display_name : { short : Str, long : Str }* -> Str
+option_display_name = \option ->
     when (option.short, option.long) is
         ("", "") -> ""
         (short, "") -> "-$(short)"
         ("", long) -> "--$(long)"
         (short, long) -> "-$(short)/--$(long)"
 
-optionTypeName : { expectedValue : ExpectedValue }* -> Str
-optionTypeName = \{ expectedValue } ->
+option_type_name : { expectedValue : ExpectedValue }* -> Str
+option_type_name = \{ expected_value } ->
     when expectedValue is
-        ExpectsValue typeName -> fullTypeName typeName
+        ExpectsValue type_name -> fullTypeName typeName
         NothingExpected -> ""
 
-fullTypeName : Str -> Str
-fullTypeName = \typeName ->
+full_type_name : Str -> Str
+full_type_name = \type_name ->
     if typeName == strTypeName then
         "string"
     else if typeName == numTypeName then
@@ -36,8 +36,8 @@ fullTypeName = \typeName ->
 ## Render [ArgExtractErr] errors as readable messages.
 ##
 ## Used in [Cli.parseOrDisplayMessage].
-formatArgExtractErr : ArgExtractErr -> Str
-formatArgExtractErr = \err ->
+format_arg_extract_err : ArgExtractErr -> Str
+format_arg_extract_err = \err ->
     when err is
         NoSubcommandCalled ->
             "A subcommand must be called."
@@ -54,12 +54,12 @@ formatArgExtractErr = \err ->
         OptionDoesNotExpectValue option ->
             "Option $(optionDisplayName option) does not expect a value."
 
-        CannotUsePartialShortGroupAsValue option partialGroup ->
-            renderedGroup = "-$(Str.joinWith partialGroup "")"
+        CannotUsePartialShortGroupAsValue option partial_group ->
+            rendered_group = "-$(Str.joinWith partialGroup "")"
 
             "The short option group $(renderedGroup) was partially consumed and cannot be used as a value for $(optionDisplayName option)."
 
-        InvalidOptionValue valueErr option ->
+        InvalidOptionValue value_err option ->
             when valueErr is
                 InvalidNumStr ->
                     "The value provided to $(optionDisplayName option) was not a valid number."
@@ -67,7 +67,7 @@ formatArgExtractErr = \err ->
                 InvalidValue reason ->
                     "The value provided to $(optionDisplayName option) was not a valid $(optionTypeName option): $(reason)"
 
-        InvalidParamValue valueErr param ->
+        InvalidParamValue value_err param ->
             when valueErr is
                 InvalidNumStr ->
                     "The value provided to the '$(param |> .name)' parameter was not a valid number."
@@ -90,10 +90,10 @@ formatArgExtractErr = \err ->
 ## Render [CliValidationErr] errors as readable messages.
 ##
 ## Displayed as the crash message when [Cli.assertValid] fails.
-formatCliValidationErr : CliValidationErr -> Str
-formatCliValidationErr = \err ->
-    valueAtSubcommandName = \{ name, subcommandPath } ->
-        subcommandPathSuffix =
+format_cli_validation_err : CliValidationErr -> Str
+format_cli_validation_err = \err ->
+    value_at_subcommand_name = \{ name, subcommand_path } ->
+        subcommand_path_suffix =
             if List.len subcommandPath <= 1 then
                 ""
             else
@@ -101,52 +101,52 @@ formatCliValidationErr = \err ->
 
         "$(name)$(subcommandPathSuffix)"
 
-    optionAtSubcommandName = \{ option, subcommandPath } ->
+    option_at_subcommand_name = \{ option, subcommand_path } ->
         valueAtSubcommandName { name: "option '$(optionDisplayName option)'", subcommandPath }
 
-    paramAtSubcommandName = \{ name, subcommandPath } ->
+    param_at_subcommand_name = \{ name, subcommand_path } ->
         valueAtSubcommandName { name: "parameter '$(name)'", subcommandPath }
 
     when err is
         OverlappingOptionNames option1 option2 ->
             "The $(optionAtSubcommandName option1) overlaps with the $(optionAtSubcommandName option2)."
 
-        OverlappingParameterNames { first, second, subcommandPath } ->
+        OverlappingParameterNames { first, second, subcommand_path } ->
             "The $(paramAtSubcommandName { name: first, subcommandPath }) overlaps with the $(paramAtSubcommandName { name: second, subcommandPath })."
 
-        InvalidShortFlagName { name, subcommandPath } ->
-            valueName = "option '-$(name)'"
+        InvalidShortFlagName { name, subcommand_path } ->
+            value_name = "option '-$(name)'"
             "The $(valueAtSubcommandName { name: valueName, subcommandPath }) is not a single character."
 
-        InvalidLongFlagName { name, subcommandPath } ->
-            valueName = "option '--$(name)'"
+        InvalidLongFlagName { name, subcommand_path } ->
+            value_name = "option '--$(name)'"
             "The $(valueAtSubcommandName { name: valueName, subcommandPath }) is not kebab-case and at least two characters."
 
-        InvalidCommandName { name, subcommandPath } ->
-            valueName = "command '$(name)'"
+        InvalidCommandName { name, subcommand_path } ->
+            value_name = "command '$(name)'"
             "The $(valueAtSubcommandName { name: valueName, subcommandPath }) is not kebab-case."
 
-        InvalidParameterName { name, subcommandPath } ->
-            valueName = "parameter '$(name)'"
+        InvalidParameterName { name, subcommand_path } ->
+            value_name = "parameter '$(name)'"
             "The $(valueAtSubcommandName { name: valueName, subcommandPath }) is not kebab-case."
 
-        OptionMustHaveShortOrLongName { subcommandPath } ->
+        OptionMustHaveShortOrLongName { subcommand_path } ->
             "An $(valueAtSubcommandName { name: "option", subcommandPath }) has neither a short or long name."
 
-        InvalidOptionValueType { option, subcommandPath } ->
-            valueType =
+        InvalidOptionValueType { option, subcommand_path } ->
+            value_type =
                 when option.expectedValue is
-                    ExpectsValue typeName -> typeName
+                    ExpectsValue type_name -> typeName
                     NothingExpected -> ""
 
             "The $(optionAtSubcommandName { option, subcommandPath }) has value type '$(valueType)', which is not kebab-case."
 
-        InvalidParameterValueType { param, subcommandPath } ->
-            valueName = "parameter '$(param |> .name)'"
+        InvalidParameterValueType { param, subcommand_path } ->
+            value_name = "parameter '$(param |> .name)'"
             "The $(valueAtSubcommandName { name: valueName, subcommandPath }) has value type '$(param |> .type)', which is not kebab-case."
 
-        OverrodeSpecialHelpFlag { option, subcommandPath } ->
+        OverrodeSpecialHelpFlag { option, subcommand_path } ->
             "The $(optionAtSubcommandName { option, subcommandPath }) tried to overwrite the built-in -h/--help flag."
 
-        OverrodeSpecialVersionFlag { option, subcommandPath } ->
+        OverrodeSpecialVersionFlag { option, subcommand_path } ->
             "The $(optionAtSubcommandName { option, subcommandPath }) tried to overwrite the built-in -V/--version flag."

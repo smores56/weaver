@@ -23,7 +23,7 @@ main! = \{} ->
 
             Err (Exit 1 "")
 
-cliParser =
+cli_parser =
     { Cli.weave <-
         alpha: Opt.u64 {
             short: "a",

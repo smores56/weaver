@@ -48,8 +48,8 @@ CliValidationErr : [
 ##   - However, a CLI with two subcommands that each have a `-t` option
 ##     would not fail validation since only one subcommand can be called
 ##     at once.
-validateCli : CliConfig -> Result {} CliValidationErr
-validateCli = \{ name, options, parameters, subcommands } ->
+validate_cli : CliConfig -> Result {} CliValidationErr
+validate_cli = \{ name, options, parameters, subcommands } ->
     validateCommand {
         name,
         options,
@@ -59,7 +59,7 @@ validateCli = \{ name, options, parameters, subcommands } ->
         subcommandPath: [name],
     }
 
-validateCommand :
+validate_command :
     {
         name : Str,
         options : List OptionConfig,
@@ -69,7 +69,7 @@ validateCommand :
         subcommandPath : List Str,
     }
     -> Result {} CliValidationErr
-validateCommand = \{ name, options, parentOptions, parameters, subcommands, subcommandPath } ->
+validate_command = \{ name, options, parent_options, parameters, subcommands, subcommand_path } ->
     ensureCommandIsWellNamed { name, subcommandPath }
     |> Result.try \{} ->
         List.mapTry options \option ->
@@ -85,11 +85,11 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
                 checkIfThereAreOverlappingParameters parameters subcommandPath
                 |> Result.try \{} ->
                     when subcommands is
-                        HasSubcommands subcommandConfigs if !(Dict.isEmpty subcommandConfigs) ->
+                        HasSubcommands subcommand_configs if !(Dict.isEmpty subcommandConfigs) ->
                             subcommandConfigs
                             |> Dict.toList
-                            |> List.mapTry \(subcommandName, subcommand) ->
-                                updatedParentOptions =
+                            |> List.mapTry \(subcommand_name, subcommand) ->
+                                updated_parent_options =
                                     options
                                     |> List.map \option -> { option, subcommandPath }
                                     |> List.concat parentOptions
@@ -105,29 +105,29 @@ validateCommand = \{ name, options, parentOptions, parameters, subcommands, subc
                             |> Result.map \_successes -> {}
 
                         _noSubcommands ->
-                            allOptionsToCheck =
+                            all_options_to_check =
                                 options
                                 |> List.map \option -> { option, subcommandPath }
                                 |> List.concat parentOptions
 
                             checkIfThereAreOverlappingOptions allOptionsToCheck
 
-ensureCommandIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureCommandIsWellNamed = \{ name, subcommandPath } ->
+ensure_command_is_well_named : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_command_is_well_named = \{ name, subcommand_path } ->
     if isKebabCase name then
         Ok {}
     else
         Err (InvalidCommandName { name, subcommandPath })
 
-ensureParamIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureParamIsWellNamed = \{ name, subcommandPath } ->
+ensure_param_is_well_named : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_param_is_well_named = \{ name, subcommand_path } ->
     if isKebabCase name then
         Ok {}
     else
         Err (InvalidParameterName { name, subcommandPath })
 
-ensureOptionIsWellNamed : { option : OptionConfig, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureOptionIsWellNamed = \{ option, subcommandPath } ->
+ensure_option_is_well_named : { option : OptionConfig, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_option_is_well_named = \{ option, subcommand_path } ->
     when (option.short, option.long) is
         ("", "") -> Err (OptionMustHaveShortOrLongName { subcommandPath })
         (short, "") -> ensureShortFlagIsWellNamed { name: short, subcommandPath }
@@ -136,10 +136,10 @@ ensureOptionIsWellNamed = \{ option, subcommandPath } ->
             ensureShortFlagIsWellNamed { name: short, subcommandPath }
             |> Result.try \{} -> ensureLongFlagIsWellNamed { name: long, subcommandPath }
 
-ensureOptionValueTypeIsWellNamed : { option : OptionConfig, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureOptionValueTypeIsWellNamed = \{ option, subcommandPath } ->
+ensure_option_value_type_is_well_named : { option : OptionConfig, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_option_value_type_is_well_named = \{ option, subcommand_path } ->
     when option.expectedValue is
-        ExpectsValue typeName ->
+        ExpectsValue type_name ->
             if isKebabCase typeName then
                 Ok {}
             else
@@ -148,37 +148,37 @@ ensureOptionValueTypeIsWellNamed = \{ option, subcommandPath } ->
         NothingExpected ->
             Ok {}
 
-ensureParamValueTypeIsWellNamed : { param : ParameterConfig, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureParamValueTypeIsWellNamed = \{ param, subcommandPath } ->
+ensure_param_value_type_is_well_named : { param : ParameterConfig, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_param_value_type_is_well_named = \{ param, subcommand_path } ->
     if isKebabCase param.type then
         Ok {}
     else
         Err (InvalidParameterValueType { param, subcommandPath })
 
-ensureShortFlagIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureShortFlagIsWellNamed = \{ name, subcommandPath } ->
+ensure_short_flag_is_well_named : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_short_flag_is_well_named = \{ name, subcommand_path } ->
     if strLen name != 1 then
         Err (InvalidShortFlagName { name, subcommandPath })
     else
         Ok {}
 
-ensureLongFlagIsWellNamed : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
-ensureLongFlagIsWellNamed = \{ name, subcommandPath } ->
+ensure_long_flag_is_well_named : { name : Str, subcommandPath : List Str } -> Result {} CliValidationErr
+ensure_long_flag_is_well_named = \{ name, subcommand_path } ->
     if strLen name > 1 && isKebabCase name then
         Ok {}
     else
         Err (InvalidLongFlagName { name, subcommandPath })
 
-ensureOptionNamesDoNotOverlap : OptionAtSubcommand, OptionAtSubcommand -> Result {} CliValidationErr
-ensureOptionNamesDoNotOverlap = \left, right ->
-    sameCommand = left.subcommandPath == right.subcommandPath
-    eitherNameMatches =
+ensure_option_names_do_not_overlap : OptionAtSubcommand, OptionAtSubcommand -> Result {} CliValidationErr
+ensure_option_names_do_not_overlap = \left, right ->
+    same_command = left.subcommandPath == right.subcommandPath
+    either_name_matches =
         (left.option.short != "" && left.option.short == right.option.short)
         || (left.option.long != "" && left.option.long == right.option.long)
 
-    matchesHelp =
+    matches_help =
         left.option.short == helpOption.short || left.option.long == helpOption.long
-    matchesVersion =
+    matches_version =
         left.option.short == versionOption.short || left.option.long == versionOption.long
 
     if eitherNameMatches then
@@ -197,8 +197,8 @@ ensureOptionNamesDoNotOverlap = \left, right ->
     else
         Ok {}
 
-checkIfThereAreOverlappingOptions : List OptionAtSubcommand -> Result {} CliValidationErr
-checkIfThereAreOverlappingOptions = \options ->
+check_if_there_are_overlapping_options : List OptionAtSubcommand -> Result {} CliValidationErr
+check_if_there_are_overlapping_options = \options ->
     List.range { start: At 1, end: Before (List.len options) }
     |> List.map \offset ->
         List.map2 options (List.dropFirst options offset) Pair
@@ -208,8 +208,8 @@ checkIfThereAreOverlappingOptions = \options ->
             ensureOptionNamesDoNotOverlap left right
     |> Result.map \_sucesses -> {}
 
-checkIfThereAreOverlappingParameters : List ParameterConfig, List Str -> Result {} CliValidationErr
-checkIfThereAreOverlappingParameters = \parameters, subcommandPath ->
+check_if_there_are_overlapping_parameters : List ParameterConfig, List Str -> Result {} CliValidationErr
+check_if_there_are_overlapping_parameters = \parameters, subcommand_path ->
     List.range { start: At 1, end: Before (List.len parameters) }
     |> List.map \offset ->
         List.map2 parameters (List.dropFirst parameters offset) Pair

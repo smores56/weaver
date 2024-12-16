@@ -63,10 +63,10 @@ import Base exposing [
 import Extract exposing [extractOptionValues]
 import Parser exposing [ArgValue]
 
-builderWithOptionParser : OptionConfig, (List ArgValue -> Result data ArgExtractErr) -> CliBuilder data fromAction toAction
-builderWithOptionParser = \option, valueParser ->
-    argParser = \args ->
-        { values, remainingArgs } = try extractOptionValues { args, option }
+builder_with_option_parser : OptionConfig, (List ArgValue -> Result data ArgExtractErr) -> CliBuilder data fromAction toAction
+builder_with_option_parser = \option, value_parser ->
+    arg_parser = \args ->
+        { values, remaining_args } = try extractOptionValues { args, option }
         data = try valueParser values
 
         Ok { data, remainingArgs }
@@ -74,11 +74,11 @@ builderWithOptionParser = \option, valueParser ->
     Builder.fromArgParser argParser
     |> Builder.addOption option
 
-getMaybeValue : List ArgValue, OptionConfig -> Result (Result ArgValue [NoValue]) ArgExtractErr
-getMaybeValue = \values, option ->
+get_maybe_value : List ArgValue, OptionConfig -> Result (Result ArgValue [NoValue]) ArgExtractErr
+get_maybe_value = \values, option ->
     when values is
         [] -> Ok (Err NoValue)
-        [singleValue] -> Ok (Ok singleValue)
+        [single_value] -> Ok (Ok singleValue)
         [..] -> Err (OptionCanOnlyBeSetOnce option)
 
 ## Add a required option that takes a custom type to your CLI builder.
@@ -115,13 +115,13 @@ single : DefaultableOptionConfigParams a -> CliBuilder a GetOptionsAction GetOpt
 single = \{ parser, type, short ? "", long ? "", help ? "", default ? NoDefault } ->
     option = { expectedValue: ExpectsValue type, plurality: One, short, long, help }
 
-    defaultGenerator = \{} ->
+    default_generator = \{} ->
         when default is
-            Value defaultValue -> Ok defaultValue
+            Value default_value -> Ok defaultValue
             Generate generator -> Ok (generator {})
             NoDefault -> Err (MissingOption option)
 
-    valueParser = \values ->
+    value_parser = \values ->
         value = try getMaybeValue values option
 
         when value is
@@ -168,7 +168,7 @@ maybe : OptionConfigParams data -> CliBuilder (Result data [NoValue]) GetOptions
 maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
     option = { expectedValue: ExpectsValue type, plurality: Optional, short, long, help }
 
-    valueParser = \values ->
+    value_parser = \values ->
         value = try getMaybeValue values option
 
         when value is
@@ -216,7 +216,7 @@ list : OptionConfigParams data -> CliBuilder (List data) GetOptionsAction GetOpt
 list = \{ parser, type, short ? "", long ? "", help ? "" } ->
     option = { expectedValue: ExpectsValue type, plurality: Many, short, long, help }
 
-    valueParser = \values ->
+    value_parser = \values ->
         List.mapTry values \value ->
             when value is
                 Err NoValue -> Err (NoValueProvidedForOption option)
@@ -245,7 +245,7 @@ flag : OptionConfigBaseParams -> CliBuilder Bool GetOptionsAction GetOptionsActi
 flag = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedValue: NothingExpected, plurality: Optional, short, long, help }
 
-    valueParser = \values ->
+    value_parser = \values ->
         value = try getMaybeValue values option
 
         when value is
@@ -274,7 +274,7 @@ count : OptionConfigBaseParams -> CliBuilder U64 GetOptionsAction GetOptionsActi
 count = \{ short ? "", long ? "", help ? "" } ->
     option = { expectedValue: NothingExpected, plurality: Many, short, long, help }
 
-    valueParser = \values ->
+    value_parser = \values ->
         if values |> List.any Result.isOk then
             Err (OptionDoesNotExpectValue option)
         else
@@ -315,8 +315,8 @@ str = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeStr : OptionConfigBaseParams -> CliBuilder (Result Str [NoValue]) GetOptionsAction GetOptionsAction
-maybeStr = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: strTypeName, short, long, help }
+maybe_str : OptionConfigBaseParams -> CliBuilder (Result Str [NoValue]) GetOptionsAction GetOptionsAction
+maybe_str = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: strTypeName, short, long, help }
 
 ## Add an option that takes a string and can be given multiple times
 ## to your CLI builder.
@@ -334,8 +334,8 @@ maybeStr = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: st
 ##     parser ["example", "-a", "abc", "--answer", "def", "--answer=ghi"]
 ##     == SuccessfullyParsed ["abc", "def", "ghi"]
 ## ```
-strList : OptionConfigBaseParams -> CliBuilder (List Str) GetOptionsAction GetOptionsAction
-strList = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: strTypeName, short, long, help }
+str_list : OptionConfigBaseParams -> CliBuilder (List Str) GetOptionsAction GetOptionsAction
+str_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: strTypeName, short, long, help }
 
 ## Add a required option that takes a `Dec` to your CLI builder.
 ##
@@ -370,8 +370,8 @@ dec = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeDec : OptionConfigBaseParams -> CliBuilder (Result Dec [NoValue]) GetOptionsAction GetOptionsAction
-maybeDec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, short, long, help }
+maybe_dec : OptionConfigBaseParams -> CliBuilder (Result Dec [NoValue]) GetOptionsAction GetOptionsAction
+maybe_dec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `Dec` and can be given multiple times
 ## to your CLI builder.
@@ -389,8 +389,8 @@ maybeDec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
 ##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
-decList : OptionConfigBaseParams -> CliBuilder (List Dec) GetOptionsAction GetOptionsAction
-decList = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, type: numTypeName, short, long, help }
+dec_list : OptionConfigBaseParams -> CliBuilder (List Dec) GetOptionsAction GetOptionsAction
+dec_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `F32` to your CLI builder.
 ##
@@ -425,8 +425,8 @@ f32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeF32 : OptionConfigBaseParams -> CliBuilder (Result F32 [NoValue]) GetOptionsAction GetOptionsAction
-maybeF32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, short, long, help }
+maybe_f32 : OptionConfigBaseParams -> CliBuilder (Result F32 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_f32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `F32` and can be given multiple times
 ## to your CLI builder.
@@ -444,8 +444,8 @@ maybeF32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
 ##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
-f32List : OptionConfigBaseParams -> CliBuilder (List F32) GetOptionsAction GetOptionsAction
-f32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, type: numTypeName, short, long, help }
+f32_list : OptionConfigBaseParams -> CliBuilder (List F32) GetOptionsAction GetOptionsAction
+f32_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `F64` to your CLI builder.
 ##
@@ -480,8 +480,8 @@ f64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeF64 : OptionConfigBaseParams -> CliBuilder (Result F64 [NoValue]) GetOptionsAction GetOptionsAction
-maybeF64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, short, long, help }
+maybe_f64 : OptionConfigBaseParams -> CliBuilder (Result F64 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_f64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `F64` and can be given multiple times
 ## to your CLI builder.
@@ -499,8 +499,8 @@ maybeF64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
 ##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
-f64List : OptionConfigBaseParams -> CliBuilder (List F64) GetOptionsAction GetOptionsAction
-f64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, type: numTypeName, short, long, help }
+f64_list : OptionConfigBaseParams -> CliBuilder (List F64) GetOptionsAction GetOptionsAction
+f64_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `U8` to your CLI builder.
 ##
@@ -535,8 +535,8 @@ u8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pars
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU8 : OptionConfigBaseParams -> CliBuilder (Result U8 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, short, long, help }
+maybe_u8 : OptionConfigBaseParams -> CliBuilder (Result U8 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `U8` and can be given multiple times
 ## to your CLI builder.
@@ -554,8 +554,8 @@ maybeU8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, typ
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u8List : OptionConfigBaseParams -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
-u8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type: numTypeName, short, long, help }
+u8_list : OptionConfigBaseParams -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
+u8_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `U16` to your CLI builder.
 ##
@@ -590,8 +590,8 @@ u16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU16 : OptionConfigBaseParams -> CliBuilder (Result U16 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, short, long, help }
+maybe_u16 : OptionConfigBaseParams -> CliBuilder (Result U16 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `U16` and can be given multiple times
 ## to your CLI builder.
@@ -609,8 +609,8 @@ maybeU16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u16List : OptionConfigBaseParams -> CliBuilder (List U16) GetOptionsAction GetOptionsAction
-u16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, type: numTypeName, short, long, help }
+u16_list : OptionConfigBaseParams -> CliBuilder (List U16) GetOptionsAction GetOptionsAction
+u16_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `U32` to your CLI builder.
 ##
@@ -645,8 +645,8 @@ u32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU32 : OptionConfigBaseParams -> CliBuilder (Result U32 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, short, long, help }
+maybe_u32 : OptionConfigBaseParams -> CliBuilder (Result U32 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `U32` and can be given multiple times
 ## to your CLI builder.
@@ -664,8 +664,8 @@ maybeU32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u32List : OptionConfigBaseParams -> CliBuilder (List U32) GetOptionsAction GetOptionsAction
-u32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, type: numTypeName, short, long, help }
+u32_list : OptionConfigBaseParams -> CliBuilder (List U32) GetOptionsAction GetOptionsAction
+u32_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `U64` to your CLI builder.
 ##
@@ -700,8 +700,8 @@ u64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU64 : OptionConfigBaseParams -> CliBuilder (Result U64 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, short, long, help }
+maybe_u64 : OptionConfigBaseParams -> CliBuilder (Result U64 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `U64` and can be given multiple times
 ## to your CLI builder.
@@ -719,8 +719,8 @@ maybeU64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u64List : OptionConfigBaseParams -> CliBuilder (List U64) GetOptionsAction GetOptionsAction
-u64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, type: numTypeName, short, long, help }
+u64_list : OptionConfigBaseParams -> CliBuilder (List U64) GetOptionsAction GetOptionsAction
+u64_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, type: numTypeName, short, long, help }
 
 ## Add a required option that takes a `U128` to your CLI builder.
 ##
@@ -755,8 +755,8 @@ u128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pa
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU128 : OptionConfigBaseParams -> CliBuilder (Result U128 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, short, long, help }
+maybe_u128 : OptionConfigBaseParams -> CliBuilder (Result U128 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, short, long, help }
 
 ## Add an option that takes a `U128` and can be given multiple times
 ## to your CLI builder.
@@ -774,8 +774,8 @@ maybeU128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128,
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u128List : OptionConfigBaseParams -> CliBuilder (List U128) GetOptionsAction GetOptionsAction
-u128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, type: numTypeName, short, long, help }
+u128_list : OptionConfigBaseParams -> CliBuilder (List U128) GetOptionsAction GetOptionsAction
+u128_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, type: numTypeName, short, long, help }
 
 ## Add a required option that takes an `I8` to your CLI builder.
 ##
@@ -810,8 +810,8 @@ i8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pars
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI8 : OptionConfigBaseParams -> CliBuilder (Result I8 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, short, long, help }
+maybe_i8 : OptionConfigBaseParams -> CliBuilder (Result I8 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, short, long, help }
 
 ## Add an option that takes an `I8` and can be given multiple times
 ## to your CLI builder.
@@ -829,8 +829,8 @@ maybeI8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, typ
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i8List : OptionConfigBaseParams -> CliBuilder (List I8) GetOptionsAction GetOptionsAction
-i8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type: numTypeName, short, long, help }
+i8_list : OptionConfigBaseParams -> CliBuilder (List I8) GetOptionsAction GetOptionsAction
+i8_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type: numTypeName, short, long, help }
 
 ## Add a required option that takes an `I16` to your CLI builder.
 ##
@@ -865,8 +865,8 @@ i16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI16 : OptionConfigBaseParams -> CliBuilder (Result I16 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, short, long, help }
+maybe_i16 : OptionConfigBaseParams -> CliBuilder (Result I16 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, short, long, help }
 
 ## Add an option that takes an `I16` and can be given multiple times
 ## to your CLI builder.
@@ -884,8 +884,8 @@ maybeI16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i16List : OptionConfigBaseParams -> CliBuilder (List I16) GetOptionsAction GetOptionsAction
-i16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, type: numTypeName, short, long, help }
+i16_list : OptionConfigBaseParams -> CliBuilder (List I16) GetOptionsAction GetOptionsAction
+i16_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, type: numTypeName, short, long, help }
 
 ## Add a required option that takes an `I32` to your CLI builder.
 ##
@@ -920,8 +920,8 @@ i32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI32 : OptionConfigBaseParams -> CliBuilder (Result I32 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, short, long, help }
+maybe_i32 : OptionConfigBaseParams -> CliBuilder (Result I32 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, short, long, help }
 
 ## Add an option that takes an `I32` and can be given multiple times
 ## to your CLI builder.
@@ -939,8 +939,8 @@ maybeI32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i32List : OptionConfigBaseParams -> CliBuilder (List I32) GetOptionsAction GetOptionsAction
-i32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, type: numTypeName, short, long, help }
+i32_list : OptionConfigBaseParams -> CliBuilder (List I32) GetOptionsAction GetOptionsAction
+i32_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, type: numTypeName, short, long, help }
 
 ## Add a required option that takes an `I64` to your CLI builder.
 ##
@@ -975,8 +975,8 @@ i64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI64 : OptionConfigBaseParams -> CliBuilder (Result I64 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, short, long, help }
+maybe_i64 : OptionConfigBaseParams -> CliBuilder (Result I64 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, short, long, help }
 
 ## Add an option that takes an `I64` and can be given multiple times
 ## to your CLI builder.
@@ -994,8 +994,8 @@ maybeI64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, t
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i64List : OptionConfigBaseParams -> CliBuilder (List I64) GetOptionsAction GetOptionsAction
-i64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, type: numTypeName, short, long, help }
+i64_list : OptionConfigBaseParams -> CliBuilder (List I64) GetOptionsAction GetOptionsAction
+i64_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, type: numTypeName, short, long, help }
 
 ## Add a required option that takes an `I128` to your CLI builder.
 ##
@@ -1030,8 +1030,8 @@ i128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pa
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI128 : OptionConfigBaseParams -> CliBuilder (Result I128 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, short, long, help }
+maybe_i128 : OptionConfigBaseParams -> CliBuilder (Result I128 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, short, long, help }
 
 ## Add an option that takes an `I128` and can be given multiple times
 ## to your CLI builder.
@@ -1049,5 +1049,5 @@ maybeI128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128,
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i128List : OptionConfigBaseParams -> CliBuilder (List I128) GetOptionsAction GetOptionsAction
-i128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI128, type: numTypeName, short, long, help }
+i128_list : OptionConfigBaseParams -> CliBuilder (List I128) GetOptionsAction GetOptionsAction
+i128_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI128, type: numTypeName, short, long, help }

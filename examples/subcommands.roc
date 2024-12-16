@@ -24,7 +24,7 @@ main! = \{} ->
 
             Err (Exit 1 "")
 
-cliParser =
+cli_parser =
     { Cli.weave <-
         force: Opt.flag { short: "f", help: "Force the task to complete." },
         sc: SubCmd.optional [subcommandParser1, subcommandParser2],
@@ -39,7 +39,7 @@ cliParser =
     }
     |> Cli.assertValid
 
-subcommandParser1 =
+subcommand_parser1 =
     { Cli.weave <-
         d: Opt.maybeU64 { short: "d", help: "A non-overlapping subcommand flag with s2." },
         volume: Opt.maybeU64 { short: "v", long: "volume", help: "How loud to grind the gears." },
@@ -47,7 +47,7 @@ subcommandParser1 =
     }
     |> SubCmd.finish { name: "s1", description: "A first subcommand.", mapper: S1 }
 
-subcommandParser2 =
+subcommand_parser2 =
     Opt.maybeU64 { short: "d", help: "This doesn't overlap with s1's -d flag." }
     |> Cli.map DFlag
     |> SubCmd.finish {
@@ -56,14 +56,14 @@ subcommandParser2 =
         mapper: S2,
     }
 
-subSubcommandParser1 =
+sub_subcommand_parser1 =
     { Cli.weave <-
         a: Opt.u64 { short: "a", help: "An example short flag for a sub-subcommand." },
         b: Opt.u64 { short: "b", help: "Another example short flag for a sub-subcommand." },
     }
     |> SubCmd.finish { name: "ss1", description: "A sub-subcommand.", mapper: SS1 }
 
-subSubcommandParser2 =
+sub_subcommand_parser2 =
     { Cli.weave <-
         a: Opt.u64 { short: "a", help: "Set the alpha level." },
         c: Opt.u64 { short: "c", long: "create", help: "Create a doohickey." },

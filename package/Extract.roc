@@ -19,26 +19,26 @@ ExtractParamValuesOutput : {
     remainingArgs : List Arg,
 }
 
-extractParamValues : ExtractParamValuesParams -> Result ExtractParamValuesOutput ArgExtractErr
-extractParamValues = \{ args, param } ->
-    startingState = {
+extract_param_values : ExtractParamValuesParams -> Result ExtractParamValuesOutput ArgExtractErr
+extract_param_values = \{ args, param } ->
+    starting_state = {
         action: GetParam,
         values: [],
         remainingArgs: [],
     }
 
-    stateAfter =
+    state_after =
         args
         |> List.walkTry startingState \state, arg ->
             when state.action is
                 GetParam -> extractSingleParam state param arg
                 StopParsing -> Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-    Result.map stateAfter \{ values, remainingArgs } ->
+    Result.map stateAfter \{ values, remaining_args } ->
         { values, remainingArgs }
 
-extractSingleParam : ExtractParamValuesState, ParameterConfig, Arg -> Result ExtractParamValuesState ArgExtractErr
-extractSingleParam = \state, param, arg ->
+extract_single_param : ExtractParamValuesState, ParameterConfig, Arg -> Result ExtractParamValuesState ArgExtractErr
+extract_single_param = \state, param, arg ->
     when arg is
         Short short ->
             Err (UnrecognizedShortArg short)
@@ -75,28 +75,28 @@ ExtractOptionValueWalkerState : {
     remainingArgs : List Arg,
 }
 
-extractOptionValues : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
-extractOptionValues = \{ args, option } ->
-    startingState = {
+extract_option_values : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
+extract_option_values = \{ args, option } ->
+    starting_state = {
         action: FindOption,
         values: [],
         remainingArgs: [],
     }
 
-    stateAfter = List.walkTry args startingState \state, arg ->
+    state_after = List.walkTry args startingState \state, arg ->
         when state.action is
             FindOption -> findOptionForExtraction state arg option
             GetValue -> getValueForExtraction state arg option
 
     when stateAfter is
         Err err -> Err err
-        Ok { action, values, remainingArgs } ->
+        Ok { action, values, remaining_args } ->
             when action is
                 GetValue -> Err (NoValueProvidedForOption option)
                 FindOption -> Ok { values, remainingArgs }
 
-findOptionForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
-findOptionForExtraction = \state, arg, option ->
+find_option_for_extraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
+find_option_for_extraction = \state, arg, option ->
     when arg is
         Short short ->
             if short == option.short then
@@ -107,7 +107,7 @@ findOptionForExtraction = \state, arg, option ->
             else
                 Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-        ShortGroup shortGroup ->
+        ShortGroup short_group ->
             findOptionsInShortGroup state option shortGroup
 
         Long long ->
@@ -126,11 +126,11 @@ findOptionForExtraction = \state, arg, option ->
         _nothingFound ->
             Ok { state & remainingArgs: state.remainingArgs |> List.append arg }
 
-findOptionsInShortGroup : ExtractOptionValueWalkerState, OptionConfig, { names : List Str, complete : [Partial, Complete] } -> Result ExtractOptionValueWalkerState ArgExtractErr
-findOptionsInShortGroup = \state, option, shortGroup ->
-    stateAfter =
+find_options_in_short_group : ExtractOptionValueWalkerState, OptionConfig, { names : List Str, complete : [Partial, Complete] } -> Result ExtractOptionValueWalkerState ArgExtractErr
+find_options_in_short_group = \state, option, short_group ->
+    state_after =
         shortGroup.names
-        |> List.walkTry { action: FindOption, remaining: [], values: [] } \sgState, name ->
+        |> List.walkTry { action: FindOption, remaining: [], values: [] } \sg_state, name ->
             when sgState.action is
                 GetValue -> Err (CannotUsePartialShortGroupAsValue option shortGroup.names)
                 FindOption ->
@@ -145,7 +145,7 @@ findOptionsInShortGroup = \state, option, shortGroup ->
     when stateAfter is
         Err err -> Err err
         Ok { action, remaining, values } ->
-            restOfGroup =
+            rest_of_group =
                 if List.isEmpty values then
                     Ok (ShortGroup shortGroup)
                 else if List.isEmpty remaining then
@@ -160,8 +160,8 @@ findOptionsInShortGroup = \state, option, shortGroup ->
                     values: state.values |> List.concat values,
                 }
 
-getValueForExtraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
-getValueForExtraction = \state, arg, option ->
+get_value_for_extraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
+get_value_for_extraction = \state, arg, option ->
     value =
         when arg is
             Short s -> Ok "-$(s)"

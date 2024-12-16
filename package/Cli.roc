@@ -171,18 +171,18 @@ weave = \left, right, combiner ->
     Builder.combine left right combiner
 
 ## Fail the parsing process if any arguments are left over after parsing.
-ensureAllArgsWereParsed : List Arg -> Result {} ArgExtractErr
-ensureAllArgsWereParsed = \remainingArgs ->
+ensure_all_args_were_parsed : List Arg -> Result {} ArgExtractErr
+ensure_all_args_were_parsed = \remaining_args ->
     when remainingArgs is
         [] -> Ok {}
         [first, ..] ->
-            extraArgErr =
+            extra_arg_err =
                 when first is
                     Parameter param -> ExtraParamProvided param
                     Long long -> UnrecognizedLongArg long.name
                     Short short -> UnrecognizedShortArg short
                     ShortGroup sg ->
-                        firstShortArg = List.first sg.names |> Result.withDefault ""
+                        first_short_arg = List.first sg.names |> Result.withDefault ""
                         UnrecognizedShortArg firstShortArg
 
             Err extraArgErr
@@ -233,7 +233,7 @@ ensureAllArgsWereParsed = \remainingArgs ->
 ## ```
 finish : CliBuilder data fromAction toAction, CliConfigParams -> Result (CliParser data) CliValidationErr
 finish = \builder, params ->
-    { parser, config, textStyle } = finishWithoutValidating builder params
+    { parser, config, text_style } = finishWithoutValidating builder params
 
     validateCli config
     |> Result.map \{} -> { parser, config, textStyle }
@@ -257,8 +257,8 @@ finish = \builder, params ->
 ##     parser ["example", "-v", "-v"]
 ##     == SuccessfullyParsed { verbosity: 2, file: Err NoValue }
 ## ```
-finishWithoutValidating : CliBuilder data fromAction toAction, CliConfigParams -> CliParser data
-finishWithoutValidating = \builder, { name, authors ? [], version ? "", description ? "", textStyle ? Color } ->
+finish_without_validating : CliBuilder data fromAction toAction, CliConfigParams -> CliParser data
+finish_without_validating = \builder, { name, authors ? [], version ? "", description ? "", text_style ? Color } ->
     { options, parameters, subcommands, parser } =
         builder
         |> Builder.checkForHelpAndVersion
@@ -302,8 +302,8 @@ finishWithoutValidating = \builder, { name, authors ? [], version ? "", descript
 ## |> Cli.finish { name: "example" }
 ## |> Cli.assertValid
 ## ```
-assertValid : Result (CliParser data) CliValidationErr -> CliParser data
-assertValid = \result ->
+assert_valid : Result (CliParser data) CliValidationErr -> CliParser data
+assert_valid = \result ->
     when result is
         Ok cli -> cli
         Err err -> crash (formatCliValidationErr err)
@@ -374,15 +374,15 @@ assertValid = \result ->
 ##           example [OPTIONS]
 ##         """
 ## ```
-parseOrDisplayMessage : CliParser data, List Str -> Result data Str
-parseOrDisplayMessage = \parser, args ->
+parse_or_display_message : CliParser data, List Str -> Result data Str
+parse_or_display_message = \parser, args ->
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
-        ShowHelp { subcommandPath } -> Err (helpText parser.config subcommandPath parser.textStyle)
+        ShowHelp { subcommand_path } -> Err (helpText parser.config subcommandPath parser.textStyle)
         ShowVersion -> Err parser.config.version
-        IncorrectUsage err { subcommandPath } ->
-            usageStr = usageHelp parser.config subcommandPath parser.textStyle
-            incorrectUsageStr =
+        IncorrectUsage err { subcommand_path } ->
+            usage_str = usageHelp parser.config subcommandPath parser.textStyle
+            incorrect_usage_str =
                 """
                 Error: $(formatArgExtractErr err)
 

@@ -22,7 +22,7 @@ main! = \{} ->
 
             Err (Exit 1 "")
 
-cliParser =
+cli_parser =
     Opt.u64 { short: "a", long: "alpha", help: "Set the alpha level." }
     |> Cli.map Alpha
     |> Cli.finish {

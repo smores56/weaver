@@ -11,16 +11,16 @@ import Base exposing [
 import Utils exposing [toUpperCase, strLen]
 
 # TODO: use roc-ansi once module params fix importing packages
-boldAnsiCode = "\u(001b)[1m"
-boldAndUnderlineAnsiCode = "\u(001b)[1m\u(001b)[4m"
-resetAnsiCode = "\u(001b)[0m"
+bold_ansi_code = "\u(001b)[1m"
+bold_and_underline_ansi_code = "\u(001b)[1m\u(001b)[4m"
+reset_ansi_code = "\u(001b)[0m"
 
 ## Walks the subcommand tree from the root CLI config and either
 ## returns the subcommand's config as if it were the root command if a
 ## subcommand is found, or just the root command's config otherwise.
-findSubcommandOrDefault : CliConfig, List Str -> { config : CliConfig, subcommandPath : List Str }
-findSubcommandOrDefault = \config, subcommandPath ->
-    baseCommand = {
+find_subcommand_or_default : CliConfig, List Str -> { config : CliConfig, subcommandPath : List Str }
+find_subcommand_or_default = \config, subcommand_path ->
+    base_command = {
         description: config.description,
         options: config.options,
         parameters: config.parameters,
@@ -44,8 +44,8 @@ findSubcommandOrDefault = \config, subcommandPath ->
             }
 
 ## Searches a command's config for subcommands recursively.
-findSubcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
-findSubcommand = \command, path ->
+find_subcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
+find_subcommand = \command, path ->
     when path is
         [] -> Ok command
         [first, .. as rest] ->
@@ -89,50 +89,50 @@ findSubcommand = \command, path ->
 ##           -V, --version  Show the version.
 ##         """
 ## ```
-helpText : CliConfig, List Str, TextStyle -> Str
-helpText = \baseConfig, path, textStyle ->
-    { config, subcommandPath } = findSubcommandOrDefault baseConfig path
+help_text : CliConfig, List Str, TextStyle -> Str
+help_text = \base_config, path, text_style ->
+    { config, subcommand_path } = findSubcommandOrDefault baseConfig path
     { version, authors, description, options, parameters, subcommands } = config
 
     name = subcommandPath |> Str.joinWith " "
 
-    topLine =
+    top_line =
         [name, version]
         |> List.dropIf Str.isEmpty
         |> Str.joinWith " "
 
-    authorsText =
+    authors_text =
         if List.isEmpty authors then
             ""
         else
             Str.concat "\n" (Str.joinWith authors " ")
 
-    descriptionText =
+    description_text =
         if Str.isEmpty description then
             ""
         else
             Str.concat "\n\n" description
 
-    subcommandsText =
+    subcommands_text =
         when subcommands is
             HasSubcommands scs if !(Dict.isEmpty scs) ->
                 commandsHelp subcommands textStyle
 
             _noSubcommands -> ""
 
-    parametersText =
+    parameters_text =
         if List.isEmpty parameters then
             ""
         else
             parametersHelp parameters textStyle
 
-    optionsText =
+    options_text =
         if List.isEmpty options then
             ""
         else
             optionsHelp options textStyle
 
-    bottomSections =
+    bottom_sections =
         [subcommandsText, parametersText, optionsText]
         |> List.dropIf Str.isEmpty
         |> Str.joinWith "\n\n"
@@ -174,26 +174,26 @@ helpText = \baseConfig, path, textStyle ->
 ##           example -v [OPTIONS]
 ##         """
 ## ```
-usageHelp : CliConfig, List Str, TextStyle -> Str
-usageHelp = \config, path, textStyle ->
-    { config: { options, parameters, subcommands }, subcommandPath } = findSubcommandOrDefault config path
+usage_help : CliConfig, List Str, TextStyle -> Str
+usage_help = \config, path, text_style ->
+    { config: { options, parameters, subcommands }, subcommand_path } = findSubcommandOrDefault config path
 
     name = Str.joinWith subcommandPath " "
 
-    requiredOptions =
+    required_options =
         options
         |> List.dropIf \opt -> opt.expectedValue == NothingExpected
         |> List.map optionSimpleNameFormatter
 
-    otherOptions =
+    other_options =
         if List.len requiredOptions == List.len options then
             []
         else
             ["[options]"]
 
-    paramsStrings =
+    params_strings =
         parameters
-        |> List.map \{ name: paramName, plurality } ->
+        |> List.map \{ name: param_name, plurality } ->
             ellipsis =
                 when plurality is
                     Optional | One -> ""
@@ -201,13 +201,13 @@ usageHelp = \config, path, textStyle ->
 
             "<$(paramName)$(ellipsis)>"
 
-    firstLine =
+    first_line =
         requiredOptions
         |> List.concat otherOptions
         |> List.concat paramsStrings
         |> Str.joinWith " "
 
-    subcommandUsage =
+    subcommand_usage =
         when subcommands is
             HasSubcommands sc if !(Dict.isEmpty sc) -> "\n  $(name) <COMMAND>"
             _other -> ""
@@ -222,16 +222,16 @@ usageHelp = \config, path, textStyle ->
       $(name) $(firstLine)$(subcommandUsage)
     """
 
-commandsHelp : SubcommandsConfig, TextStyle -> Str
-commandsHelp = \subcommands, textStyle ->
+commands_help : SubcommandsConfig, TextStyle -> Str
+commands_help = \subcommands, text_style ->
     commands =
         when subcommands is
             NoSubcommands -> []
             HasSubcommands sc -> Dict.toList sc
 
-    alignedCommands =
+    aligned_commands =
         commands
-        |> List.map \(name, subConfig) ->
+        |> List.map \(name, sub_config) ->
             (name, subConfig.description)
         |> alignTwoColumns textStyle
 
@@ -245,9 +245,9 @@ commandsHelp = \subcommands, textStyle ->
     $(Str.joinWith alignedCommands "\n")
     """
 
-parametersHelp : List ParameterConfig, TextStyle -> Str
-parametersHelp = \params, textStyle ->
-    formattedParams =
+parameters_help : List ParameterConfig, TextStyle -> Str
+parameters_help = \params, text_style ->
+    formatted_params =
         params
         |> List.map \param ->
             ellipsis =
@@ -268,21 +268,21 @@ parametersHelp = \params, textStyle ->
     $(Str.joinWith formattedParams "\n")
     """
 
-optionNameFormatter : OptionConfig -> Str
-optionNameFormatter = \{ short, long, expectedValue } ->
-    shortName =
+option_name_formatter : OptionConfig -> Str
+option_name_formatter = \{ short, long, expected_value } ->
+    short_name =
         if short != "" then
             "-$(short)"
         else
             ""
 
-    longName =
+    long_name =
         if long != "" then
             "--$(long)"
         else
             ""
 
-    typeName =
+    type_name =
         when expectedValue is
             NothingExpected -> ""
             ExpectsValue name -> " $(toUpperCase name)"
@@ -292,21 +292,21 @@ optionNameFormatter = \{ short, long, expectedValue } ->
     |> List.map \name -> Str.concat name typeName
     |> Str.joinWith ", "
 
-optionSimpleNameFormatter : OptionConfig -> Str
-optionSimpleNameFormatter = \{ short, long, expectedValue } ->
-    shortName =
+option_simple_name_formatter : OptionConfig -> Str
+option_simple_name_formatter = \{ short, long, expected_value } ->
+    short_name =
         if short != "" then
             "-$(short)"
         else
             ""
 
-    longName =
+    long_name =
         if long != "" then
             "--$(long)"
         else
             ""
 
-    typeName =
+    type_name =
         when expectedValue is
             NothingExpected -> ""
             ExpectsValue name -> " $(toUpperCase name)"
@@ -316,9 +316,9 @@ optionSimpleNameFormatter = \{ short, long, expectedValue } ->
     |> Str.joinWith "/"
     |> Str.concat typeName
 
-optionsHelp : List OptionConfig, TextStyle -> Str
-optionsHelp = \options, textStyle ->
-    formattedOptions =
+options_help : List OptionConfig, TextStyle -> Str
+options_help = \options, text_style ->
+    formatted_options =
         options
         |> List.map \option ->
             (optionNameFormatter option, option.help)
@@ -334,8 +334,8 @@ optionsHelp = \options, textStyle ->
     $(Str.joinWith formattedOptions "\n")
     """
 
-indentMultilineStringBy : Str, U64 -> Str
-indentMultilineStringBy = \string, indentAmount ->
+indent_multiline_string_by : Str, U64 -> Str
+indent_multiline_string_by = \string, indent_amount ->
     indentation = Str.repeat " " indentAmount
 
     string
@@ -347,9 +347,9 @@ indentMultilineStringBy = \string, indentAmount ->
             Str.concat indentation line
     |> Str.joinWith "\n"
 
-alignTwoColumns : List (Str, Str), TextStyle -> List Str
-alignTwoColumns = \columns, textStyle ->
-    maxFirstColumnLen =
+align_two_columns : List (Str, Str), TextStyle -> List Str
+align_two_columns = \columns, text_style ->
+    max_first_column_len =
         columns
         |> List.map \(first, _second) -> strLen first
         |> List.max
@@ -363,7 +363,7 @@ alignTwoColumns = \columns, textStyle ->
     List.map columns \(first, second) ->
         buffer =
             Str.repeat " " (maxFirstColumnLen - strLen first)
-        secondShifted =
+        second_shifted =
             indentMultilineStringBy second (maxFirstColumnLen + 4)
 
         "  $(style)$(first)$(buffer)$(reset)  $(secondShifted)"

@@ -13,7 +13,7 @@ import Builder exposing [
     GetParamsAction,
 ]
 
-SubcommandParserConfig subState : {
+SubcommandParserConfig sub_state : {
     name : Str,
     parser : ArgParser subState,
     config : SubcommandConfig,
@@ -43,7 +43,7 @@ finish = \builder, { name, description ? "", mapper } ->
     { options, parameters, subcommands, parser } =
         builder
         |> Builder.checkForHelpAndVersion
-        |> Builder.updateParser \{ data, remainingArgs } ->
+        |> Builder.updateParser \{ data, remaining_args } ->
             Ok { data: mapper data, remainingArgs }
         |> Builder.intoParts
 
@@ -57,19 +57,19 @@ finish = \builder, { name, description ? "", mapper } ->
     { name, config, parser }
 
 ## Check the first parameter passed to see if a subcommand was called.
-getFirstArgToCheckForSubcommandCall :
+get_first_arg_to_check_for_subcommand_call :
     ArgParserState *,
     List (SubcommandParserConfig subState),
     (Result (SubcommandParserConfig subState) [NotFound] -> ArgParserResult (ArgParserState state))
     -> ArgParserResult (ArgParserState state)
-getFirstArgToCheckForSubcommandCall = \{ remainingArgs, subcommandPath }, subcommandParsers, callback ->
-    findSubcommand = \param ->
+get_first_arg_to_check_for_subcommand_call = \{ remaining_args, subcommand_path }, subcommand_parsers, callback ->
+    find_subcommand = \param ->
         subcommandParsers
         |> List.findFirst \sc -> Ok sc.name == param
 
     when List.first remainingArgs is
         Err ListWasEmpty -> callback (findSubcommand (Err NoValue))
-        Ok firstArg ->
+        Ok first_arg ->
             when firstArg is
                 Short short -> IncorrectUsage (UnrecognizedShortArg short) { subcommandPath }
                 Long long -> IncorrectUsage (UnrecognizedLongArg long.name) { subcommandPath }
@@ -110,21 +110,21 @@ getFirstArgToCheckForSubcommandCall = \{ remainingArgs, subcommandPath }, subcom
 ##     == SuccessfullyParsed (Ok (Bar "abc"))
 ## ```
 optional : List (SubcommandParserConfig subState) -> CliBuilder (Result subState [NoSubcommand]) GetOptionsAction GetParamsAction
-optional = \subcommandConfigs ->
+optional = \subcommand_configs ->
     subcommands =
         subcommandConfigs
         |> List.map \{ name, config } -> (name, config)
         |> Dict.fromList
 
-    fullParser = \{ args, subcommandPath } ->
-        getFirstArgToCheckForSubcommandCall { data: {}, remainingArgs: args, subcommandPath } subcommandConfigs \subcommandFound ->
+    full_parser = \{ args, subcommand_path } ->
+        getFirstArgToCheckForSubcommandCall { data: {}, remainingArgs: args, subcommandPath } subcommandConfigs \subcommand_found ->
             when subcommandFound is
                 Err NotFound ->
                     SuccessfullyParsed { data: Err NoSubcommand, remainingArgs: args, subcommandPath }
 
                 Ok subcommand ->
-                    subParser =
-                        onSuccessfulArgParse subcommand.parser \{ data: subData, remainingArgs: subRemainingArgs, subcommandPath: subSubcommandPath } ->
+                    sub_parser =
+                        onSuccessfulArgParse subcommand.parser \{ data: sub_data, remaining_args: sub_remaining_args, subcommand_path: sub_subcommand_path } ->
                             SuccessfullyParsed { data: Ok subData, remainingArgs: subRemainingArgs, subcommandPath: subSubcommandPath }
 
                     subParser {
@@ -169,21 +169,21 @@ optional = \subcommandConfigs ->
 ##     == SuccessfullyParsed (Bar "abc")
 ## ```
 required : List (SubcommandParserConfig subData) -> CliBuilder subData GetOptionsAction GetParamsAction
-required = \subcommandConfigs ->
+required = \subcommand_configs ->
     subcommands =
         subcommandConfigs
         |> List.map \{ name, config } -> (name, config)
         |> Dict.fromList
 
-    fullParser = \{ args, subcommandPath } ->
-        getFirstArgToCheckForSubcommandCall { data: {}, remainingArgs: args, subcommandPath } subcommandConfigs \subcommandFound ->
+    full_parser = \{ args, subcommand_path } ->
+        getFirstArgToCheckForSubcommandCall { data: {}, remainingArgs: args, subcommandPath } subcommandConfigs \subcommand_found ->
             when subcommandFound is
                 Err NotFound ->
                     IncorrectUsage NoSubcommandCalled { subcommandPath }
 
                 Ok subcommand ->
-                    subParser =
-                        onSuccessfulArgParse subcommand.parser \{ data: subData, remainingArgs: subRemainingArgs, subcommandPath: subSubcommandPath } ->
+                    sub_parser =
+                        onSuccessfulArgParse subcommand.parser \{ data: sub_data, remaining_args: sub_remaining_args, subcommand_path: sub_subcommand_path } ->
                             SuccessfullyParsed { data: subData, remainingArgs: subRemainingArgs, subcommandPath: subSubcommandPath }
 
                     subParser {

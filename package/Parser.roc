@@ -9,17 +9,17 @@ Arg : [
 
 ArgValue : Result Str [NoValue]
 
-parseArgs : List Str -> List Arg
-parseArgs = \args ->
-    startingState = { parsedArgs: [], passThrough: KeepParsing }
+parse_args : List Str -> List Arg
+parse_args = \args ->
+    starting_state = { parsedArgs: [], passThrough: KeepParsing }
 
-    stateAfter =
+    state_after =
         args
         |> List.dropFirst 1
-        |> List.walk startingState \{ parsedArgs, passThrough }, arg ->
+        |> List.walk startingState \{ parsed_args, pass_through }, arg ->
             when passThrough is
                 KeepParsing ->
-                    parsedArg = parseArg arg
+                    parsed_arg = parseArg arg
                     when parsedArg is
                         Parameter "--" ->
                             { passThrough: PassThrough, parsedArgs }
@@ -35,8 +35,8 @@ parseArgs = \args ->
 
     stateAfter.parsedArgs
 
-parseArg : Str -> Arg
-parseArg = \arg ->
+parse_arg : Str -> Arg
+parse_arg = \arg ->
     when Str.splitFirst arg "-" is
         Ok { before: "", after } ->
             if after == "" then
@@ -54,8 +54,8 @@ parseArg = \arg ->
         _other ->
             Parameter arg
 
-parseLongArg : Str -> Arg
-parseLongArg = \arg ->
+parse_long_arg : Str -> Arg
+parse_long_arg = \arg ->
     when Str.splitFirst arg "=" is
         Ok { before: option, after: value } ->
             Long { name: option, value: Ok value }
@@ -63,8 +63,8 @@ parseLongArg = \arg ->
         _other ->
             Long { name: arg, value: Err NoValue }
 
-constructSetOfOptions : Str -> Arg
-constructSetOfOptions = \combined ->
+construct_set_of_options : Str -> Arg
+construct_set_of_options = \combined ->
     options =
         combined
         |> Str.toUtf8

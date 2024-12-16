@@ -3,7 +3,7 @@ module []
 import Opt
 import Cli
 
-basicCli =
+basic_cli =
     Opt.u64 { short: "a", help: "Set the alpha level." }
     |> Cli.map Alpha
     |> Cli.finish { name: "basic-cli", version: "v1.0.0", textStyle: Plain }
@@ -15,7 +15,7 @@ expect
     == Ok (Alpha 123)
 
 expect
-    helpMessage =
+    help_message =
         """
         basic-cli v1.0.0
 
