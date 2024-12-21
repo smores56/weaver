@@ -38,16 +38,16 @@ from_str = \str ->
     @Arg (Unix (Str.toUtf8 str))
 
 ## Attempt to decode an [Arg] to a UTF-8 [Str].
-to_str : Arg -> Result Str [InvalidUnicode]
+to_str : Arg -> Result Str [InvalidUtf8]
 to_str = \@Arg arg ->
     # TODO: update when Unicode -> Str conversion is ready:
     # https://github.com/roc-lang/roc/issues/7390
     when arg is
         Unix unix ->
             Str.fromUtf8 unix
-            |> Result.mapErr \_err -> InvalidUnicode
+            |> Result.mapErr \_err -> InvalidUtf8
 
-        Windows _windows -> Err InvalidUnicode
+        Windows _windows -> Err InvalidUtf8
 
 ## Convert an [Arg] to a list of bytes.
 to_bytes : Arg -> List U8

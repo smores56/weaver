@@ -68,7 +68,7 @@ format_arg_extract_err = \err ->
                 InvalidValue reason ->
                     "The value provided to $(option_display_name option) was not a valid $(option_type_name option): $(reason)"
 
-                InvalidUnicode ->
+                InvalidUtf8 ->
                     "The value provided to $(option_display_name option) was not valid UTF-8."
 
         InvalidParamValue value_err param ->
@@ -79,7 +79,7 @@ format_arg_extract_err = \err ->
                 InvalidValue reason ->
                     "The value provided to the '$(param |> .name)' parameter was not a valid $(param |> .type |> full_type_name): $(reason)."
 
-                InvalidUnicode ->
+                InvalidUtf8 ->
                     "The value provided to the '$(param |> .name)' parameter was not valid UTF-8."
 
         MissingParam parameter ->

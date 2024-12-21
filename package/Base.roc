@@ -114,7 +114,7 @@ Plurality : [Optional, One, Many]
 ## The two built-in flags that we parse automatically.
 SpecialFlags : { help : Bool, version : Bool }
 
-InvalidValue : [InvalidNumStr, InvalidValue Str, InvalidUnicode]
+InvalidValue : [InvalidNumStr, InvalidValue Str, InvalidUtf8]
 
 DefaultValue a : [NoDefault, Value a, Generate ({} -> a)]
 

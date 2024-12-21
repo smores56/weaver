@@ -103,7 +103,7 @@ builder_with_parameter_parser = \param, value_parser ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUnicode]
+##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
 ##     parse_color = \color ->
 ##         when Arg.to_str color is
 ##             Ok "green" -> Ok Green
@@ -158,7 +158,7 @@ single = \{ parser, type, name, help ? "", default ? NoDefault } ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUnicode]
+##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
 ##     parse_color = \color ->
 ##         when Arg.to_str color is
 ##             Ok "green" -> Ok Green
@@ -209,7 +209,7 @@ maybe = \{ parser, type, name, help ? "" } ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUnicode]
+##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
 ##     parse_color = \color ->
 ##         when Arg.to_str color is
 ##             Ok "green" -> Ok Green

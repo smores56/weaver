@@ -102,7 +102,7 @@ get_maybe_value = \values, option ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUnicode]
+##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
 ##     parse_color = \color ->
 ##         when Arg.to_str color is
 ##             Ok "green" -> Ok Green
@@ -155,7 +155,7 @@ single = \{ parser, type, short ? "", long ? "", help ? "", default ? NoDefault 
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUnicode]
+##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
 ##     parse_color = \color ->
 ##         when Arg.to_str color is
 ##             Ok "green" -> Ok Green
@@ -203,7 +203,7 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUnicode]
+##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
 ##     parse_color = \color ->
 ##         when Arg.to_str color is
 ##             Ok "green" -> Ok Green

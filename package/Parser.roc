@@ -45,7 +45,7 @@ parse_arg = \arg ->
     str_arg =
         when Arg.to_str arg is
             Ok str -> str
-            Err InvalidUnicode ->
+            Err InvalidUtf8 ->
                 return Parameter arg
 
     when Str.splitFirst str_arg "-" is
