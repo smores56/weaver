@@ -76,7 +76,7 @@
 ##
 ## expect
 ##     cliParser
-##     |> Cli.parse_or_display_message ["example", "-a", "123", "-vvv", "file.txt", "file-2.txt"]
+##     |> Cli.parse_or_display_message ["example", "-a", "123", "-vvv", "file.txt", "file-2.txt"] Arg.to_os_raw
 ##     == Ok { alpha: 123, verbosity: 3, files: ["file.txt", "file-2.txt"] }
 ## ```
 ##
@@ -110,7 +110,8 @@ import Base exposing [
     CliConfigParams,
     map_successfully_parsed,
 ]
-import Parser exposing [Arg, parse_args]
+import Arg exposing [Arg]
+import Parser exposing [ParsedArg, parse_args]
 import Builder exposing [CliBuilder]
 import Validate exposing [validate_cli, CliValidationErr]
 import ErrorFormatter exposing [
@@ -122,7 +123,7 @@ import Help exposing [help_text, usage_help]
 ## A parser that interprets command line arguments and returns well-formed data.
 CliParser state : {
     config : CliConfig,
-    parser : List Str -> ArgParserResult state,
+    parser : List Arg -> ArgParserResult state,
     text_style : TextStyle,
 }
 
@@ -171,7 +172,7 @@ weave = \left, right, combiner ->
     Builder.combine left right combiner
 
 ## Fail the parsing process if any arguments are left over after parsing.
-ensure_all_args_were_parsed : List Arg -> Result {} ArgExtractErr
+ensure_all_args_were_parsed : List ParsedArg -> Result {} ArgExtractErr
 ensure_all_args_were_parsed = \remaining_args ->
     when remaining_args is
         [] -> Ok {}
@@ -337,7 +338,7 @@ assert_valid = \result ->
 ##
 ## expect
 ##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-h"]
+##     |> Cli.parse_or_display_message ["example", "-h"] Arg.to_os_raw
 ##     == Err
 ##         """
 ##         example v0.1.0
@@ -356,17 +357,17 @@ assert_valid = \result ->
 ##
 ## expect
 ##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-V"]
+##     |> Cli.parse_or_display_message ["example", "-V"] Arg.to_os_raw
 ##     == Err "v0.1.0"
 ##
 ## expect
 ##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-v"]
+##     |> Cli.parse_or_display_message ["example", "-v"] Arg.to_os_raw
 ##     == Ok { verbosity: 1 }
 ##
 ## expect
 ##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-x"]
+##     |> Cli.parse_or_display_message ["example", "-x"] Arg.to_os_raw
 ##     == Err
 ##         """
 ##         Error: The argument -x was not recognized.
@@ -375,8 +376,13 @@ assert_valid = \result ->
 ##           example [OPTIONS]
 ##         """
 ## ```
-parse_or_display_message : CliParser data, List Str -> Result data Str
-parse_or_display_message = \parser, args ->
+parse_or_display_message : CliParser data, List arg, (arg -> [Unix (List U8), Windows (List U16)]) -> Result data Str
+parse_or_display_message = \parser, external_args, to_raw_arg ->
+    args =
+        external_args
+        |> List.map to_raw_arg
+        |> List.map Arg.from_raw_arg
+
     when parser.parser args is
         SuccessfullyParsed data -> Ok data
         ShowHelp { subcommand_path } -> Err (help_text parser.config subcommand_path parser.text_style)

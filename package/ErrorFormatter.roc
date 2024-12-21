@@ -2,6 +2,7 @@
 ## they are readable for developers and users on failure.
 module [format_arg_extract_err, format_cli_validation_err]
 
+import Arg
 import Base exposing [
     ArgExtractErr,
     ExpectedValue,
@@ -67,6 +68,9 @@ format_arg_extract_err = \err ->
                 InvalidValue reason ->
                     "The value provided to $(option_display_name option) was not a valid $(option_type_name option): $(reason)"
 
+                InvalidUtf8 ->
+                    "The value provided to $(option_display_name option) was not valid UTF-8."
+
         InvalidParamValue value_err param ->
             when value_err is
                 InvalidNumStr ->
@@ -74,6 +78,9 @@ format_arg_extract_err = \err ->
 
                 InvalidValue reason ->
                     "The value provided to the '$(param |> .name)' parameter was not a valid $(param |> .type |> full_type_name): $(reason)."
+
+                InvalidUtf8 ->
+                    "The value provided to the '$(param |> .name)' parameter was not valid UTF-8."
 
         MissingParam parameter ->
             "The '$(parameter |> .name)' parameter did not receive a value."
@@ -85,7 +92,7 @@ format_arg_extract_err = \err ->
             "The argument --$(long) was not recognized."
 
         ExtraParamProvided param ->
-            "The parameter \"$(param)\" was not expected."
+            "The parameter \"$(Arg.display param)\" was not expected."
 
 ## Render [CliValidationErr] errors as readable messages.
 ##

@@ -1,22 +1,23 @@
 module [extract_param_values, extract_option_values]
 
+import Arg exposing [Arg]
 import Base exposing [ArgExtractErr, OptionConfig, ParameterConfig]
-import Parser exposing [Arg, ArgValue]
+import Parser exposing [ParsedArg, ArgValue]
 
 ExtractParamValuesParams : {
-    args : List Arg,
+    args : List ParsedArg,
     param : ParameterConfig,
 }
 
 ExtractParamValuesState : {
     action : [GetParam, StopParsing],
-    values : List Str,
-    remaining_args : List Arg,
+    values : List Arg,
+    remaining_args : List ParsedArg,
 }
 
 ExtractParamValuesOutput : {
-    values : List Str,
-    remaining_args : List Arg,
+    values : List Arg,
+    remaining_args : List ParsedArg,
 }
 
 extract_param_values : ExtractParamValuesParams -> Result ExtractParamValuesOutput ArgExtractErr
@@ -37,7 +38,7 @@ extract_param_values = \{ args, param } ->
     Result.map state_after \{ values, remaining_args } ->
         { values, remaining_args }
 
-extract_single_param : ExtractParamValuesState, ParameterConfig, Arg -> Result ExtractParamValuesState ArgExtractErr
+extract_single_param : ExtractParamValuesState, ParameterConfig, ParsedArg -> Result ExtractParamValuesState ArgExtractErr
 extract_single_param = \state, param, arg ->
     when arg is
         Short short ->
@@ -60,19 +61,19 @@ extract_single_param = \state, param, arg ->
                 Many -> Ok { state & values: state.values |> List.append p }
 
 ExtractOptionValuesParams : {
-    args : List Arg,
+    args : List ParsedArg,
     option : OptionConfig,
 }
 
 ExtractOptionValuesOutput : {
     values : List ArgValue,
-    remaining_args : List Arg,
+    remaining_args : List ParsedArg,
 }
 
 ExtractOptionValueWalkerState : {
     action : [FindOption, GetValue],
     values : List ArgValue,
-    remaining_args : List Arg,
+    remaining_args : List ParsedArg,
 }
 
 extract_option_values : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
@@ -95,7 +96,7 @@ extract_option_values = \{ args, option } ->
                 GetValue -> Err (NoValueProvidedForOption option)
                 FindOption -> Ok { values, remaining_args }
 
-find_option_for_extraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
+find_option_for_extraction : ExtractOptionValueWalkerState, ParsedArg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
 find_option_for_extraction = \state, arg, option ->
     when arg is
         Short short ->
@@ -160,16 +161,20 @@ find_options_in_short_group = \state, option, short_group ->
                     values: state.values |> List.concat values,
                 }
 
-get_value_for_extraction : ExtractOptionValueWalkerState, Arg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
+get_value_for_extraction : ExtractOptionValueWalkerState, ParsedArg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
 get_value_for_extraction = \state, arg, option ->
     value =
         when arg is
-            Short s -> Ok "-$(s)"
-            ShortGroup { names, complete: Complete } -> Ok "-$(Str.joinWith names "")"
-            ShortGroup { names, complete: Partial } -> Err (CannotUsePartialShortGroupAsValue option names)
-            Long { name, value: Ok val } -> Ok "--$(name)=$(val)"
-            Long { name, value: Err NoValue } -> Ok "--$(name)"
-            Parameter p -> Ok p
+            Short s -> Arg.from_str "-$(s)"
+            ShortGroup { names, complete: Complete } -> Arg.from_str "-$(Str.joinWith names "")"
+            ShortGroup { names, complete: Partial } ->
+                return Err (CannotUsePartialShortGroupAsValue option names)
 
-    Result.map value \val ->
-        { state & action: FindOption, values: state.values |> List.append (Ok val) }
+            Long { name, value: Ok val } ->
+                # Using [Arg.display] is safe here because `val` must be valid UTF-8 to be `Ok`
+                Arg.from_str "--$(name)=$(Arg.display val)"
+
+            Long { name, value: Err NoValue } -> Arg.from_str "--$(name)"
+            Parameter p -> p
+
+    Ok { state & action: FindOption, values: state.values |> List.append (Ok value) }

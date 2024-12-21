@@ -31,11 +31,9 @@ import weaver.Opt
 import weaver.Cli
 import weaver.Param
 
-main! = \{} ->
-    args = Arg.list! {}
-
+main! = \args ->
     data =
-        Cli.parse_or_display_message cli_parser args
+        Cli.parse_or_display_message cli_parser args Arg.to_os_raw
         |> try Result.onErr! \message ->
             try Stdout.line! message
             Err (Exit 1 "")
