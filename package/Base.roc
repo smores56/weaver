@@ -34,7 +34,8 @@ module [
     SubcommandsConfig,
 ]
 
-import Parser exposing [Arg]
+import Arg exposing [Arg]
+import Parser exposing [ParsedArg]
 
 ## The result of attempting to parse args into config data.
 ArgParserResult a : [
@@ -46,11 +47,11 @@ ArgParserResult a : [
 
 ## The parameters that an [ArgParser] takes to extract data
 ## from args.
-ArgParserParams : { args : List Arg, subcommand_path : List Str }
+ArgParserParams : { args : List ParsedArg, subcommand_path : List Str }
 
 ## The intermediate state that an [ArgParser] passes between
 ## different parsing steps.
-ArgParserState a : { data : a, remaining_args : List Arg, subcommand_path : List Str }
+ArgParserState a : { data : a, remaining_args : List ParsedArg, subcommand_path : List Str }
 
 ## A function that takes command line arguments and a subcommand,
 ## and attempts to extract configuration data from said arguments.
@@ -95,7 +96,7 @@ ArgExtractErr : [
     MissingParam ParameterConfig,
     UnrecognizedShortArg Str,
     UnrecognizedLongArg Str,
-    ExtraParamProvided Str,
+    ExtraParamProvided Arg,
 ]
 
 str_type_name = "str"
@@ -113,12 +114,12 @@ Plurality : [Optional, One, Many]
 ## The two built-in flags that we parse automatically.
 SpecialFlags : { help : Bool, version : Bool }
 
-InvalidValue : [InvalidNumStr, InvalidValue Str]
+InvalidValue : [InvalidNumStr, InvalidValue Str, InvalidUnicode]
 
 DefaultValue a : [NoDefault, Value a, Generate ({} -> a)]
 
 ## A parser that extracts an argument value from a string.
-ValueParser a : Str -> Result a InvalidValue
+ValueParser a : Arg -> Result a InvalidValue
 
 OptionConfigBaseParams : {
     short ? Str,
