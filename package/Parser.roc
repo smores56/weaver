@@ -1,15 +1,20 @@
-module [parse_args, Arg, ArgValue]
+module [parse_args, ParsedArg, ArgValue]
 
-Arg : [
+import Arg exposing [Arg]
+
+ArgValue : Result Arg [NoValue]
+
+ParsedArg : [
     Short Str,
     ShortGroup { names : List Str, complete : [Complete, Partial] },
-    Long { name : Str, value : Result Str [NoValue] },
-    Parameter Str,
+    Long { name : Str, value : ArgValue },
+    Parameter Arg,
 ]
 
-ArgValue : Result Str [NoValue]
+single_dash_arg = Arg.from_str "-"
+double_dash_arg = Arg.from_str "--"
 
-parse_args : List Str -> List Arg
+parse_args : List Arg -> List ParsedArg
 parse_args = \args ->
     starting_state = { parsed_args: [], pass_through: KeepParsing }
 
@@ -21,7 +26,7 @@ parse_args = \args ->
                 KeepParsing ->
                     parsed_arg = parse_arg arg
                     when parsed_arg is
-                        Parameter "--" ->
+                        Parameter a if a == double_dash_arg ->
                             { pass_through: PassThrough, parsed_args }
 
                         _other ->
@@ -35,12 +40,18 @@ parse_args = \args ->
 
     state_after.parsed_args
 
-parse_arg : Str -> Arg
+parse_arg : Arg -> ParsedArg
 parse_arg = \arg ->
-    when Str.splitFirst arg "-" is
+    str_arg =
+        when Arg.to_str arg is
+            Ok str -> str
+            Err InvalidUnicode ->
+                return Parameter arg
+
+    when Str.splitFirst str_arg "-" is
         Ok { before: "", after } ->
             if after == "" then
-                Parameter "-"
+                Parameter single_dash_arg
             else
                 when Str.splitFirst after "-" is
                     Ok { before: "", after: rest } ->
@@ -54,16 +65,16 @@ parse_arg = \arg ->
         _other ->
             Parameter arg
 
-parse_long_arg : Str -> Arg
+parse_long_arg : Str -> ParsedArg
 parse_long_arg = \arg ->
     when Str.splitFirst arg "=" is
         Ok { before: option, after: value } ->
-            Long { name: option, value: Ok value }
+            Long { name: option, value: Ok (Arg.from_str value) }
 
         _other ->
             Long { name: arg, value: Err NoValue }
 
-construct_set_of_options : Str -> Arg
+construct_set_of_options : Str -> ParsedArg
 construct_set_of_options = \combined ->
     options =
         combined
@@ -75,44 +86,47 @@ construct_set_of_options = \combined ->
         other -> ShortGroup { names: other, complete: Complete }
 
 expect
-    parsed = parse_arg "-"
+    parsed = parse_arg (Arg.from_str "-")
 
-    parsed == Parameter "-"
+    parsed == Parameter (Arg.from_str "-")
 
 expect
-    parsed = parse_arg "-a"
+    parsed = parse_arg (Arg.from_str "-a")
 
     parsed == Short "a"
 
 expect
-    parsed = parse_arg "-abc"
+    parsed = parse_arg (Arg.from_str "-abc")
 
     parsed == ShortGroup { names: ["a", "b", "c"], complete: Complete }
 
 expect
-    parsed = parse_arg "--abc"
+    parsed = parse_arg (Arg.from_str "--abc")
 
     parsed == Long { name: "abc", value: Err NoValue }
 
 expect
-    parsed = parse_arg "--abc=xyz"
+    parsed = parse_arg (Arg.from_str "--abc=xyz")
 
-    parsed == Long { name: "abc", value: Ok "xyz" }
-
-expect
-    parsed = parse_arg "123"
-
-    parsed == Parameter "123"
+    parsed == Long { name: "abc", value: Ok (Arg.from_str "xyz") }
 
 expect
-    parsed = parse_args ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
+    parsed = parse_arg (Arg.from_str "123")
+
+    parsed == Parameter (Arg.from_str "123")
+
+expect
+    parsed =
+        ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
+        |> List.map Arg.from_str
+        |> parse_args
 
     parsed
     == [
         Short "a",
-        Parameter "123",
+        Parameter (Arg.from_str "123"),
         Long { name: "passed", value: Err NoValue },
         ShortGroup { names: ["b", "c", "d"], complete: Complete },
-        Parameter "xyz",
-        Parameter "--subject=world",
+        Parameter (Arg.from_str "xyz"),
+        Parameter (Arg.from_str "--subject=world"),
     ]

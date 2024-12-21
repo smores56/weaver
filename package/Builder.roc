@@ -16,6 +16,7 @@ module [
     check_for_help_and_version,
 ]
 
+import Arg
 import Base exposing [
     ArgParser,
     ArgParserState,
@@ -29,7 +30,7 @@ import Base exposing [
     ParameterConfig,
     SubcommandConfig,
 ]
-import Parser exposing [Arg]
+import Parser exposing [ParsedArg]
 
 GetOptionsAction : { get_options : {} }
 GetParamsAction : { get_params : {} }
@@ -42,7 +43,7 @@ CliBuilder data from_action to_action := {
     subcommands : Dict Str SubcommandConfig,
 }
 
-from_arg_parser : (List Arg -> Result { data : data, remaining_args : List Arg } ArgExtractErr) -> CliBuilder data from_action to_action
+from_arg_parser : (List ParsedArg -> Result { data : data, remaining_args : List ParsedArg } ArgExtractErr) -> CliBuilder data from_action to_action
 from_arg_parser = \parser ->
     new_parser = \{ args, subcommand_path } ->
         when parser args is
@@ -86,7 +87,7 @@ set_parser = \@CliBuilder builder, parser ->
         parser,
     }
 
-update_parser : CliBuilder state from_action to_action, ({ data : state, remaining_args : List Arg } -> Result { data : next_state, remaining_args : List Arg } ArgExtractErr) -> CliBuilder next_state from_action to_action
+update_parser : CliBuilder state from_action to_action, ({ data : state, remaining_args : List ParsedArg } -> Result { data : next_state, remaining_args : List ParsedArg } ArgExtractErr) -> CliBuilder next_state from_action to_action
 update_parser = \@CliBuilder builder, updater ->
     new_parser =
         on_successful_arg_parse builder.parser \{ data, remaining_args, subcommand_path } ->
@@ -152,7 +153,7 @@ combine = \@CliBuilder left, @CliBuilder right, combiner ->
         subcommands: Dict.insertAll left.subcommands right.subcommands,
     }
 
-flag_was_passed : OptionConfig, List Arg -> Bool
+flag_was_passed : OptionConfig, List ParsedArg -> Bool
 flag_was_passed = \option, args ->
     List.any args \arg ->
         when arg is
@@ -188,7 +189,7 @@ expect
         |> map Inspected
         |> into_parts
 
-    out = parser { args: [Parameter "123"], subcommand_path: [] }
+    out = parser { args: [Parameter (Arg.from_str "123")], subcommand_path: [] }
 
     out
     == SuccessfullyParsed {
@@ -198,7 +199,7 @@ expect
     }
 
 expect
-    args = [Parameter "-h"]
+    args = [Parameter (Arg.from_str "-h")]
 
     flag_was_passed help_option args |> Bool.not
 
@@ -213,6 +214,6 @@ expect
     flag_was_passed help_option args
 
 expect
-    args = [Long { name: "help", value: Ok "123" }]
+    args = [Long { name: "help", value: Ok (Arg.from_str "123") }]
 
     flag_was_passed help_option args

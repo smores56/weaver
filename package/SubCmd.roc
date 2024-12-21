@@ -1,5 +1,6 @@
 module [finish, optional, required, SubcommandParserConfig]
 
+import Arg
 import Base exposing [
     ArgParser,
     ArgParserState,
@@ -65,7 +66,7 @@ get_first_arg_to_check_for_subcommand_call :
 get_first_arg_to_check_for_subcommand_call = \{ remaining_args, subcommand_path }, subcommand_parsers, callback ->
     find_subcommand = \param ->
         subcommand_parsers
-        |> List.findFirst \sc -> Ok sc.name == param
+        |> List.findFirst \sc -> Ok sc.name == (param |> Result.try Arg.to_str)
 
     when List.first remaining_args is
         Err ListWasEmpty -> callback (find_subcommand (Err NoValue))
