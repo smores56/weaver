@@ -3,47 +3,47 @@ module [
     maybe,
     list,
     str,
-    maybeStr,
-    strList,
+    maybe_str,
+    str_list,
     dec,
-    maybeDec,
-    decList,
+    maybe_dec,
+    dec_list,
     f32,
-    maybeF32,
-    f32List,
+    maybe_f32,
+    f32_list,
     f64,
-    maybeF64,
-    f64List,
+    maybe_f64,
+    f64_list,
     u8,
-    maybeU8,
-    u8List,
+    maybe_u8,
+    u8_list,
     u16,
-    maybeU16,
-    u16List,
+    maybe_u16,
+    u16_list,
     u32,
-    maybeU32,
-    u32List,
+    maybe_u32,
+    u32_list,
     u64,
-    maybeU64,
-    u64List,
+    maybe_u64,
+    u64_list,
     u128,
-    maybeU128,
-    u128List,
+    maybe_u128,
+    u128_list,
     i8,
-    maybeI8,
-    i8List,
+    maybe_i8,
+    i8_list,
     i16,
-    maybeI16,
-    i16List,
+    maybe_i16,
+    i16_list,
     i32,
-    maybeI32,
-    i32List,
+    maybe_i32,
+    i32_list,
     i64,
-    maybeI64,
-    i64List,
+    maybe_i64,
+    i64_list,
     i128,
-    maybeI128,
-    i128List,
+    maybe_i128,
+    i128_list,
 ]
 
 import Builder exposing [
@@ -58,22 +58,22 @@ import Base exposing [
     ParameterConfigParams,
     DefaultableParameterConfigParams,
     ParameterConfig,
-    strTypeName,
-    numTypeName,
+    str_type_name,
+    num_type_name,
 ]
 import Parser exposing [ArgValue]
-import Extract exposing [extractParamValues]
+import Extract exposing [extract_param_values]
 
-builderWithParameterParser : ParameterConfig, (List Str -> Result data ArgExtractErr) -> CliBuilder data fromAction toAction
-builderWithParameterParser = \param, valueParser ->
-    argParser = \args ->
-        { values, remainingArgs } = try extractParamValues { args, param }
-        data = try valueParser values
+builder_with_parameter_parser : ParameterConfig, (List Str -> Result data ArgExtractErr) -> CliBuilder data from_action to_action
+builder_with_parameter_parser = \param, value_parser ->
+    arg_parser = \args ->
+        { values, remaining_args } = try extract_param_values { args, param }
+        data = try value_parser values
 
-        Ok { data, remainingArgs }
+        Ok { data, remaining_args }
 
-    Builder.fromArgParser argParser
-    |> Builder.addParameter param
+    Builder.from_arg_parser arg_parser
+    |> Builder.add_parameter param
 
 ## Add a required parameter of a custom type to your CLI builder.
 ##
@@ -96,8 +96,8 @@ builderWithParameterParser = \param, valueParser ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parseColor : Str -> Result Color [InvalidValue Str]
-##     parseColor = \color ->
+##     parse_color : Str -> Result Color [InvalidValue Str]
+##     parse_color = \color ->
 ##         when color is
 ##             "green" -> Ok Green
 ##             "red" -> Ok Red
@@ -105,9 +105,9 @@ builderWithParameterParser = \param, valueParser ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Param.single { name: "answer", type: "color", parser: parseColor },
+##         Param.single { name: "answer", type: "color", parser: parse_color },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "blue"]
 ##     == SuccessfullyParsed Blue
@@ -116,20 +116,20 @@ single : DefaultableParameterConfigParams data -> CliBuilder data {}action GetPa
 single = \{ parser, type, name, help ? "", default ? NoDefault } ->
     param = { name, type, help, plurality: One }
 
-    defaultGenerator = \{} ->
+    default_generator = \{} ->
         when default is
-            Value defaultValue -> Ok defaultValue
+            Value default_value -> Ok default_value
             Generate generator -> Ok (generator {})
             NoDefault -> Err (MissingParam param)
 
-    valueParser = \values ->
+    value_parser = \values ->
         when List.first values is
-            Err ListWasEmpty -> defaultGenerator {}
-            Ok singleValue ->
-                parser singleValue
+            Err ListWasEmpty -> default_generator {}
+            Ok single_value ->
+                parser single_value
                 |> Result.mapErr \err -> InvalidParamValue err param
 
-    builderWithParameterParser param valueParser
+    builder_with_parameter_parser param value_parser
 
 ## Add an optional parameter of a custom type to your CLI builder.
 ##
@@ -151,8 +151,8 @@ single = \{ parser, type, name, help ? "", default ? NoDefault } ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parseColor : Str -> Result Color [InvalidValue Str]
-##     parseColor = \color ->
+##     parse_color : Str -> Result Color [InvalidValue Str]
+##     parse_color = \color ->
 ##         when color is
 ##             "green" -> Ok Green
 ##             "red" -> Ok Red
@@ -160,9 +160,9 @@ single = \{ parser, type, name, help ? "", default ? NoDefault } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Param.maybe { name: "answer", type: "color", parser: parseColor },
+##         Param.maybe { name: "answer", type: "color", parser: parse_color },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
@@ -171,15 +171,15 @@ maybe : ParameterConfigParams data -> CliBuilder (Result data [NoValue]) {}actio
 maybe = \{ parser, type, name, help ? "" } ->
     param = { name, type, help, plurality: Optional }
 
-    valueParser = \values ->
+    value_parser = \values ->
         when List.first values is
             Err ListWasEmpty -> Ok (Err NoValue)
-            Ok singleValue ->
-                parser singleValue
+            Ok single_value ->
+                parser single_value
                 |> Result.map Ok
                 |> Result.mapErr \err -> InvalidParamValue err param
 
-    builderWithParameterParser param valueParser
+    builder_with_parameter_parser param value_parser
 
 ## Add a parameter of a custom type that can be provided
 ## multiple times to your CLI builder.
@@ -202,8 +202,8 @@ maybe = \{ parser, type, name, help ? "" } ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parseColor : Str -> Result Color [InvalidValue Str]
-##     parseColor = \color ->
+##     parse_color : Str -> Result Color [InvalidValue Str]
+##     parse_color = \color ->
 ##         when color is
 ##             "green" -> Ok Green
 ##             "red" -> Ok Red
@@ -211,9 +211,9 @@ maybe = \{ parser, type, name, help ? "" } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Param.list { name: "answer", type: "color", parser: parseColor },
+##         Param.list { name: "answer", type: "color", parser: parse_color },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "blue", "red", "green"]
 ##     == SuccessfullyParsed [Blue, Red, Green]
@@ -222,11 +222,11 @@ list : ParameterConfigParams data -> CliBuilder (List data) {}action StopCollect
 list = \{ parser, type, name, help ? "" } ->
     param = { name, type, help, plurality: Many }
 
-    valueParser = \values ->
+    value_parser = \values ->
         List.mapTry values parser
         |> Result.mapErr \err -> InvalidParamValue err param
 
-    builderWithParameterParser param valueParser
+    builder_with_parameter_parser param value_parser
 
 ## Add a required string parameter to your CLI builder.
 ##
@@ -237,13 +237,13 @@ list = \{ parser, type, name, help ? "" } ->
 ##     { parser } =
 ##         Param.str { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "abc"]
 ##     == SuccessfullyParsed "abc"
 ## ```
 str : DefaultableParameterConfigBaseParams Str -> CliBuilder Str {}action GetParamsAction
-str = \{ name, help ? "", default ? NoDefault } -> single { parser: Ok, type: strTypeName, name, help, default }
+str = \{ name, help ? "", default ? NoDefault } -> single { parser: Ok, type: str_type_name, name, help, default }
 
 ## Add an optional string parameter to your CLI builder.
 ##
@@ -252,15 +252,15 @@ str = \{ name, help ? "", default ? NoDefault } -> single { parser: Ok, type: st
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeStr { name: "answer" },
+##         Param.maybe_str { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeStr : ParameterConfigBaseParams -> CliBuilder ArgValue {}action GetParamsAction
-maybeStr = \{ name, help ? "" } -> maybe { parser: Ok, type: strTypeName, name, help }
+maybe_str : ParameterConfigBaseParams -> CliBuilder ArgValue {}action GetParamsAction
+maybe_str = \{ name, help ? "" } -> maybe { parser: Ok, type: str_type_name, name, help }
 
 ## Add a string parameter that can be provided multiple times
 ## to your CLI builder.
@@ -270,15 +270,15 @@ maybeStr = \{ name, help ? "" } -> maybe { parser: Ok, type: strTypeName, name, 
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.strList { name: "answer" },
+##         Param.str_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "abc", "def", "ghi"]
 ##     == SuccessfullyParsed ["abc", "def", "ghi"]
 ## ```
-strList : ParameterConfigBaseParams -> CliBuilder (List Str) {}action StopCollectingAction
-strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, help }
+str_list : ParameterConfigBaseParams -> CliBuilder (List Str) {}action StopCollectingAction
+str_list = \{ name, help ? "" } -> list { parser: Ok, type: str_type_name, name, help }
 
 ## Add a required `Dec` parameter to your CLI builder.
 ##
@@ -290,13 +290,13 @@ strList = \{ name, help ? "" } -> list { parser: Ok, type: strTypeName, name, he
 ##     { parser } =
 ##         Param.dec { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
 dec : DefaultableParameterConfigBaseParams Dec -> CliBuilder Dec {}action GetParamsAction
-dec = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toDec, type: numTypeName, name, help, default }
+dec = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toDec, type: num_type_name, name, help, default }
 
 ## Add an optional `Dec` parameter to your CLI builder.
 ##
@@ -305,15 +305,15 @@ dec = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toDec, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeDec { name: "answer" },
+##         Param.maybe_dec { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeDec : ParameterConfigBaseParams -> CliBuilder (Result Dec [NoValue]) {}action GetParamsAction
-maybeDec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, name, help }
+maybe_dec : ParameterConfigBaseParams -> CliBuilder (Result Dec [NoValue]) {}action GetParamsAction
+maybe_dec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: num_type_name, name, help }
 
 ## Add a `Dec` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -324,15 +324,15 @@ maybeDec = \{ name, help ? "" } -> maybe { parser: Str.toDec, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.decList { name: "answer" },
+##         Param.dec_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56.0"]
 ##     == SuccessfullyParsed [12.0, 34.0, -56.0]
 ## ```
-decList : ParameterConfigBaseParams -> CliBuilder (List Dec) {}action StopCollectingAction
-decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, name, help }
+dec_list : ParameterConfigBaseParams -> CliBuilder (List Dec) {}action StopCollectingAction
+dec_list = \{ name, help ? "" } -> list { parser: Str.toDec, type: num_type_name, name, help }
 
 ## Add a required `F32` parameter to your CLI builder.
 ##
@@ -344,13 +344,13 @@ decList = \{ name, help ? "" } -> list { parser: Str.toDec, type: numTypeName, n
 ##     { parser } =
 ##         Param.f32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
 f32 : DefaultableParameterConfigBaseParams F32 -> CliBuilder F32 {}action GetParamsAction
-f32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF32, type: numTypeName, name, help, default }
+f32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF32, type: num_type_name, name, help, default }
 
 ## Add an optional `F32` parameter to your CLI builder.
 ##
@@ -359,15 +359,15 @@ f32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeF32 { name: "answer" },
+##         Param.maybe_f32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeF32 : ParameterConfigBaseParams -> CliBuilder (Result F32 [NoValue]) {}action GetParamsAction
-maybeF32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, name, help }
+maybe_f32 : ParameterConfigBaseParams -> CliBuilder (Result F32 [NoValue]) {}action GetParamsAction
+maybe_f32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: num_type_name, name, help }
 
 ## Add a `F32` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -378,15 +378,15 @@ maybeF32 = \{ name, help ? "" } -> maybe { parser: Str.toF32, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.f32List { name: "answer" },
+##         Param.f32_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56.0"]
 ##     == SuccessfullyParsed [12.0, 34.0, -56.0]
 ## ```
-f32List : ParameterConfigBaseParams -> CliBuilder (List F32) {}action StopCollectingAction
-f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, name, help }
+f32_list : ParameterConfigBaseParams -> CliBuilder (List F32) {}action StopCollectingAction
+f32_list = \{ name, help ? "" } -> list { parser: Str.toF32, type: num_type_name, name, help }
 
 ## Add a required `F64` parameter to your CLI builder.
 ##
@@ -398,13 +398,13 @@ f32List = \{ name, help ? "" } -> list { parser: Str.toF32, type: numTypeName, n
 ##     { parser } =
 ##         Param.f64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
 f64 : DefaultableParameterConfigBaseParams F64 -> CliBuilder F64 {}action GetParamsAction
-f64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF64, type: numTypeName, name, help, default }
+f64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF64, type: num_type_name, name, help, default }
 
 ## Add an optional `F64` parameter to your CLI builder.
 ##
@@ -413,15 +413,15 @@ f64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toF64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeF64 { name: "answer" },
+##         Param.maybe_f64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeF64 : ParameterConfigBaseParams -> CliBuilder (Result F64 [NoValue]) {}action GetParamsAction
-maybeF64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, name, help }
+maybe_f64 : ParameterConfigBaseParams -> CliBuilder (Result F64 [NoValue]) {}action GetParamsAction
+maybe_f64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: num_type_name, name, help }
 
 ## Add a `F64` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -432,15 +432,15 @@ maybeF64 = \{ name, help ? "" } -> maybe { parser: Str.toF64, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.f64List { name: "answer" },
+##         Param.f64_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56.0"]
 ##     == SuccessfullyParsed [12, 34, -56.0]
 ## ```
-f64List : ParameterConfigBaseParams -> CliBuilder (List F64) {}action StopCollectingAction
-f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, name, help }
+f64_list : ParameterConfigBaseParams -> CliBuilder (List F64) {}action StopCollectingAction
+f64_list = \{ name, help ? "" } -> list { parser: Str.toF64, type: num_type_name, name, help }
 
 ## Add a required `U8` parameter to your CLI builder.
 ##
@@ -452,13 +452,13 @@ f64List = \{ name, help ? "" } -> list { parser: Str.toF64, type: numTypeName, n
 ##     { parser } =
 ##         Param.u8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u8 : DefaultableParameterConfigBaseParams U8 -> CliBuilder U8 {}action GetParamsAction
-u8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU8, type: numTypeName, name, help, default }
+u8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU8, type: num_type_name, name, help, default }
 
 ## Add an optional `U8` parameter to your CLI builder.
 ##
@@ -467,15 +467,15 @@ u8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU8, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeU8 { name: "answer" },
+##         Param.maybe_u8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU8 : ParameterConfigBaseParams -> CliBuilder (Result U8 [NoValue]) {}action GetParamsAction
-maybeU8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, name, help }
+maybe_u8 : ParameterConfigBaseParams -> CliBuilder (Result U8 [NoValue]) {}action GetParamsAction
+maybe_u8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: num_type_name, name, help }
 
 ## Add a `U8` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -486,15 +486,15 @@ maybeU8 = \{ name, help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.u8List { name: "answer" },
+##         Param.u8_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed [12, 34, 56]
 ## ```
-u8List : ParameterConfigBaseParams -> CliBuilder (List U8) {}action StopCollectingAction
-u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, name, help }
+u8_list : ParameterConfigBaseParams -> CliBuilder (List U8) {}action StopCollectingAction
+u8_list = \{ name, help ? "" } -> list { parser: Str.toU8, type: num_type_name, name, help }
 
 ## Add a required `U16` parameter to your CLI builder.
 ##
@@ -506,13 +506,13 @@ u8List = \{ name, help ? "" } -> list { parser: Str.toU8, type: numTypeName, nam
 ##     { parser } =
 ##         Param.u16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u16 : DefaultableParameterConfigBaseParams U16 -> CliBuilder U16 {}action GetParamsAction
-u16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU16, type: numTypeName, name, help, default }
+u16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU16, type: num_type_name, name, help, default }
 
 ## Add an optional `U16` parameter to your CLI builder.
 ##
@@ -521,15 +521,15 @@ u16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU16, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeU16 { name: "answer" },
+##         Param.maybe_u16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU16 : ParameterConfigBaseParams -> CliBuilder (Result U16 [NoValue]) {}action GetParamsAction
-maybeU16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, name, help }
+maybe_u16 : ParameterConfigBaseParams -> CliBuilder (Result U16 [NoValue]) {}action GetParamsAction
+maybe_u16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: num_type_name, name, help }
 
 ## Add a `U16` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -540,15 +540,15 @@ maybeU16 = \{ name, help ? "" } -> maybe { parser: Str.toU16, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.u16List { name: "answer" },
+##         Param.u16_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed [12, 34, 56]
 ## ```
-u16List : ParameterConfigBaseParams -> CliBuilder (List U16) {}action StopCollectingAction
-u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, name, help }
+u16_list : ParameterConfigBaseParams -> CliBuilder (List U16) {}action StopCollectingAction
+u16_list = \{ name, help ? "" } -> list { parser: Str.toU16, type: num_type_name, name, help }
 
 ## Add a required `U32` parameter to your CLI builder.
 ##
@@ -560,13 +560,13 @@ u16List = \{ name, help ? "" } -> list { parser: Str.toU16, type: numTypeName, n
 ##     { parser } =
 ##         Param.u32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u32 : DefaultableParameterConfigBaseParams U32 -> CliBuilder U32 {}action GetParamsAction
-u32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU32, type: numTypeName, name, help, default }
+u32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU32, type: num_type_name, name, help, default }
 
 ## Add an optional `U32` parameter to your CLI builder.
 ##
@@ -575,15 +575,15 @@ u32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeU32 { name: "answer" },
+##         Param.maybe_u32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU32 : ParameterConfigBaseParams -> CliBuilder (Result U32 [NoValue]) {}action GetParamsAction
-maybeU32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, name, help }
+maybe_u32 : ParameterConfigBaseParams -> CliBuilder (Result U32 [NoValue]) {}action GetParamsAction
+maybe_u32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: num_type_name, name, help }
 
 ## Add a `U32` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -594,15 +594,15 @@ maybeU32 = \{ name, help ? "" } -> maybe { parser: Str.toU32, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.u32List { name: "answer" },
+##         Param.u32_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed [12, 34, 56]
 ## ```
-u32List : ParameterConfigBaseParams -> CliBuilder (List U32) {}action StopCollectingAction
-u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, name, help }
+u32_list : ParameterConfigBaseParams -> CliBuilder (List U32) {}action StopCollectingAction
+u32_list = \{ name, help ? "" } -> list { parser: Str.toU32, type: num_type_name, name, help }
 
 ## Add a required `U64` parameter to your CLI builder.
 ##
@@ -614,13 +614,13 @@ u32List = \{ name, help ? "" } -> list { parser: Str.toU32, type: numTypeName, n
 ##     { parser } =
 ##         Param.u64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u64 : DefaultableParameterConfigBaseParams U64 -> CliBuilder U64 {}action GetParamsAction
-u64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU64, type: numTypeName, name, help, default }
+u64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU64, type: num_type_name, name, help, default }
 
 ## Add an optional `U64` parameter to your CLI builder.
 ##
@@ -629,15 +629,15 @@ u64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeU64 { name: "answer" },
+##         Param.maybe_u64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU64 : ParameterConfigBaseParams -> CliBuilder (Result U64 [NoValue]) {}action GetParamsAction
-maybeU64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, name, help }
+maybe_u64 : ParameterConfigBaseParams -> CliBuilder (Result U64 [NoValue]) {}action GetParamsAction
+maybe_u64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: num_type_name, name, help }
 
 ## Add a `U64` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -648,15 +648,15 @@ maybeU64 = \{ name, help ? "" } -> maybe { parser: Str.toU64, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.u64List { name: "answer" },
+##         Param.u64_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed [12, 34, 56]
 ## ```
-u64List : ParameterConfigBaseParams -> CliBuilder (List U64) {}action StopCollectingAction
-u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, name, help }
+u64_list : ParameterConfigBaseParams -> CliBuilder (List U64) {}action StopCollectingAction
+u64_list = \{ name, help ? "" } -> list { parser: Str.toU64, type: num_type_name, name, help }
 
 ## Add a required `U128` parameter to your CLI builder.
 ##
@@ -668,13 +668,13 @@ u64List = \{ name, help ? "" } -> list { parser: Str.toU64, type: numTypeName, n
 ##     { parser } =
 ##         Param.u128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u128 : DefaultableParameterConfigBaseParams U128 -> CliBuilder U128 {}action GetParamsAction
-u128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU128, type: numTypeName, name, help, default }
+u128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU128, type: num_type_name, name, help, default }
 
 ## Add an optional `U128` parameter to your CLI builder.
 ##
@@ -683,15 +683,15 @@ u128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toU128,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeU128 { name: "answer" },
+##         Param.maybe_u128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU128 : ParameterConfigBaseParams -> CliBuilder (Result U128 [NoValue]) {}action GetParamsAction
-maybeU128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, name, help }
+maybe_u128 : ParameterConfigBaseParams -> CliBuilder (Result U128 [NoValue]) {}action GetParamsAction
+maybe_u128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: num_type_name, name, help }
 
 ## Add a `U128` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -702,15 +702,15 @@ maybeU128 = \{ name, help ? "" } -> maybe { parser: Str.toU128, type: numTypeNam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.u128List { name: "answer" },
+##         Param.u128_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "56"]
 ##     == SuccessfullyParsed [12, 34, 56]
 ## ```
-u128List : ParameterConfigBaseParams -> CliBuilder (List U128) {}action StopCollectingAction
-u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName, name, help }
+u128_list : ParameterConfigBaseParams -> CliBuilder (List U128) {}action StopCollectingAction
+u128_list = \{ name, help ? "" } -> list { parser: Str.toU128, type: num_type_name, name, help }
 
 ## Add a required `I8` parameter to your CLI builder.
 ##
@@ -722,13 +722,13 @@ u128List = \{ name, help ? "" } -> list { parser: Str.toU128, type: numTypeName,
 ##     { parser } =
 ##         Param.i8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i8 : DefaultableParameterConfigBaseParams I8 -> CliBuilder I8 {}action GetParamsAction
-i8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI8, type: numTypeName, name, help, default }
+i8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI8, type: num_type_name, name, help, default }
 
 ## Add an optional `I8` parameter to your CLI builder.
 ##
@@ -737,15 +737,15 @@ i8 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI8, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeI8 { name: "answer" },
+##         Param.maybe_i8 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI8 : ParameterConfigBaseParams -> CliBuilder (Result I8 [NoValue]) {}action GetParamsAction
-maybeI8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, name, help }
+maybe_i8 : ParameterConfigBaseParams -> CliBuilder (Result I8 [NoValue]) {}action GetParamsAction
+maybe_i8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: num_type_name, name, help }
 
 ## Add an `I8` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -756,15 +756,15 @@ maybeI8 = \{ name, help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, n
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.i8List { name: "answer" },
+##         Param.i8_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed [12, 34, -56]
 ## ```
-i8List : ParameterConfigBaseParams -> CliBuilder (List I8) {}action StopCollectingAction
-i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, name, help }
+i8_list : ParameterConfigBaseParams -> CliBuilder (List I8) {}action StopCollectingAction
+i8_list = \{ name, help ? "" } -> list { parser: Str.toI8, type: num_type_name, name, help }
 
 ## Add a required `I16` parameter to your CLI builder.
 ##
@@ -776,13 +776,13 @@ i8List = \{ name, help ? "" } -> list { parser: Str.toI8, type: numTypeName, nam
 ##     { parser } =
 ##         Param.i16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i16 : DefaultableParameterConfigBaseParams I16 -> CliBuilder I16 {}action GetParamsAction
-i16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI16, type: numTypeName, name, help, default }
+i16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI16, type: num_type_name, name, help, default }
 
 ## Add an optional `I16` parameter to your CLI builder.
 ##
@@ -791,15 +791,15 @@ i16 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI16, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeI16 { name: "answer" },
+##         Param.maybe_i16 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI16 : ParameterConfigBaseParams -> CliBuilder (Result I16 [NoValue]) {}action GetParamsAction
-maybeI16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, name, help }
+maybe_i16 : ParameterConfigBaseParams -> CliBuilder (Result I16 [NoValue]) {}action GetParamsAction
+maybe_i16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: num_type_name, name, help }
 
 ## Add an `I16` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -810,15 +810,15 @@ maybeI16 = \{ name, help ? "" } -> maybe { parser: Str.toI16, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.i16List { name: "answer" },
+##         Param.i16_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed [12, 34, -56]
 ## ```
-i16List : ParameterConfigBaseParams -> CliBuilder (List I16) {}action StopCollectingAction
-i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, name, help }
+i16_list : ParameterConfigBaseParams -> CliBuilder (List I16) {}action StopCollectingAction
+i16_list = \{ name, help ? "" } -> list { parser: Str.toI16, type: num_type_name, name, help }
 
 ## Add a required `I32` parameter to your CLI builder.
 ##
@@ -830,13 +830,13 @@ i16List = \{ name, help ? "" } -> list { parser: Str.toI16, type: numTypeName, n
 ##     { parser } =
 ##         Param.i32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i32 : DefaultableParameterConfigBaseParams I32 -> CliBuilder I32 {}action GetParamsAction
-i32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI32, type: numTypeName, name, help, default }
+i32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI32, type: num_type_name, name, help, default }
 
 ## Add an optional `I32` parameter to your CLI builder.
 ##
@@ -845,15 +845,15 @@ i32 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeI32 { name: "answer" },
+##         Param.maybe_i32 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI32 : ParameterConfigBaseParams -> CliBuilder (Result I32 [NoValue]) {}action GetParamsAction
-maybeI32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, name, help }
+maybe_i32 : ParameterConfigBaseParams -> CliBuilder (Result I32 [NoValue]) {}action GetParamsAction
+maybe_i32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: num_type_name, name, help }
 
 ## Add an `I32` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -864,15 +864,15 @@ maybeI32 = \{ name, help ? "" } -> maybe { parser: Str.toI32, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.i32List { name: "answer" },
+##         Param.i32_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed [12, 34, -56]
 ## ```
-i32List : ParameterConfigBaseParams -> CliBuilder (List I32) {}action StopCollectingAction
-i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, name, help }
+i32_list : ParameterConfigBaseParams -> CliBuilder (List I32) {}action StopCollectingAction
+i32_list = \{ name, help ? "" } -> list { parser: Str.toI32, type: num_type_name, name, help }
 
 ## Add a required `I64` parameter to your CLI builder.
 ##
@@ -884,13 +884,13 @@ i32List = \{ name, help ? "" } -> list { parser: Str.toI32, type: numTypeName, n
 ##     { parser } =
 ##         Param.i64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i64 : DefaultableParameterConfigBaseParams I64 -> CliBuilder I64 {}action GetParamsAction
-i64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI64, type: numTypeName, name, help, default }
+i64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI64, type: num_type_name, name, help, default }
 
 ## Add an optional `I64` parameter to your CLI builder.
 ##
@@ -899,15 +899,15 @@ i64 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeI64 { name: "answer" },
+##         Param.maybe_i64 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI64 : ParameterConfigBaseParams -> CliBuilder (Result I64 [NoValue]) {}action GetParamsAction
-maybeI64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, name, help }
+maybe_i64 : ParameterConfigBaseParams -> CliBuilder (Result I64 [NoValue]) {}action GetParamsAction
+maybe_i64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: num_type_name, name, help }
 
 ## Add an `I64` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -918,15 +918,15 @@ maybeI64 = \{ name, help ? "" } -> maybe { parser: Str.toI64, type: numTypeName,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.i64List { name: "answer" },
+##         Param.i64_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed [12, 34, -56]
 ## ```
-i64List : ParameterConfigBaseParams -> CliBuilder (List I64) {}action StopCollectingAction
-i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, name, help }
+i64_list : ParameterConfigBaseParams -> CliBuilder (List I64) {}action StopCollectingAction
+i64_list = \{ name, help ? "" } -> list { parser: Str.toI64, type: num_type_name, name, help }
 
 ## Add a required `I128` parameter to your CLI builder.
 ##
@@ -938,13 +938,13 @@ i64List = \{ name, help ? "" } -> list { parser: Str.toI64, type: numTypeName, n
 ##     { parser } =
 ##         Param.i128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i128 : DefaultableParameterConfigBaseParams I128 -> CliBuilder I128 {}action GetParamsAction
-i128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI128, type: numTypeName, name, help, default }
+i128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI128, type: num_type_name, name, help, default }
 
 ## Add an optional `I128` parameter to your CLI builder.
 ##
@@ -953,15 +953,15 @@ i128 = \{ name, help ? "", default ? NoDefault } -> single { parser: Str.toI128,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.maybeI128 { name: "answer" },
+##         Param.maybe_i128 { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI128 : ParameterConfigBaseParams -> CliBuilder (Result I128 [NoValue]) {}action GetParamsAction
-maybeI128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, name, help }
+maybe_i128 : ParameterConfigBaseParams -> CliBuilder (Result I128 [NoValue]) {}action GetParamsAction
+maybe_i128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: num_type_name, name, help }
 
 ## Add an `I128` parameter that can be provided multiple times
 ## to your CLI builder.
@@ -972,12 +972,12 @@ maybeI128 = \{ name, help ? "" } -> maybe { parser: Str.toI128, type: numTypeNam
 ## ```roc
 ## expect
 ##     { parser } =
-##         Param.i128List { name: "answer" },
+##         Param.i128_list { name: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "12", "34", "--", "-56"]
 ##     == SuccessfullyParsed [12, 34, -56]
 ## ```
-i128List : ParameterConfigBaseParams -> CliBuilder (List I128) {}action StopCollectingAction
-i128List = \{ name, help ? "" } -> list { parser: Str.toI128, type: numTypeName, name, help }
+i128_list : ParameterConfigBaseParams -> CliBuilder (List I128) {}action StopCollectingAction
+i128_list = \{ name, help ? "" } -> list { parser: Str.toI128, type: num_type_name, name, help }

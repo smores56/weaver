@@ -12,18 +12,19 @@ import weaver.Param
 main! = \{} ->
     args = Arg.list! {}
 
-    when Cli.parseOrDisplayMessage cliParser args is
-        Ok data ->
-            Stdout.line! "Successfully parsed! Here's what I got:"
-            Stdout.line! ""
-            Stdout.line! (Inspect.toStr data)
-
-        Err message ->
-            Stdout.line! message
-
+    data =
+        Cli.parse_or_display_message cli_parser args
+        |> try Result.onErr! \message ->
+            try Stdout.line! message
             Err (Exit 1 "")
 
-cliParser =
+    try Stdout.line! "Successfully parsed! Here's what I got:"
+    try Stdout.line! ""
+    try Stdout.line! (Inspect.toStr data)
+
+    Ok {}
+
+cli_parser =
     { Cli.weave <-
         alpha: Opt.u64 {
             short: "a",
@@ -37,14 +38,14 @@ cliParser =
             help: "Set the beta level. [default: PI]",
             default: Generate (\{} -> Num.pi),
         },
-        file: Param.maybeStr {
+        file: Param.maybe_str {
             name: "file",
             help: "The file to process. [default: NONE]",
         }
-        |> Cli.map \f -> Result.withDefault f "NONE",
+        |> Cli.map \f -> Result.with_default f "NONE",
     }
     |> Cli.finish {
         name: "default-values",
         version: "v0.0.1",
     }
-    |> Cli.assertValid
+    |> Cli.assert_valid

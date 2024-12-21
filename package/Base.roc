@@ -3,11 +3,11 @@ module [
     ArgParserParams,
     ArgParserState,
     ArgParser,
-    onSuccessfulArgParse,
-    mapSuccessfullyParsed,
+    on_successful_arg_parse,
+    map_successfully_parsed,
     ArgExtractErr,
-    strTypeName,
-    numTypeName,
+    str_type_name,
+    num_type_name,
     TextStyle,
     ExpectedValue,
     Plurality,
@@ -20,8 +20,8 @@ module [
     OptionConfigParams,
     DefaultableOptionConfigParams,
     OptionConfig,
-    helpOption,
-    versionOption,
+    help_option,
+    version_option,
     ParameterConfigBaseParams,
     DefaultableParameterConfigBaseParams,
     ParameterConfigParams,
@@ -38,19 +38,19 @@ import Parser exposing [Arg]
 
 ## The result of attempting to parse args into config data.
 ArgParserResult a : [
-    ShowHelp { subcommandPath : List Str },
+    ShowHelp { subcommand_path : List Str },
     ShowVersion,
-    IncorrectUsage ArgExtractErr { subcommandPath : List Str },
+    IncorrectUsage ArgExtractErr { subcommand_path : List Str },
     SuccessfullyParsed a,
 ]
 
 ## The parameters that an [ArgParser] takes to extract data
 ## from args.
-ArgParserParams : { args : List Arg, subcommandPath : List Str }
+ArgParserParams : { args : List Arg, subcommand_path : List Str }
 
 ## The intermediate state that an [ArgParser] passes between
 ## different parsing steps.
-ArgParserState a : { data : a, remainingArgs : List Arg, subcommandPath : List Str }
+ArgParserState a : { data : a, remaining_args : List Arg, subcommand_path : List Str }
 
 ## A function that takes command line arguments and a subcommand,
 ## and attempts to extract configuration data from said arguments.
@@ -61,24 +61,24 @@ ArgParser a : ArgParserParams -> ArgParserResult (ArgParserState a)
 ## If an [ArgParser] successfully parses some data, then said data
 ## is provided to a callback and the resulting [ArgParserResult] is
 ## passed along in the newly bound [ArgParser].
-onSuccessfulArgParse : ArgParser a, (ArgParserState a -> ArgParserResult (ArgParserState b)) -> ArgParser b
-onSuccessfulArgParse = \result, mapper ->
+on_successful_arg_parse : ArgParser a, (ArgParserState a -> ArgParserResult (ArgParserState b)) -> ArgParser b
+on_successful_arg_parse = \result, mapper ->
     \input ->
         when result input is
             ShowVersion -> ShowVersion
-            ShowHelp { subcommandPath } -> ShowHelp { subcommandPath }
-            IncorrectUsage argExtractErr { subcommandPath } -> IncorrectUsage argExtractErr { subcommandPath }
-            SuccessfullyParsed { data, remainingArgs, subcommandPath } ->
-                mapper { data, remainingArgs, subcommandPath }
+            ShowHelp { subcommand_path } -> ShowHelp { subcommand_path }
+            IncorrectUsage arg_extract_err { subcommand_path } -> IncorrectUsage arg_extract_err { subcommand_path }
+            SuccessfullyParsed { data, remaining_args, subcommand_path } ->
+                mapper { data, remaining_args, subcommand_path }
 
 ## Maps successfully parsed data that was parsed by an [ArgParser]
 ## by a user-defined operation.
-mapSuccessfullyParsed : ArgParserResult a, (a -> b) -> ArgParserResult b
-mapSuccessfullyParsed = \result, mapper ->
+map_successfully_parsed : ArgParserResult a, (a -> b) -> ArgParserResult b
+map_successfully_parsed = \result, mapper ->
     when result is
         ShowVersion -> ShowVersion
-        ShowHelp { subcommandPath } -> ShowHelp { subcommandPath }
-        IncorrectUsage argExtractErr { subcommandPath } -> IncorrectUsage argExtractErr { subcommandPath }
+        ShowHelp { subcommand_path } -> ShowHelp { subcommand_path }
+        IncorrectUsage arg_extract_err { subcommand_path } -> IncorrectUsage arg_extract_err { subcommand_path }
         SuccessfullyParsed parsed ->
             SuccessfullyParsed (mapper parsed)
 
@@ -98,8 +98,8 @@ ArgExtractErr : [
     ExtraParamProvided Str,
 ]
 
-strTypeName = "str"
-numTypeName = "num"
+str_type_name = "str"
+num_type_name = "num"
 
 ## Whether help text should have fancy styling.
 TextStyle : [Color, Plain]
@@ -154,7 +154,7 @@ DefaultableOptionConfigParams a : {
 
 ## Metadata for options in our CLI building system.
 OptionConfig : {
-    expectedValue : ExpectedValue,
+    expected_value : ExpectedValue,
     plurality : Plurality,
     short : Str,
     long : Str,
@@ -162,22 +162,22 @@ OptionConfig : {
 }
 
 ## Metadata for the `-h/--help` option that we parse automatically.
-helpOption : OptionConfig
-helpOption = {
+help_option : OptionConfig
+help_option = {
     short: "h",
     long: "help",
     help: "Show this help page.",
-    expectedValue: NothingExpected,
+    expected_value: NothingExpected,
     plurality: Optional,
 }
 
 ## Metadata for the `-V/--version` option that we parse automatically.
-versionOption : OptionConfig
-versionOption = {
+version_option : OptionConfig
+version_option = {
     short: "V",
     long: "version",
     help: "Show the version.",
-    expectedValue: NothingExpected,
+    expected_value: NothingExpected,
     plurality: Optional,
 }
 
@@ -223,7 +223,7 @@ CliConfigParams : {
     authors ? List Str,
     version ? Str,
     description ? Str,
-    textStyle ? TextStyle,
+    text_style ? TextStyle,
 }
 
 ## Metadata for a root-level CLI.
@@ -250,13 +250,12 @@ SubcommandConfigParams : {
 ## to avoid infinite recursion.
 SubcommandsConfig : [
     NoSubcommands,
-    HasSubcommands
-        (Dict Str {
-            description : Str,
-            subcommands : SubcommandsConfig,
-            options : List OptionConfig,
-            parameters : List ParameterConfig,
-        }),
+    HasSubcommands (Dict Str {
+        description : Str,
+        subcommands : SubcommandsConfig,
+        options : List OptionConfig,
+        parameters : List ParameterConfig,
+    }),
 ]
 
 ## Metadata for a subcommand.

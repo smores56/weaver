@@ -6,47 +6,47 @@ module [
     flag,
     count,
     str,
-    maybeStr,
-    strList,
+    maybe_str,
+    str_list,
     dec,
-    maybeDec,
-    decList,
+    maybe_dec,
+    dec_list,
     f32,
-    maybeF32,
-    f32List,
+    maybe_f32,
+    f32_list,
     f64,
-    maybeF64,
-    f64List,
+    maybe_f64,
+    f64_list,
     u8,
-    maybeU8,
-    u8List,
+    maybe_u8,
+    u8_list,
     u16,
-    maybeU16,
-    u16List,
+    maybe_u16,
+    u16_list,
     u32,
-    maybeU32,
-    u32List,
+    maybe_u32,
+    u32_list,
     u64,
-    maybeU64,
-    u64List,
+    maybe_u64,
+    u64_list,
     u128,
-    maybeU128,
-    u128List,
+    maybe_u128,
+    u128_list,
     i8,
-    maybeI8,
-    i8List,
+    maybe_i8,
+    i8_list,
     i16,
-    maybeI16,
-    i16List,
+    maybe_i16,
+    i16_list,
     i32,
-    maybeI32,
-    i32List,
+    maybe_i32,
+    i32_list,
     i64,
-    maybeI64,
-    i64List,
+    maybe_i64,
+    i64_list,
     i128,
-    maybeI128,
-    i128List,
+    maybe_i128,
+    i128_list,
 ]
 
 import Builder exposing [CliBuilder, GetOptionsAction]
@@ -57,28 +57,28 @@ import Base exposing [
     OptionConfigParams,
     DefaultableOptionConfigParams,
     OptionConfig,
-    strTypeName,
-    numTypeName,
+    str_type_name,
+    num_type_name,
 ]
-import Extract exposing [extractOptionValues]
+import Extract exposing [extract_option_values]
 import Parser exposing [ArgValue]
 
-builderWithOptionParser : OptionConfig, (List ArgValue -> Result data ArgExtractErr) -> CliBuilder data fromAction toAction
-builderWithOptionParser = \option, valueParser ->
-    argParser = \args ->
-        { values, remainingArgs } = try extractOptionValues { args, option }
-        data = try valueParser values
+builder_with_option_parser : OptionConfig, (List ArgValue -> Result data ArgExtractErr) -> CliBuilder data from_action to_action
+builder_with_option_parser = \option, value_parser ->
+    arg_parser = \args ->
+        { values, remaining_args } = try extract_option_values { args, option }
+        data = try value_parser values
 
-        Ok { data, remainingArgs }
+        Ok { data, remaining_args }
 
-    Builder.fromArgParser argParser
-    |> Builder.addOption option
+    Builder.from_arg_parser arg_parser
+    |> Builder.add_option option
 
-getMaybeValue : List ArgValue, OptionConfig -> Result (Result ArgValue [NoValue]) ArgExtractErr
-getMaybeValue = \values, option ->
+get_maybe_value : List ArgValue, OptionConfig -> Result (Result ArgValue [NoValue]) ArgExtractErr
+get_maybe_value = \values, option ->
     when values is
         [] -> Ok (Err NoValue)
-        [singleValue] -> Ok (Ok singleValue)
+        [single_value] -> Ok (Ok single_value)
         [..] -> Err (OptionCanOnlyBeSetOnce option)
 
 ## Add a required option that takes a custom type to your CLI builder.
@@ -95,8 +95,8 @@ getMaybeValue = \values, option ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parseColor : Str -> Result Color [InvalidValue Str]
-##     parseColor = \color ->
+##     parse_color : Str -> Result Color [InvalidValue Str]
+##     parse_color = \color ->
 ##         when color is
 ##             "green" -> Ok Green
 ##             "red" -> Ok Red
@@ -104,34 +104,34 @@ getMaybeValue = \values, option ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Opt.single { short: "c", parser: parseColor, type: "color" },
+##         Opt.single { short: "c", parser: parse_color, type: "color" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-c", "green"]
 ##     == SuccessfullyParsed Green
 ## ```
 single : DefaultableOptionConfigParams a -> CliBuilder a GetOptionsAction GetOptionsAction
 single = \{ parser, type, short ? "", long ? "", help ? "", default ? NoDefault } ->
-    option = { expectedValue: ExpectsValue type, plurality: One, short, long, help }
+    option = { expected_value: ExpectsValue type, plurality: One, short, long, help }
 
-    defaultGenerator = \{} ->
+    default_generator = \{} ->
         when default is
-            Value defaultValue -> Ok defaultValue
+            Value default_value -> Ok default_value
             Generate generator -> Ok (generator {})
             NoDefault -> Err (MissingOption option)
 
-    valueParser = \values ->
-        value = try getMaybeValue values option
+    value_parser = \values ->
+        value = try get_maybe_value values option
 
         when value is
-            Err NoValue -> defaultGenerator {}
+            Err NoValue -> default_generator {}
             Ok (Err NoValue) -> Err (NoValueProvidedForOption option)
             Ok (Ok val) ->
                 parser val
                 |> Result.mapErr \err -> InvalidOptionValue err option
 
-    builderWithOptionParser option valueParser
+    builder_with_option_parser option value_parser
 
 ## Add an optional option that takes a custom type to your CLI builder.
 ##
@@ -148,8 +148,8 @@ single = \{ parser, type, short ? "", long ? "", help ? "", default ? NoDefault 
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parseColor : Str -> Result Color [InvalidValue Str]
-##     parseColor = \color ->
+##     parse_color : Str -> Result Color [InvalidValue Str]
+##     parse_color = \color ->
 ##         when color is
 ##             "green" -> Ok Green
 ##             "red" -> Ok Red
@@ -157,19 +157,19 @@ single = \{ parser, type, short ? "", long ? "", help ? "", default ? NoDefault 
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Opt.maybe { short: "c", type: "color", parser: parseColor },
+##         Opt.maybe { short: "c", type: "color", parser: parse_color },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
 maybe : OptionConfigParams data -> CliBuilder (Result data [NoValue]) GetOptionsAction GetOptionsAction
 maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
-    option = { expectedValue: ExpectsValue type, plurality: Optional, short, long, help }
+    option = { expected_value: ExpectsValue type, plurality: Optional, short, long, help }
 
-    valueParser = \values ->
-        value = try getMaybeValue values option
+    value_parser = \values ->
+        value = try get_maybe_value values option
 
         when value is
             Err NoValue -> Ok (Err NoValue)
@@ -179,7 +179,7 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
                 |> Result.map Ok
                 |> Result.mapErr \err -> InvalidOptionValue err option
 
-    builderWithOptionParser option valueParser
+    builder_with_option_parser option value_parser
 
 ## Add an option that takes a custom type and can be given multiple times
 ## to your CLI builder.
@@ -196,8 +196,8 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ## expect
 ##     Color : [Green, Red, Blue]
 ##
-##     parseColor : Str -> Result Color [InvalidValue Str]
-##     parseColor = \color ->
+##     parse_color : Str -> Result Color [InvalidValue Str]
+##     parse_color = \color ->
 ##         when color is
 ##             "green" -> Ok Green
 ##             "red" -> Ok Red
@@ -205,18 +205,18 @@ maybe = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ##             other -> Err (InvalidValue "'$(other)' is not a valid color, must be green, red, or blue")
 ##
 ##     { parser } =
-##         Opt.list { short: "c", type: "color", parser: parseColor },
+##         Opt.list { short: "c", type: "color", parser: parse_color },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-c", "green", "--color=red"]
 ##     == SuccessfullyParsed [Green, Red]
 ## ```
 list : OptionConfigParams data -> CliBuilder (List data) GetOptionsAction GetOptionsAction
 list = \{ parser, type, short ? "", long ? "", help ? "" } ->
-    option = { expectedValue: ExpectsValue type, plurality: Many, short, long, help }
+    option = { expected_value: ExpectsValue type, plurality: Many, short, long, help }
 
-    valueParser = \values ->
+    value_parser = \values ->
         List.mapTry values \value ->
             when value is
                 Err NoValue -> Err (NoValueProvidedForOption option)
@@ -224,7 +224,7 @@ list = \{ parser, type, short ? "", long ? "", help ? "" } ->
                     parser val
                     |> Result.mapErr \err -> InvalidOptionValue err option
 
-    builderWithOptionParser option valueParser
+    builder_with_option_parser option value_parser
 
 ## Add an optional flag to your CLI builder.
 ##
@@ -236,24 +236,24 @@ list = \{ parser, type, short ? "", long ? "", help ? "" } ->
 ##     { parser } =
 ##         Opt.flag { short: "f", long: "force" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-f"]
 ##     == SuccessfullyParsed Bool.true
 ## ```
 flag : OptionConfigBaseParams -> CliBuilder Bool GetOptionsAction GetOptionsAction
 flag = \{ short ? "", long ? "", help ? "" } ->
-    option = { expectedValue: NothingExpected, plurality: Optional, short, long, help }
+    option = { expected_value: NothingExpected, plurality: Optional, short, long, help }
 
-    valueParser = \values ->
-        value = try getMaybeValue values option
+    value_parser = \values ->
+        value = try get_maybe_value values option
 
         when value is
             Err NoValue -> Ok Bool.false
             Ok (Err NoValue) -> Ok Bool.true
             Ok (Ok _val) -> Err (OptionDoesNotExpectValue option)
 
-    builderWithOptionParser option valueParser
+    builder_with_option_parser option value_parser
 
 ## Add a flag that can be given multiple times to your CLI builder.
 ##
@@ -265,22 +265,22 @@ flag = \{ short ? "", long ? "", help ? "" } ->
 ##     { parser } =
 ##         Opt.count { short: "f", long: "force" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-f", "--force", "-fff"]
 ##     == SuccessfullyParsed 5
 ## ```
 count : OptionConfigBaseParams -> CliBuilder U64 GetOptionsAction GetOptionsAction
 count = \{ short ? "", long ? "", help ? "" } ->
-    option = { expectedValue: NothingExpected, plurality: Many, short, long, help }
+    option = { expected_value: NothingExpected, plurality: Many, short, long, help }
 
-    valueParser = \values ->
+    value_parser = \values ->
         if values |> List.any Result.isOk then
             Err (OptionDoesNotExpectValue option)
         else
             Ok (List.len values)
 
-    builderWithOptionParser option valueParser
+    builder_with_option_parser option value_parser
 
 ## Add a required option that takes a string to your CLI builder.
 ##
@@ -292,13 +292,13 @@ count = \{ short ? "", long ? "", help ? "" } ->
 ##     { parser } =
 ##         Opt.str { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=abc"]
 ##     == SuccessfullyParsed "abc"
 ## ```
 str : DefaultableOptionConfigBaseParams Str -> CliBuilder Str GetOptionsAction GetOptionsAction
-str = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Ok, type: strTypeName, short, long, help, default }
+str = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Ok, type: str_type_name, short, long, help, default }
 
 ## Add an optional option that takes a string to your CLI builder.
 ##
@@ -308,15 +308,15 @@ str = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeStr { long: "answer" },
+##         Opt.maybe_str { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeStr : OptionConfigBaseParams -> CliBuilder (Result Str [NoValue]) GetOptionsAction GetOptionsAction
-maybeStr = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: strTypeName, short, long, help }
+maybe_str : OptionConfigBaseParams -> CliBuilder (Result Str [NoValue]) GetOptionsAction GetOptionsAction
+maybe_str = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: str_type_name, short, long, help }
 
 ## Add an option that takes a string and can be given multiple times
 ## to your CLI builder.
@@ -327,15 +327,15 @@ maybeStr = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Ok, type: st
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.strList { long: "answer" },
+##         Opt.str_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "abc", "--answer", "def", "--answer=ghi"]
 ##     == SuccessfullyParsed ["abc", "def", "ghi"]
 ## ```
-strList : OptionConfigBaseParams -> CliBuilder (List Str) GetOptionsAction GetOptionsAction
-strList = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: strTypeName, short, long, help }
+str_list : OptionConfigBaseParams -> CliBuilder (List Str) GetOptionsAction GetOptionsAction
+str_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: str_type_name, short, long, help }
 
 ## Add a required option that takes a `Dec` to your CLI builder.
 ##
@@ -347,13 +347,13 @@ strList = \{ short ? "", long ? "", help ? "" } -> list { parser: Ok, type: strT
 ##     { parser } =
 ##         Opt.dec { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
 dec : DefaultableOptionConfigBaseParams Dec -> CliBuilder Dec GetOptionsAction GetOptionsAction
-dec = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toDec, type: numTypeName, short, long, help, default }
+dec = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toDec, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `Dec` to your CLI builder.
 ##
@@ -363,15 +363,15 @@ dec = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeDec { long: "answer" },
+##         Opt.maybe_dec { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeDec : OptionConfigBaseParams -> CliBuilder (Result Dec [NoValue]) GetOptionsAction GetOptionsAction
-maybeDec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, type: numTypeName, short, long, help }
+maybe_dec : OptionConfigBaseParams -> CliBuilder (Result Dec [NoValue]) GetOptionsAction GetOptionsAction
+maybe_dec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `Dec` and can be given multiple times
 ## to your CLI builder.
@@ -382,15 +382,15 @@ maybeDec = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toDec, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.decList { long: "answer" },
+##         Opt.dec_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
 ##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
-decList : OptionConfigBaseParams -> CliBuilder (List Dec) GetOptionsAction GetOptionsAction
-decList = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, type: numTypeName, short, long, help }
+dec_list : OptionConfigBaseParams -> CliBuilder (List Dec) GetOptionsAction GetOptionsAction
+dec_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `F32` to your CLI builder.
 ##
@@ -402,13 +402,13 @@ decList = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toDec, typ
 ##     { parser } =
 ##         Opt.f32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
 f32 : DefaultableOptionConfigBaseParams F32 -> CliBuilder F32 GetOptionsAction GetOptionsAction
-f32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toF32, type: numTypeName, short, long, help, default }
+f32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toF32, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `F32` to your CLI builder.
 ##
@@ -418,15 +418,15 @@ f32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeF32 { long: "answer" },
+##         Opt.maybe_f32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeF32 : OptionConfigBaseParams -> CliBuilder (Result F32 [NoValue]) GetOptionsAction GetOptionsAction
-maybeF32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, type: numTypeName, short, long, help }
+maybe_f32 : OptionConfigBaseParams -> CliBuilder (Result F32 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_f32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `F32` and can be given multiple times
 ## to your CLI builder.
@@ -437,15 +437,15 @@ maybeF32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.f32List { long: "answer" },
+##         Opt.f32_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
 ##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
-f32List : OptionConfigBaseParams -> CliBuilder (List F32) GetOptionsAction GetOptionsAction
-f32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, type: numTypeName, short, long, help }
+f32_list : OptionConfigBaseParams -> CliBuilder (List F32) GetOptionsAction GetOptionsAction
+f32_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `F64` to your CLI builder.
 ##
@@ -457,13 +457,13 @@ f32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF32, typ
 ##     { parser } =
 ##         Opt.f64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42.5"]
 ##     == SuccessfullyParsed 42.5
 ## ```
 f64 : DefaultableOptionConfigBaseParams F64 -> CliBuilder F64 GetOptionsAction GetOptionsAction
-f64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toF64, type: numTypeName, short, long, help, default }
+f64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toF64, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `F64` to your CLI builder.
 ##
@@ -473,15 +473,15 @@ f64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeF64 { long: "answer" },
+##         Opt.maybe_f64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeF64 : OptionConfigBaseParams -> CliBuilder (Result F64 [NoValue]) GetOptionsAction GetOptionsAction
-maybeF64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, type: numTypeName, short, long, help }
+maybe_f64 : OptionConfigBaseParams -> CliBuilder (Result F64 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_f64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `F64` and can be given multiple times
 ## to your CLI builder.
@@ -492,15 +492,15 @@ maybeF64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toF64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.f64List { long: "answer" },
+##         Opt.f64_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "-3.0"]
 ##     == SuccessfullyParsed [1.0, 2.0, -3.0]
 ## ```
-f64List : OptionConfigBaseParams -> CliBuilder (List F64) GetOptionsAction GetOptionsAction
-f64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, type: numTypeName, short, long, help }
+f64_list : OptionConfigBaseParams -> CliBuilder (List F64) GetOptionsAction GetOptionsAction
+f64_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `U8` to your CLI builder.
 ##
@@ -512,13 +512,13 @@ f64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toF64, typ
 ##     { parser } =
 ##         Opt.u8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u8 : DefaultableOptionConfigBaseParams U8 -> CliBuilder U8 GetOptionsAction GetOptionsAction
-u8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU8, type: numTypeName, short, long, help, default }
+u8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU8, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `U8` to your CLI builder.
 ##
@@ -528,15 +528,15 @@ u8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pars
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeU8 { long: "answer" },
+##         Opt.maybe_u8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU8 : OptionConfigBaseParams -> CliBuilder (Result U8 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, type: numTypeName, short, long, help }
+maybe_u8 : OptionConfigBaseParams -> CliBuilder (Result U8 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `U8` and can be given multiple times
 ## to your CLI builder.
@@ -547,15 +547,15 @@ maybeU8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU8, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.u8List { long: "answer" },
+##         Opt.u8_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u8List : OptionConfigBaseParams -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
-u8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type: numTypeName, short, long, help }
+u8_list : OptionConfigBaseParams -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
+u8_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `U16` to your CLI builder.
 ##
@@ -567,13 +567,13 @@ u8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU8, type:
 ##     { parser } =
 ##         Opt.u16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u16 : DefaultableOptionConfigBaseParams U16 -> CliBuilder U16 GetOptionsAction GetOptionsAction
-u16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU16, type: numTypeName, short, long, help, default }
+u16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU16, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `U16` to your CLI builder.
 ##
@@ -583,15 +583,15 @@ u16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeU16 { long: "answer" },
+##         Opt.maybe_u16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU16 : OptionConfigBaseParams -> CliBuilder (Result U16 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, type: numTypeName, short, long, help }
+maybe_u16 : OptionConfigBaseParams -> CliBuilder (Result U16 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `U16` and can be given multiple times
 ## to your CLI builder.
@@ -602,15 +602,15 @@ maybeU16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU16, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.u16List { long: "answer" },
+##         Opt.u16_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u16List : OptionConfigBaseParams -> CliBuilder (List U16) GetOptionsAction GetOptionsAction
-u16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, type: numTypeName, short, long, help }
+u16_list : OptionConfigBaseParams -> CliBuilder (List U16) GetOptionsAction GetOptionsAction
+u16_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `U32` to your CLI builder.
 ##
@@ -622,13 +622,13 @@ u16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU16, typ
 ##     { parser } =
 ##         Opt.u32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u32 : DefaultableOptionConfigBaseParams U32 -> CliBuilder U32 GetOptionsAction GetOptionsAction
-u32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU32, type: numTypeName, short, long, help, default }
+u32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU32, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `U32` to your CLI builder.
 ##
@@ -638,15 +638,15 @@ u32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeU32 { long: "answer" },
+##         Opt.maybe_u32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU32 : OptionConfigBaseParams -> CliBuilder (Result U32 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, type: numTypeName, short, long, help }
+maybe_u32 : OptionConfigBaseParams -> CliBuilder (Result U32 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `U32` and can be given multiple times
 ## to your CLI builder.
@@ -657,15 +657,15 @@ maybeU32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.u32List { long: "answer" },
+##         Opt.u32_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u32List : OptionConfigBaseParams -> CliBuilder (List U32) GetOptionsAction GetOptionsAction
-u32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, type: numTypeName, short, long, help }
+u32_list : OptionConfigBaseParams -> CliBuilder (List U32) GetOptionsAction GetOptionsAction
+u32_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `U64` to your CLI builder.
 ##
@@ -677,13 +677,13 @@ u32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU32, typ
 ##     { parser } =
 ##         Opt.u64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u64 : DefaultableOptionConfigBaseParams U64 -> CliBuilder U64 GetOptionsAction GetOptionsAction
-u64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU64, type: numTypeName, short, long, help, default }
+u64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU64, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `U64` to your CLI builder.
 ##
@@ -693,15 +693,15 @@ u64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeU64 { long: "answer" },
+##         Opt.maybe_u64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU64 : OptionConfigBaseParams -> CliBuilder (Result U64 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, type: numTypeName, short, long, help }
+maybe_u64 : OptionConfigBaseParams -> CliBuilder (Result U64 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `U64` and can be given multiple times
 ## to your CLI builder.
@@ -712,15 +712,15 @@ maybeU64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.u64List { long: "answer" },
+##         Opt.u64_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u64List : OptionConfigBaseParams -> CliBuilder (List U64) GetOptionsAction GetOptionsAction
-u64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, type: numTypeName, short, long, help }
+u64_list : OptionConfigBaseParams -> CliBuilder (List U64) GetOptionsAction GetOptionsAction
+u64_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, type: num_type_name, short, long, help }
 
 ## Add a required option that takes a `U128` to your CLI builder.
 ##
@@ -732,13 +732,13 @@ u64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU64, typ
 ##     { parser } =
 ##         Opt.u128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 u128 : DefaultableOptionConfigBaseParams U128 -> CliBuilder U128 GetOptionsAction GetOptionsAction
-u128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU128, type: numTypeName, short, long, help, default }
+u128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toU128, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes a `U128` to your CLI builder.
 ##
@@ -748,15 +748,15 @@ u128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pa
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeU128 { long: "answer" },
+##         Opt.maybe_u128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeU128 : OptionConfigBaseParams -> CliBuilder (Result U128 [NoValue]) GetOptionsAction GetOptionsAction
-maybeU128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128, type: numTypeName, short, long, help }
+maybe_u128 : OptionConfigBaseParams -> CliBuilder (Result U128 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_u128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128, type: num_type_name, short, long, help }
 
 ## Add an option that takes a `U128` and can be given multiple times
 ## to your CLI builder.
@@ -767,15 +767,15 @@ maybeU128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toU128,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.u128List { long: "answer" },
+##         Opt.u128_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-u128List : OptionConfigBaseParams -> CliBuilder (List U128) GetOptionsAction GetOptionsAction
-u128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, type: numTypeName, short, long, help }
+u128_list : OptionConfigBaseParams -> CliBuilder (List U128) GetOptionsAction GetOptionsAction
+u128_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, type: num_type_name, short, long, help }
 
 ## Add a required option that takes an `I8` to your CLI builder.
 ##
@@ -787,13 +787,13 @@ u128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toU128, t
 ##     { parser } =
 ##         Opt.i8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i8 : DefaultableOptionConfigBaseParams I8 -> CliBuilder I8 GetOptionsAction GetOptionsAction
-i8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI8, type: numTypeName, short, long, help, default }
+i8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI8, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes an `I8` to your CLI builder.
 ##
@@ -803,15 +803,15 @@ i8 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pars
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeI8 { long: "answer" },
+##         Opt.maybe_i8 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI8 : OptionConfigBaseParams -> CliBuilder (Result I8 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, type: numTypeName, short, long, help }
+maybe_i8 : OptionConfigBaseParams -> CliBuilder (Result I8 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, type: num_type_name, short, long, help }
 
 ## Add an option that takes an `I8` and can be given multiple times
 ## to your CLI builder.
@@ -822,15 +822,15 @@ maybeI8 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI8, typ
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.i8List { long: "answer" },
+##         Opt.i8_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i8List : OptionConfigBaseParams -> CliBuilder (List I8) GetOptionsAction GetOptionsAction
-i8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type: numTypeName, short, long, help }
+i8_list : OptionConfigBaseParams -> CliBuilder (List I8) GetOptionsAction GetOptionsAction
+i8_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type: num_type_name, short, long, help }
 
 ## Add a required option that takes an `I16` to your CLI builder.
 ##
@@ -842,13 +842,13 @@ i8List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI8, type:
 ##     { parser } =
 ##         Opt.i16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i16 : DefaultableOptionConfigBaseParams I16 -> CliBuilder I16 GetOptionsAction GetOptionsAction
-i16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI16, type: numTypeName, short, long, help, default }
+i16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI16, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes an `I16` to your CLI builder.
 ##
@@ -858,15 +858,15 @@ i16 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeI16 { long: "answer" },
+##         Opt.maybe_i16 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI16 : OptionConfigBaseParams -> CliBuilder (Result I16 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, type: numTypeName, short, long, help }
+maybe_i16 : OptionConfigBaseParams -> CliBuilder (Result I16 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, type: num_type_name, short, long, help }
 
 ## Add an option that takes an `I16` and can be given multiple times
 ## to your CLI builder.
@@ -877,15 +877,15 @@ maybeI16 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI16, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.i16List { long: "answer" },
+##         Opt.i16_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i16List : OptionConfigBaseParams -> CliBuilder (List I16) GetOptionsAction GetOptionsAction
-i16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, type: numTypeName, short, long, help }
+i16_list : OptionConfigBaseParams -> CliBuilder (List I16) GetOptionsAction GetOptionsAction
+i16_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, type: num_type_name, short, long, help }
 
 ## Add a required option that takes an `I32` to your CLI builder.
 ##
@@ -897,13 +897,13 @@ i16List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI16, typ
 ##     { parser } =
 ##         Opt.i32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i32 : DefaultableOptionConfigBaseParams I32 -> CliBuilder I32 GetOptionsAction GetOptionsAction
-i32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI32, type: numTypeName, short, long, help, default }
+i32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI32, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes an `I32` to your CLI builder.
 ##
@@ -913,15 +913,15 @@ i32 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeI32 { long: "answer" },
+##         Opt.maybe_i32 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI32 : OptionConfigBaseParams -> CliBuilder (Result I32 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, type: numTypeName, short, long, help }
+maybe_i32 : OptionConfigBaseParams -> CliBuilder (Result I32 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, type: num_type_name, short, long, help }
 
 ## Add an option that takes an `I32` and can be given multiple times
 ## to your CLI builder.
@@ -932,15 +932,15 @@ maybeI32 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI32, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.i32List { long: "answer" },
+##         Opt.i32_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i32List : OptionConfigBaseParams -> CliBuilder (List I32) GetOptionsAction GetOptionsAction
-i32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, type: numTypeName, short, long, help }
+i32_list : OptionConfigBaseParams -> CliBuilder (List I32) GetOptionsAction GetOptionsAction
+i32_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, type: num_type_name, short, long, help }
 
 ## Add a required option that takes an `I64` to your CLI builder.
 ##
@@ -952,13 +952,13 @@ i32List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI32, typ
 ##     { parser } =
 ##         Opt.i64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i64 : DefaultableOptionConfigBaseParams I64 -> CliBuilder I64 GetOptionsAction GetOptionsAction
-i64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI64, type: numTypeName, short, long, help, default }
+i64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI64, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes an `I64` to your CLI builder.
 ##
@@ -968,15 +968,15 @@ i64 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { par
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeI64 { long: "answer" },
+##         Opt.maybe_i64 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI64 : OptionConfigBaseParams -> CliBuilder (Result I64 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, type: numTypeName, short, long, help }
+maybe_i64 : OptionConfigBaseParams -> CliBuilder (Result I64 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, type: num_type_name, short, long, help }
 
 ## Add an option that takes an `I64` and can be given multiple times
 ## to your CLI builder.
@@ -987,15 +987,15 @@ maybeI64 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI64, t
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.i64List { long: "answer" },
+##         Opt.i64_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i64List : OptionConfigBaseParams -> CliBuilder (List I64) GetOptionsAction GetOptionsAction
-i64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, type: numTypeName, short, long, help }
+i64_list : OptionConfigBaseParams -> CliBuilder (List I64) GetOptionsAction GetOptionsAction
+i64_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, type: num_type_name, short, long, help }
 
 ## Add a required option that takes an `I128` to your CLI builder.
 ##
@@ -1007,13 +1007,13 @@ i64List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI64, typ
 ##     { parser } =
 ##         Opt.i128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "--answer=42"]
 ##     == SuccessfullyParsed 42
 ## ```
 i128 : DefaultableOptionConfigBaseParams I128 -> CliBuilder I128 GetOptionsAction GetOptionsAction
-i128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI128, type: numTypeName, short, long, help, default }
+i128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { parser: Str.toI128, type: num_type_name, short, long, help, default }
 
 ## Add an optional option that takes an `I128` to your CLI builder.
 ##
@@ -1023,15 +1023,15 @@ i128 = \{ short ? "", long ? "", help ? "", default ? NoDefault } -> single { pa
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.maybeI128 { long: "answer" },
+##         Opt.maybe_i128 { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example"]
 ##     == SuccessfullyParsed (Err NoValue)
 ## ```
-maybeI128 : OptionConfigBaseParams -> CliBuilder (Result I128 [NoValue]) GetOptionsAction GetOptionsAction
-maybeI128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128, type: numTypeName, short, long, help }
+maybe_i128 : OptionConfigBaseParams -> CliBuilder (Result I128 [NoValue]) GetOptionsAction GetOptionsAction
+maybe_i128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128, type: num_type_name, short, long, help }
 
 ## Add an option that takes an `I128` and can be given multiple times
 ## to your CLI builder.
@@ -1042,12 +1042,12 @@ maybeI128 = \{ short ? "", long ? "", help ? "" } -> maybe { parser: Str.toI128,
 ## ```roc
 ## expect
 ##     { parser } =
-##         Opt.i128List { long: "answer" },
+##         Opt.i128_list { long: "answer" },
 ##         |> Cli.finish { name: "example" }
-##         |> Cli.assertValid
+##         |> Cli.assert_valid
 ##
 ##     parser ["example", "-a", "1", "--answer=2", "--answer", "3"]
 ##     == SuccessfullyParsed [1, 2, 3]
 ## ```
-i128List : OptionConfigBaseParams -> CliBuilder (List I128) GetOptionsAction GetOptionsAction
-i128List = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI128, type: numTypeName, short, long, help }
+i128_list : OptionConfigBaseParams -> CliBuilder (List I128) GetOptionsAction GetOptionsAction
+i128_list = \{ short ? "", long ? "", help ? "" } -> list { parser: Str.toI128, type: num_type_name, short, long, help }

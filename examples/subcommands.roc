@@ -13,23 +13,24 @@ import weaver.SubCmd
 main! = \{} ->
     args = Arg.list! {}
 
-    when Cli.parseOrDisplayMessage cliParser args is
-        Ok data ->
-            Stdout.line! "Successfully parsed! Here's what I got:"
-            Stdout.line! ""
-            Stdout.line! (Inspect.toStr data)
-
-        Err message ->
-            Stdout.line! message
-
+    data =
+        Cli.parse_or_display_message cli_parser args
+        |> try Result.onErr! \message ->
+            try Stdout.line! message
             Err (Exit 1 "")
 
-cliParser =
+    try Stdout.line! "Successfully parsed! Here's what I got:"
+    try Stdout.line! ""
+    try Stdout.line! (Inspect.toStr data)
+
+    Ok {}
+
+cli_parser =
     { Cli.weave <-
         force: Opt.flag { short: "f", help: "Force the task to complete." },
-        sc: SubCmd.optional [subcommandParser1, subcommandParser2],
-        file: Param.maybeStr { name: "file", help: "The file to process." },
-        files: Param.strList { name: "files", help: "The rest of the files." },
+        sc: SubCmd.optional [subcommand_parser1, subcommand_parser2],
+        file: Param.maybe_str { name: "file", help: "The file to process." },
+        files: Param.str_list { name: "files", help: "The rest of the files." },
     }
     |> Cli.finish {
         name: "subcommands",
@@ -37,18 +38,18 @@ cliParser =
         authors: ["Some One <some.one@mail.com>"],
         description: "This is a basic example of what you can build with Weaver. You get safe parsing, useful error messages, and help pages all for free!",
     }
-    |> Cli.assertValid
+    |> Cli.assert_valid
 
-subcommandParser1 =
+subcommand_parser1 =
     { Cli.weave <-
-        d: Opt.maybeU64 { short: "d", help: "A non-overlapping subcommand flag with s2." },
-        volume: Opt.maybeU64 { short: "v", long: "volume", help: "How loud to grind the gears." },
-        sc: SubCmd.optional [subSubcommandParser1, subSubcommandParser2],
+        d: Opt.maybe_u64 { short: "d", help: "A non-overlapping subcommand flag with s2." },
+        volume: Opt.maybe_u64 { short: "v", long: "volume", help: "How loud to grind the gears." },
+        sc: SubCmd.optional [sub_subcommand_parser1, sub_subcommand_parser2],
     }
     |> SubCmd.finish { name: "s1", description: "A first subcommand.", mapper: S1 }
 
-subcommandParser2 =
-    Opt.maybeU64 { short: "d", help: "This doesn't overlap with s1's -d flag." }
+subcommand_parser2 =
+    Opt.maybe_u64 { short: "d", help: "This doesn't overlap with s1's -d flag." }
     |> Cli.map DFlag
     |> SubCmd.finish {
         name: "s2",
@@ -56,14 +57,14 @@ subcommandParser2 =
         mapper: S2,
     }
 
-subSubcommandParser1 =
+sub_subcommand_parser1 =
     { Cli.weave <-
         a: Opt.u64 { short: "a", help: "An example short flag for a sub-subcommand." },
         b: Opt.u64 { short: "b", help: "Another example short flag for a sub-subcommand." },
     }
     |> SubCmd.finish { name: "ss1", description: "A sub-subcommand.", mapper: SS1 }
 
-subSubcommandParser2 =
+sub_subcommand_parser2 =
     { Cli.weave <-
         a: Opt.u64 { short: "a", help: "Set the alpha level." },
         c: Opt.u64 { short: "c", long: "create", help: "Create a doohickey." },

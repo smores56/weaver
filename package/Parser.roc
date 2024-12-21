@@ -1,4 +1,4 @@
-module [parseArgs, Arg, ArgValue]
+module [parse_args, Arg, ArgValue]
 
 Arg : [
     Short Str,
@@ -9,34 +9,34 @@ Arg : [
 
 ArgValue : Result Str [NoValue]
 
-parseArgs : List Str -> List Arg
-parseArgs = \args ->
-    startingState = { parsedArgs: [], passThrough: KeepParsing }
+parse_args : List Str -> List Arg
+parse_args = \args ->
+    starting_state = { parsed_args: [], pass_through: KeepParsing }
 
-    stateAfter =
+    state_after =
         args
         |> List.dropFirst 1
-        |> List.walk startingState \{ parsedArgs, passThrough }, arg ->
-            when passThrough is
+        |> List.walk starting_state \{ parsed_args, pass_through }, arg ->
+            when pass_through is
                 KeepParsing ->
-                    parsedArg = parseArg arg
-                    when parsedArg is
+                    parsed_arg = parse_arg arg
+                    when parsed_arg is
                         Parameter "--" ->
-                            { passThrough: PassThrough, parsedArgs }
+                            { pass_through: PassThrough, parsed_args }
 
                         _other ->
-                            { passThrough: KeepParsing, parsedArgs: parsedArgs |> List.append parsedArg }
+                            { pass_through: KeepParsing, parsed_args: parsed_args |> List.append parsed_arg }
 
                 PassThrough ->
                     {
-                        passThrough: PassThrough,
-                        parsedArgs: parsedArgs |> List.append (Parameter arg),
+                        pass_through: PassThrough,
+                        parsed_args: parsed_args |> List.append (Parameter arg),
                     }
 
-    stateAfter.parsedArgs
+    state_after.parsed_args
 
-parseArg : Str -> Arg
-parseArg = \arg ->
+parse_arg : Str -> Arg
+parse_arg = \arg ->
     when Str.splitFirst arg "-" is
         Ok { before: "", after } ->
             if after == "" then
@@ -47,15 +47,15 @@ parseArg = \arg ->
                         if rest == "" || Str.startsWith rest "-" then
                             Parameter arg
                         else
-                            parseLongArg rest
+                            parse_long_arg rest
 
-                    _other -> constructSetOfOptions after
+                    _other -> construct_set_of_options after
 
         _other ->
             Parameter arg
 
-parseLongArg : Str -> Arg
-parseLongArg = \arg ->
+parse_long_arg : Str -> Arg
+parse_long_arg = \arg ->
     when Str.splitFirst arg "=" is
         Ok { before: option, after: value } ->
             Long { name: option, value: Ok value }
@@ -63,8 +63,8 @@ parseLongArg = \arg ->
         _other ->
             Long { name: arg, value: Err NoValue }
 
-constructSetOfOptions : Str -> Arg
-constructSetOfOptions = \combined ->
+construct_set_of_options : Str -> Arg
+construct_set_of_options = \combined ->
     options =
         combined
         |> Str.toUtf8
@@ -75,37 +75,37 @@ constructSetOfOptions = \combined ->
         other -> ShortGroup { names: other, complete: Complete }
 
 expect
-    parsed = parseArg "-"
+    parsed = parse_arg "-"
 
     parsed == Parameter "-"
 
 expect
-    parsed = parseArg "-a"
+    parsed = parse_arg "-a"
 
     parsed == Short "a"
 
 expect
-    parsed = parseArg "-abc"
+    parsed = parse_arg "-abc"
 
     parsed == ShortGroup { names: ["a", "b", "c"], complete: Complete }
 
 expect
-    parsed = parseArg "--abc"
+    parsed = parse_arg "--abc"
 
     parsed == Long { name: "abc", value: Err NoValue }
 
 expect
-    parsed = parseArg "--abc=xyz"
+    parsed = parse_arg "--abc=xyz"
 
     parsed == Long { name: "abc", value: Ok "xyz" }
 
 expect
-    parsed = parseArg "123"
+    parsed = parse_arg "123"
 
     parsed == Parameter "123"
 
 expect
-    parsed = parseArgs ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
+    parsed = parse_args ["this-wont-show", "-a", "123", "--passed", "-bcd", "xyz", "--", "--subject=world"]
 
     parsed
     == [

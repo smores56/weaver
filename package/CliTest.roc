@@ -3,19 +3,19 @@ module []
 import Opt
 import Cli
 
-basicCli =
+basic_cli =
     Opt.u64 { short: "a", help: "Set the alpha level." }
     |> Cli.map Alpha
-    |> Cli.finish { name: "basic-cli", version: "v1.0.0", textStyle: Plain }
-    |> Cli.assertValid
+    |> Cli.finish { name: "basic-cli", version: "v1.0.0", text_style: Plain }
+    |> Cli.assert_valid
 
 expect
-    basicCli
-    |> Cli.parseOrDisplayMessage ["basic-cli", "-a", "123"]
+    basic_cli
+    |> Cli.parse_or_display_message ["basic-cli", "-a", "123"]
     == Ok (Alpha 123)
 
 expect
-    helpMessage =
+    help_message =
         """
         basic-cli v1.0.0
 
@@ -28,6 +28,6 @@ expect
           -V, --version  Show the version.
         """
 
-    basicCli
-    |> Cli.parseOrDisplayMessage ["basic-cli", "-h"]
-    == Err helpMessage
+    basic_cli
+    |> Cli.parse_or_display_message ["basic-cli", "-h"]
+    == Err help_message
