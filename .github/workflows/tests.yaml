@@ -8,9 +8,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
-  test-examples:
+  run-tests:
     runs-on: [ubuntu-20.04]
+    name: Run Roc tests
     steps:
       - uses: actions/checkout@v3
 
@@ -32,5 +32,30 @@ jobs:
 
       - run: ./roc_nightly/roc version
 
-      # run all tests 
       - run: ./roc_nightly/roc test package/main.roc
+
+  test-docs:
+    runs-on: [ubuntu-20.04]
+    name: Validate docs generation
+    steps:
+      - uses: actions/checkout@v3
+
+      # get roc cli 
+      - name: get latest roc nightly
+        run: |
+          curl -fOL https://github.com/roc-lang/roc/releases/download/nightly/roc_nightly-linux_x86_64-latest.tar.gz
+
+      - name: rename nightly tar
+        run: mv $(ls | grep "roc_nightly.*tar\.gz") roc_nightly.tar.gz
+
+      - name: decompress the tar
+        run: tar -xzf roc_nightly.tar.gz
+
+      - run: rm roc_nightly.tar.gz
+
+      - name: simplify nightly folder name
+        run: mv roc_nightly* roc_nightly
+
+      - run: ./roc_nightly/roc version
+
+      - run: ./roc_nightly/roc docs package/main.roc
