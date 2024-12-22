@@ -36,7 +36,7 @@ full_type_name = \type_name ->
 
 ## Render [ArgExtractErr] errors as readable messages.
 ##
-## Used in [Cli.parseOrDisplayMessage].
+## Used in [Cli.parse_or_display_message].
 format_arg_extract_err : ArgExtractErr -> Str
 format_arg_extract_err = \err ->
     when err is
@@ -96,7 +96,7 @@ format_arg_extract_err = \err ->
 
 ## Render [CliValidationErr] errors as readable messages.
 ##
-## Displayed as the crash message when [Cli.assertValid] fails.
+## Displayed as the crash message when [Cli.assert_valid] fails.
 format_cli_validation_err : CliValidationErr -> Str
 format_cli_validation_err = \err ->
     value_at_subcommand_name = \{ name, subcommand_path } ->
