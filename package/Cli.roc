@@ -10,43 +10,43 @@
 ##
 ## ```roc
 ## { Cli.weave <-
-##     alpha: Opt.u64 { short: "a", help: "Set the alpha level" },
-##     verbosity: Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
-##     files: Param.str_list { name: "files", help: "The files to process." },
+##     alpha: Opt.u64({ short: "a", help: "Set the alpha level" }),
+##     verbosity: Opt.count({ short: "v", long: "verbose", help: "How loud we should be." }),
+##     files: Param.str_list({ name: "files", help: "The files to process." }),
 ## }
-## |> Cli.finish {
+## |> Cli.finish({
 ##     name: "example",
 ##     version: "v1.0.0",
 ##     authors: ["Some One <some.one@mail.com>"],
 ##     description: "Do some work with some files."
-## }
+## })
 ## |> Cli.assert_valid
 ## ```
 ##
 ## You can also add create subcommands in the same way:
 ##
 ## ```roc
-## fooSubcommand =
-##     Opt.u64 { short: "a", help: "Set the alpha level" }
-##     |> SubCmd.finish {
+## foo_subcommand =
+##     Opt.u64({ short: "a", help: "Set the alpha level" })
+##     |> SubCmd.finish({
 ##         name: "foo",
 ##         description: "Foo some stuff."
 ##         mapper: Foo,
-##     }
+##     })
 ##
-## barSubcommand =
+## bar_subcommand =
 ##     # We allow two subcommands of the same parent to have overlapping
 ##     # fields since only one can ever be parsed at a time.
-##     Opt.u64 { short: "a", help: "Set the alpha level" }
-##     |> SubCmd.finish {
+##     Opt.u64({ short: "a", help: "Set the alpha level" })
+##     |> SubCmd.finish({
 ##         name: "bar",
 ##         description: "Bar some stuff."
 ##         mapper: Bar,
-##     }
+##     })
 ##
 ## { Cli.weave <-
-##     verbosity: Opt.count { short: "v", long: "verbose" },
-##     sc: SubCmd.optional [fooSubcommand, barSubcommand],
+##     verbosity: Opt.count({ short: "v", long: "verbose" }),
+##     sc: SubCmd.optional([fooSubcommand, barSubcommand]),
 ## }
 ## ```
 ##
@@ -60,24 +60,24 @@
 ## data if it parses correctly:
 ##
 ## ```roc
-## cliParser =
+## cli_parser =
 ##     { Cli.weave <-
-##         alpha: Opt.u64 { short: "a", help: "Set the alpha level" },
-##         verbosity: Opt.count { short: "v", long: "verbose", help: "How loud we should be." },
-##         files: Param.str_list { name: "files", help: "The files to process." },
+##         alpha: Opt.u64({ short: "a", help: "Set the alpha level" }),
+##         verbosity: Opt.count({ short: "v", long: "verbose", help: "How loud we should be." }),
+##         files: Param.str_list({ name: "files", help: "The files to process." }),
 ##     }
-##     |> Cli.finish {
+##     |> Cli.finish({
 ##         name: "example",
 ##         version: "v1.0.0",
 ##         authors: ["Some One <some.one@mail.com>"],
 ##         description: "Do some work with some files."
-##     }
+##     })
 ##     |> Cli.assert_valid
 ##
 ## expect
-##     cliParser
-##     |> Cli.parse_or_display_message ["example", "-a", "123", "-vvv", "file.txt", "file-2.txt"] Arg.to_os_raw
-##     == Ok { alpha: 123, verbosity: 3, files: ["file.txt", "file-2.txt"] }
+##     cli_parser
+##     |> Cli.parse_or_display_message(["example", "-a", "123", "-vvv", "file.txt", "file-2.txt"], Arg.to_os_raw)
+##     == Ok({ alpha: 123, verbosity: 3, files: ["file.txt", "file-2.txt"] })
 ## ```
 ##
 ## You're ready to start parsing arguments using Weaver!
@@ -135,20 +135,20 @@ CliParser state : {
 ## expect
 ##     { parser } =
 ##         { Cli.weave <-
-##             verbosity: Opt.count { short: "v", long: "verbose" }
-##                 |> Cli.map Verbosity,
-##             file: Param.maybe_str { name: "file" }
-##                 |> Cli.map \f -> Result.withDefault f "NO_FILE",
+##             verbosity: Opt.count({ short: "v", long: "verbose" })
+##                 |> Cli.map(Verbosity),
+##             file: Param.maybe_str({ name: "file" })
+##                 |> Cli.map(\f -> Result.with_default(f, "NO_FILE")),
 ##         }
-##         |> Cli.finish { name: "example" }
+##         |> Cli.finish({ name: "example" })
 ##         |> Cli.assert_valid
 ##
-##    parser ["example", "-vvv"]
-##    == SuccessfullyParsed { verbosity: Verbosity 3, file: "NO_FILE" }
+##    parser(["example", "-vvv"])
+##    == SuccessfullyParsed({ verbosity: Verbosity(3), file: "NO_FILE" })
 ## ```
 map : CliBuilder a from_action to_action, (a -> b) -> CliBuilder b from_action to_action
 map = \builder, mapper ->
-    Builder.map builder mapper
+    Builder.map(builder, mapper)
 
 ## Begin weaving together a CLI builder using the `<-` builder notation.
 ##
@@ -158,35 +158,35 @@ map = \builder, mapper ->
 ## expect
 ##     { parser } =
 ##         { Cli.weave <-
-##             verbosity: Opt.count { short: "v", long: "verbose" },
-##             file: Param.str { name: "file" },
+##             verbosity: Opt.count({ short: "v", long: "verbose" }),
+##             file: Param.str({ name: "file" }),
 ##         }
-##         |> Cli.finish { name: "example" }
+##         |> Cli.finish({ name: "example" })
 ##         |> Cli.assert_valid
 ##
-##    parser ["example", "file.txt", "-vvv"]
-##    == SuccessfullyParsed { verbosity: 3, file: "file.txt" }
+##    parser(["example", "file.txt", "-vvv"])
+##    == SuccessfullyParsed({ verbosity: 3, file: "file.txt" })
 ## ```
 weave : CliBuilder a action1 action2, CliBuilder b action2 action3, (a, b -> c) -> CliBuilder c action1 action3
 weave = \left, right, combiner ->
-    Builder.combine left right combiner
+    Builder.combine(left, right, combiner)
 
 ## Fail the parsing process if any arguments are left over after parsing.
 ensure_all_args_were_parsed : List ParsedArg -> Result {} ArgExtractErr
 ensure_all_args_were_parsed = \remaining_args ->
     when remaining_args is
-        [] -> Ok {}
+        [] -> Ok({})
         [first, ..] ->
             extra_arg_err =
                 when first is
-                    Parameter param -> ExtraParamProvided param
-                    Long long -> UnrecognizedLongArg long.name
-                    Short short -> UnrecognizedShortArg short
-                    ShortGroup sg ->
-                        first_short_arg = List.first sg.names |> Result.withDefault ""
-                        UnrecognizedShortArg first_short_arg
+                    Parameter(param) -> ExtraParamProvided(param)
+                    Long(long) -> UnrecognizedLongArg(long.name)
+                    Short(short) -> UnrecognizedShortArg(short)
+                    ShortGroup(sg) ->
+                        first_short_arg = List.first(sg.names) ?? ""
+                        UnrecognizedShortArg(first_short_arg)
 
-            Err extra_arg_err
+            Err(extra_arg_err)
 
 ## Bundle a CLI builder into a parser, ensuring that its configuration is valid.
 ##
@@ -218,26 +218,26 @@ ensure_all_args_were_parsed = \remaining_args ->
 ## ```roc
 ## expect
 ##     { Cli.weave <-
-##         verbosity: Opt.count { short: "v", long: "verbose" },
-##         file: Param.str { name: "file" },
+##         verbosity: Opt.count({ short: "v", long: "verbose" }),
+##         file: Param.str({ name: "file" }),
 ##     }
-##     |> Cli.finish { name: "example" }
-##     |> Result.isOk
+##     |> Cli.finish({ name: "example" })
+##     |> Result.is_ok
 ##
 ## expect
 ##     { Cli.weave <-
-##         verbosity: Opt.count { short: "" },
-##         file: Param.str { name: "" },
+##         verbosity: Opt.count({ short: "" }),
+##         file: Param.str({ name: "" }),
 ##     }
-##     |> Cli.finish { name: "example" }
-##     |> Result.isErr
+##     |> Cli.finish({ name: "example" })
+##     |> Result.is_err
 ## ```
 finish : CliBuilder data from_action to_action, CliConfigParams -> Result (CliParser data) CliValidationErr
 finish = \builder, params ->
-    { parser, config, text_style } = finish_without_validating builder params
-    try validate_cli config
+    { parser, config, text_style } = finish_without_validating(builder, params)
+    try(validate_cli(config))
 
-    Ok { parser, config, text_style }
+    Ok({ parser, config, text_style })
 
 ## Bundle a CLI builder into a parser without validating its configuration.
 ##
@@ -250,23 +250,23 @@ finish = \builder, params ->
 ## expect
 ##     { parser } =
 ##         { Cli.weave <-
-##             verbosity: Opt.count { short: "v", long: "verbose" },
-##             file: Param.maybe_str { name: "file" },
+##             verbosity: Opt.count({ short: "v", long: "verbose" }),
+##             file: Param.maybe_str({ name: "file" }),
 ##         }
-##         |> Cli.finish_without_validating { name: "example" }
+##         |> Cli.finish_without_validating({ name: "example" })
 ##
-##     parser ["example", "-v", "-v"]
-##     == SuccessfullyParsed { verbosity: 2, file: Err NoValue }
+##     parser(["example", "-v", "-v"])
+##     == SuccessfullyParsed({ verbosity: 2, file: Err NoValue })
 ## ```
 finish_without_validating : CliBuilder data from_action to_action, CliConfigParams -> CliParser data
-finish_without_validating = \builder, { name, authors ? [], version ? "", description ? "", text_style ? Color } ->
+finish_without_validating = \builder, { name, authors ?? [], version ?? "", description ?? "", text_style ?? Color } ->
     { options, parameters, subcommands, parser } =
         builder
         |> Builder.check_for_help_and_version
-        |> Builder.update_parser \data ->
-            try ensure_all_args_were_parsed data.remaining_args
+        |> Builder.update_parser(\data ->
+            try(ensure_all_args_were_parsed(data.remaining_args))
 
-            Ok data
+            Ok(data))
         |> Builder.into_parts
 
     config = {
@@ -276,15 +276,15 @@ finish_without_validating = \builder, { name, authors ? [], version ? "", descri
         description,
         options,
         parameters,
-        subcommands: HasSubcommands subcommands,
+        subcommands: HasSubcommands(subcommands),
     }
 
     {
         config,
         text_style,
         parser: \args ->
-            parser { args: parse_args args, subcommand_path: [name] }
-            |> map_successfully_parsed \{ data } -> data,
+            parser({ args: parse_args(args), subcommand_path: [name] })
+            |> map_successfully_parsed(\{ data } -> data),
     }
 
 ## Assert that a CLI is properly configured, crashing your program if not.
@@ -300,15 +300,15 @@ finish_without_validating = \builder, { name, authors ? [], version ? "", descri
 ## for correct parsing.
 ##
 ## ```roc
-## Opt.num { short: "a" }
-## |> Cli.finish { name: "example" }
+## Opt.num({ short: "a" })
+## |> Cli.finish({ name: "example" })
 ## |> Cli.assert_valid
 ## ```
 assert_valid : Result (CliParser data) CliValidationErr -> CliParser data
 assert_valid = \result ->
     when result is
-        Ok cli -> cli
-        Err err -> crash (format_cli_validation_err err)
+        Ok(cli) -> cli
+        Err(err) -> crash(format_cli_validation_err(err))
 
 ## Parse arguments using a CLI parser or show a useful message on failure.
 ##
@@ -324,22 +324,22 @@ assert_valid = \result ->
 ##    usage section of the relevant command/subcommand's help text.
 ##
 ## ```roc
-## exampleCli =
+## example_cli =
 ##     { Cli.weave <-
-##         verbosity: Opt.count { short: "v", long: "verbose" },
-##         alpha: Opt.maybe_num { short: "a", long: "alpha" },
+##         verbosity: Opt.count({ short: "v", long: "verbose" }),
+##         alpha: Opt.maybe_num({ short: "a", long: "alpha" }),
 ##     }
-##     |> Cli.finish {
+##     |> Cli.finish({
 ##         name: "example",
 ##         version: "v0.1.0",
 ##         description: "An example CLI.",
-##     }
+##     })
 ##     |> Cli.assert_valid
 ##
 ## expect
-##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-h"] Arg.to_os_raw
-##     == Err
+##     example_cli
+##     |> Cli.parse_or_display_message(["example", "-h"], Arg.to_os_raw)
+##     == Err(
 ##         """
 ##         example v0.1.0
 ##
@@ -354,66 +354,68 @@ assert_valid = \result ->
 ##           -h, --help     Show this help page.
 ##           -V, --version  Show the version.
 ##         """
+##         )
 ##
 ## expect
-##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-V"] Arg.to_os_raw
-##     == Err "v0.1.0"
+##     example_cli
+##     |> Cli.parse_or_display_message(["example", "-V"], Arg.to_os_raw)
+##     == Err("v0.1.0")
 ##
 ## expect
-##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-v"] Arg.to_os_raw
-##     == Ok { verbosity: 1 }
+##     example_cli
+##     |> Cli.parse_or_display_message(["example", "-v"], Arg.to_os_raw)
+##     == Ok({ verbosity: 1 })
 ##
 ## expect
-##     exampleCli
-##     |> Cli.parse_or_display_message ["example", "-x"] Arg.to_os_raw
-##     == Err
+##     example_cli
+##     |> Cli.parse_or_display_message(["example", "-x"], Arg.to_os_raw)
+##     == Err(
 ##         """
 ##         Error: The argument -x was not recognized.
 ##
 ##         Usage:
 ##           example [OPTIONS]
 ##         """
+##         )
 ## ```
 parse_or_display_message : CliParser data, List arg, (arg -> [Unix (List U8), Windows (List U16)]) -> Result data Str
 parse_or_display_message = \parser, external_args, to_raw_arg ->
     args =
         external_args
-        |> List.map to_raw_arg
-        |> List.map Arg.from_raw_arg
+        |> List.map(to_raw_arg)
+        |> List.map(Arg.from_raw_arg)
 
-    when parser.parser args is
-        SuccessfullyParsed data -> Ok data
-        ShowHelp { subcommand_path } -> Err (help_text parser.config subcommand_path parser.text_style)
-        ShowVersion -> Err parser.config.version
-        IncorrectUsage err { subcommand_path } ->
-            usage_str = usage_help parser.config subcommand_path parser.text_style
+    when parser.parser(args) is
+        SuccessfullyParsed(data) -> Ok(data)
+        ShowHelp({ subcommand_path }) -> Err(help_text(parser.config, subcommand_path, parser.text_style))
+        ShowVersion -> Err(parser.config.version)
+        IncorrectUsage(err, { subcommand_path }) ->
+            usage_str = usage_help(parser.config, subcommand_path, parser.text_style)
             incorrect_usage_str =
                 """
-                Error: $(format_arg_extract_err err)
+                Error: $(format_arg_extract_err(err))
 
                 $(usage_str)
                 """
 
-            Err incorrect_usage_str
+            Err(incorrect_usage_str)
 
 expect
-    Opt.count { short: "v" }
-    |> Cli.map Verbosity
-    |> Cli.finish { name: "empty" }
-    |> Result.isOk
+    Opt.count({ short: "v" })
+    |> Cli.map(Verbosity)
+    |> Cli.finish({ name: "empty" })
+    |> Result.is_ok
 
 expect
-    Opt.count { short: "" }
-    |> Cli.map Verbosity
-    |> Cli.finish { name: "example" }
-    |> Result.isErr
+    Opt.count({ short: "" })
+    |> Cli.map(Verbosity)
+    |> Cli.finish({ name: "example" })
+    |> Result.is_err
 
 expect
     { Cli.weave <-
-        verbosity: Opt.count { short: "v" },
-        points: Param.str { name: "points" },
+        verbosity: Opt.count({ short: "v" }),
+        points: Param.str({ name: "points" }),
     }
-    |> Cli.finish { name: "test" }
-    |> Result.isOk
+    |> Cli.finish({ name: "test" })
+    |> Result.is_ok

@@ -65,12 +65,12 @@ ArgParser a : ArgParserParams -> ArgParserResult (ArgParserState a)
 on_successful_arg_parse : ArgParser a, (ArgParserState a -> ArgParserResult (ArgParserState b)) -> ArgParser b
 on_successful_arg_parse = \result, mapper ->
     \input ->
-        when result input is
+        when result(input) is
             ShowVersion -> ShowVersion
-            ShowHelp { subcommand_path } -> ShowHelp { subcommand_path }
-            IncorrectUsage arg_extract_err { subcommand_path } -> IncorrectUsage arg_extract_err { subcommand_path }
-            SuccessfullyParsed { data, remaining_args, subcommand_path } ->
-                mapper { data, remaining_args, subcommand_path }
+            ShowHelp({ subcommand_path }) -> ShowHelp({ subcommand_path })
+            IncorrectUsage(arg_extract_err, { subcommand_path }) -> IncorrectUsage(arg_extract_err, { subcommand_path })
+            SuccessfullyParsed({ data, remaining_args, subcommand_path }) ->
+                mapper({ data, remaining_args, subcommand_path })
 
 ## Maps successfully parsed data that was parsed by an [ArgParser]
 ## by a user-defined operation.
@@ -78,10 +78,10 @@ map_successfully_parsed : ArgParserResult a, (a -> b) -> ArgParserResult b
 map_successfully_parsed = \result, mapper ->
     when result is
         ShowVersion -> ShowVersion
-        ShowHelp { subcommand_path } -> ShowHelp { subcommand_path }
-        IncorrectUsage arg_extract_err { subcommand_path } -> IncorrectUsage arg_extract_err { subcommand_path }
-        SuccessfullyParsed parsed ->
-            SuccessfullyParsed (mapper parsed)
+        ShowHelp({ subcommand_path }) -> ShowHelp({ subcommand_path })
+        IncorrectUsage(arg_extract_err, { subcommand_path }) -> IncorrectUsage(arg_extract_err, { subcommand_path })
+        SuccessfullyParsed(parsed) ->
+            SuccessfullyParsed(mapper(parsed))
 
 ## Errors that can occur while extracting values from command line arguments.
 ArgExtractErr : [
@@ -122,35 +122,35 @@ DefaultValue a : [NoDefault, Value a, Generate ({} -> a)]
 ValueParser a : Arg -> Result a InvalidValue
 
 OptionConfigBaseParams : {
-    short ? Str,
-    long ? Str,
-    help ? Str,
+    short ?? Str,
+    long ?? Str,
+    help ?? Str,
 }
 
 DefaultableOptionConfigBaseParams a : {
-    short ? Str,
-    long ? Str,
-    help ? Str,
-    default ? DefaultValue a,
+    short ?? Str,
+    long ?? Str,
+    help ?? Str,
+    default ?? DefaultValue a,
 }
 
 ## Default-value options for creating an option.
 OptionConfigParams a : {
-    short ? Str,
-    long ? Str,
-    help ? Str,
+    short ?? Str,
+    long ?? Str,
+    help ?? Str,
     type : Str,
     parser : ValueParser a,
 }
 
 ## Default-value options for creating an option.
 DefaultableOptionConfigParams a : {
-    short ? Str,
-    long ? Str,
-    help ? Str,
+    short ?? Str,
+    long ?? Str,
+    help ?? Str,
     type : Str,
     parser : ValueParser a,
-    default ? DefaultValue a,
+    default ?? DefaultValue a,
 }
 
 ## Metadata for options in our CLI building system.
@@ -184,19 +184,19 @@ version_option = {
 
 ParameterConfigBaseParams : {
     name : Str,
-    help ? Str,
+    help ?? Str,
 }
 
 DefaultableParameterConfigBaseParams a : {
     name : Str,
-    help ? Str,
-    default ? DefaultValue a,
+    help ?? Str,
+    default ?? DefaultValue a,
 }
 
 ## Default-value options for creating an parameter.
 ParameterConfigParams a : {
     name : Str,
-    help ? Str,
+    help ?? Str,
     type : Str,
     parser : ValueParser a,
 }
@@ -204,10 +204,10 @@ ParameterConfigParams a : {
 ## Default-value options for creating an parameter.
 DefaultableParameterConfigParams a : {
     name : Str,
-    help ? Str,
+    help ?? Str,
     type : Str,
     parser : ValueParser a,
-    default ? DefaultValue a,
+    default ?? DefaultValue a,
 }
 
 ## Metadata for parameters in our CLI building system.
@@ -221,10 +221,10 @@ ParameterConfig : {
 ## Default-value options for bundling an CLI.
 CliConfigParams : {
     name : Str,
-    authors ? List Str,
-    version ? Str,
-    description ? Str,
-    text_style ? TextStyle,
+    authors ?? List Str,
+    version ?? Str,
+    description ?? Str,
+    text_style ?? TextStyle,
 }
 
 ## Metadata for a root-level CLI.
@@ -241,7 +241,7 @@ CliConfig : {
 ## Default-value options for bundling a subcommand.
 SubcommandConfigParams : {
     name : Str,
-    description ? Str,
+    description ?? Str,
 }
 
 ## Metadata for a set of subcommands under a parent command.
@@ -252,11 +252,11 @@ SubcommandConfigParams : {
 SubcommandsConfig : [
     NoSubcommands,
     HasSubcommands (Dict Str {
-        description : Str,
-        subcommands : SubcommandsConfig,
-        options : List OptionConfig,
-        parameters : List ParameterConfig,
-    }),
+                description : Str,
+                subcommands : SubcommandsConfig,
+                options : List OptionConfig,
+                parameters : List ParameterConfig,
+            }),
 ]
 
 ## Metadata for a subcommand.

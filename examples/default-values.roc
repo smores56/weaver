@@ -11,39 +11,39 @@ import weaver.Param
 
 main! = \args ->
     data =
-        Cli.parse_or_display_message cli_parser args Arg.to_os_raw
-        |> try Result.onErr! \message ->
-            try Stdout.line! message
-            Err (Exit 1 "")
+        Cli.parse_or_display_message(cli_parser, args, Arg.to_os_raw)
+        |> try(Result.on_err!, \message ->
+            try(Stdout.line!, message)
+            Err(Exit(1, "")))
 
-    try Stdout.line! "Successfully parsed! Here's what I got:"
-    try Stdout.line! ""
-    try Stdout.line! (Inspect.toStr data)
+    try(Stdout.line!, "Successfully parsed! Here's what I got:")
+    try(Stdout.line!, "")
+    try(Stdout.line!, Inspect.to_str(data))
 
-    Ok {}
+    Ok({})
 
 cli_parser =
     { Cli.weave <-
-        alpha: Opt.u64 {
+        alpha: Opt.u64({
             short: "a",
             long: "alpha",
             help: "Set the alpha level. [default: 123]",
-            default: Value 123,
-        },
-        beta: Opt.dec {
+            default: Value(123),
+        }),
+        beta: Opt.dec({
             short: "b",
             long: "beta",
             help: "Set the beta level. [default: PI]",
-            default: Generate (\{} -> Num.pi),
-        },
-        file: Param.maybe_str {
+            default: Generate(\{} -> Num.pi),
+        }),
+        file: Param.maybe_str({
             name: "file",
             help: "The file to process. [default: NONE]",
-        }
-        |> Cli.map \f -> Result.with_default f "NONE",
+        })
+        |> Cli.map(\f -> Result.with_default(f, "NONE")),
     }
-    |> Cli.finish {
+    |> Cli.finish({
         name: "default-values",
         version: "v0.0.1",
-    }
+    })
     |> Cli.assert_valid
