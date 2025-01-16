@@ -183,7 +183,7 @@ maybe = \{ parser, type, name, help ?? "" } ->
             Err(ListWasEmpty) -> Ok(Err(NoValue))
             Ok(single_value) ->
                 parser(single_value)
-                |> Result.map(Ok)
+                |> Result.map_ok(Ok)
                 |> Result.map_err(\err -> InvalidParamValue(err, param))
 
     builder_with_parameter_parser(param, value_parser)

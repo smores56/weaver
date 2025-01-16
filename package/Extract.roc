@@ -35,7 +35,7 @@ extract_param_values = \{ args, param } ->
                 GetParam -> extract_single_param(state, param, arg)
                 StopParsing -> Ok({ state & remaining_args: state.remaining_args |> List.append(arg) }))
 
-    Result.map(state_after, \{ values, remaining_args } ->
+    Result.map_ok(state_after, \{ values, remaining_args } ->
         { values, remaining_args })
 
 extract_single_param : ExtractParamValuesState, ParameterConfig, ParsedArg -> Result ExtractParamValuesState ArgExtractErr

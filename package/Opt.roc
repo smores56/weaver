@@ -183,7 +183,7 @@ maybe = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
             Ok(Err(NoValue)) -> Err(NoValueProvidedForOption(option))
             Ok(Ok(val)) ->
                 parser(val)
-                |> Result.map(Ok)
+                |> Result.map_ok(Ok)
                 |> Result.map_err(\err -> InvalidOptionValue(err, option))
 
     builder_with_option_parser(option, value_parser)
