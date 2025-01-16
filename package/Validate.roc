@@ -100,7 +100,7 @@ validate_command = \{ name, options, parent_options, parameters, subcommands, su
                     subcommands: subcommand.subcommands,
                     subcommand_path: subcommand_path |> List.append(subcommand_name),
                 }))
-            |> Result.map(\_successes -> {})
+            |> Result.map_ok(\_successes -> {})
 
         _no_subcommands ->
             all_options_to_check =
@@ -204,7 +204,7 @@ check_if_there_are_overlapping_options = \options ->
         pairs
         |> List.map_try(\Pair(left, right) ->
             ensure_option_names_do_not_overlap(left, right)))
-    |> Result.map(\_sucesses -> {})
+    |> Result.map_ok(\_sucesses -> {})
 
 check_if_there_are_overlapping_parameters : List ParameterConfig, List Str -> Result {} CliValidationErr
 check_if_there_are_overlapping_parameters = \parameters, subcommand_path ->
@@ -218,4 +218,4 @@ check_if_there_are_overlapping_parameters = \parameters, subcommand_path ->
                 Err(OverlappingParameterNames({ first: first.name, second: second.name, subcommand_path }))
             else
                 Ok({})))
-    |> Result.map(\_sucesses -> {})
+    |> Result.map_ok(\_sucesses -> {})
