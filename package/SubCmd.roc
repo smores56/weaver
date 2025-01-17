@@ -1,4 +1,10 @@
-module [finish, optional, required, SubcommandParserConfig]
+module [
+    empty,
+    finish,
+    optional,
+    required,
+    SubcommandParserConfig,
+]
 
 import Arg
 import Base exposing [
@@ -19,6 +25,32 @@ SubcommandParserConfig sub_state : {
     parser : ArgParser sub_state,
     config : SubcommandConfig,
 }
+
+## Create an empty subcommand.
+##
+## If you only need to register a subcommand based on its name,
+## this provides that. Subcommands that take arguments should be
+## built like normal CLIs and finalized with [finish].
+##
+## ```roc
+## foo_subcommand =
+##     SubCmd.empty({ name: "foobar", description: "Foo and bar subcommand", value: FooBar })
+## ```
+empty : { name : Str, description ?? Str, value: common_state } -> { name : Str, parser : ArgParser common_state, config : SubcommandConfig }
+empty = \{ name, description ?? "", value } ->
+    { options, parameters, subcommands, parser } =
+        Builder.from_arg_parser(\args -> Ok({ data: value, remaining_args: args }))
+        |> Builder.check_for_help_and_version
+        |> Builder.into_parts
+
+    config = {
+        description,
+        options,
+        parameters,
+        subcommands: HasSubcommands(subcommands),
+    }
+
+    { name, config, parser }
 
 ## Bundle a CLI builder into a subcommand.
 ##
