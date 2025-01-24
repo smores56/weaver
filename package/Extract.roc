@@ -21,7 +21,7 @@ ExtractParamValuesOutput : {
 }
 
 extract_param_values : ExtractParamValuesParams -> Result ExtractParamValuesOutput ArgExtractErr
-extract_param_values = \{ args, param } ->
+extract_param_values = |{ args, param }|
     starting_state = {
         action: GetParam,
         values: [],
@@ -30,16 +30,16 @@ extract_param_values = \{ args, param } ->
 
     state_after =
         args
-        |> List.walk_try(starting_state, \state, arg ->
+        |> List.walk_try(starting_state, |state, arg|
             when state.action is
                 GetParam -> extract_single_param(state, param, arg)
                 StopParsing -> Ok({ state & remaining_args: state.remaining_args |> List.append(arg) }))
 
-    Result.map_ok(state_after, \{ values, remaining_args } ->
+    Result.map_ok(state_after, |{ values, remaining_args }|
         { values, remaining_args })
 
 extract_single_param : ExtractParamValuesState, ParameterConfig, ParsedArg -> Result ExtractParamValuesState ArgExtractErr
-extract_single_param = \state, param, arg ->
+extract_single_param = |state, param, arg|
     when arg is
         Short(short) ->
             Err(UnrecognizedShortArg(short))
@@ -77,14 +77,14 @@ ExtractOptionValueWalkerState : {
 }
 
 extract_option_values : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
-extract_option_values = \{ args, option } ->
+extract_option_values = |{ args, option }|
     starting_state = {
         action: FindOption,
         values: [],
         remaining_args: [],
     }
 
-    state_after = List.walk_try(args, starting_state, \state, arg ->
+    state_after = List.walk_try(args, starting_state, |state, arg|
         when state.action is
             FindOption -> find_option_for_extraction(state, arg, option)
             GetValue -> get_value_for_extraction(state, arg, option))
@@ -97,7 +97,7 @@ extract_option_values = \{ args, option } ->
                 FindOption -> Ok({ values, remaining_args })
 
 find_option_for_extraction : ExtractOptionValueWalkerState, ParsedArg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
-find_option_for_extraction = \state, arg, option ->
+find_option_for_extraction = |state, arg, option|
     when arg is
         Short(short) ->
             if short == option.short then
@@ -128,10 +128,10 @@ find_option_for_extraction = \state, arg, option ->
             Ok({ state & remaining_args: state.remaining_args |> List.append(arg) })
 
 find_options_in_short_group : ExtractOptionValueWalkerState, OptionConfig, { names : List Str, complete : [Partial, Complete] } -> Result ExtractOptionValueWalkerState ArgExtractErr
-find_options_in_short_group = \state, option, short_group ->
+find_options_in_short_group = |state, option, short_group|
     state_after =
         short_group.names
-        |> List.walk_try({ action: FindOption, remaining: [], values: [] }, \sg_state, name ->
+        |> List.walk_try({ action: FindOption, remaining: [], values: [] }, |sg_state, name|
             when sg_state.action is
                 GetValue -> Err(CannotUsePartialShortGroupAsValue(option, short_group.names))
                 FindOption ->
@@ -163,7 +163,7 @@ find_options_in_short_group = \state, option, short_group ->
             )
 
 get_value_for_extraction : ExtractOptionValueWalkerState, ParsedArg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
-get_value_for_extraction = \state, arg, option ->
+get_value_for_extraction = |state, arg, option|
     value =
         when arg is
             Short(s) -> Arg.from_str("-$(s)")

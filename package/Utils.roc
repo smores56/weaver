@@ -1,18 +1,18 @@
 module [is_kebab_case, to_upper_case]
 
 is_digit : U8 -> Bool
-is_digit = \char ->
+is_digit = |char|
     zero_ascii_code = 48
     nine_ascii_code = 57
 
     char >= zero_ascii_code && char <= nine_ascii_code
 
 is_lower_case : U8 -> Bool
-is_lower_case = \char ->
+is_lower_case = |char|
     char >= 'a' && char <= 'z'
 
 is_kebab_case : Str -> Bool
-is_kebab_case = \s ->
+is_kebab_case = |s|
     dash_ascii_code : U8
     dash_ascii_code = 45
 
@@ -24,21 +24,21 @@ is_kebab_case = \s ->
             last_is_kebab = is_lower_case(last) || is_digit(last)
             middle_is_kebab =
                 middle
-                |> List.all(\char ->
+                |> List.all(|char|
                     is_lower_case(char) || is_digit(char) || char == dash_ascii_code)
             no_double_dashes =
                 middle
                 |> List.map2(List.drop_first(middle, 1), Pair)
-                |> List.all(\Pair(left, right) ->
+                |> List.all(|Pair(left, right)|
                     !(left == dash_ascii_code && right == dash_ascii_code))
 
             first_is_kebab && last_is_kebab && middle_is_kebab && no_double_dashes
 
 to_upper_case : Str -> Str
-to_upper_case = \str ->
+to_upper_case = |str|
     str
     |> Str.to_utf8
-    |> List.map(\c ->
+    |> List.map(|c|
         if is_lower_case(c) then
             c - ('a' - 'A')
         else

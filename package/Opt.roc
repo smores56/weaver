@@ -71,10 +71,10 @@ import Extract exposing [extract_option_values]
 import Parser exposing [ArgValue]
 
 builder_with_option_parser : OptionConfig, (List ArgValue -> Result data ArgExtractErr) -> CliBuilder data from_action to_action
-builder_with_option_parser = \option, value_parser ->
-    arg_parser = \args ->
-        { values, remaining_args } = try(extract_option_values, { args, option })
-        data = try(value_parser, values)
+builder_with_option_parser = |option, value_parser|
+    arg_parser = |args|
+        { values, remaining_args } = extract_option_values({ args, option })?
+        data = value_parser(values)?
 
         Ok({ data, remaining_args })
 
@@ -82,7 +82,7 @@ builder_with_option_parser = \option, value_parser ->
     |> Builder.add_option(option)
 
 get_maybe_value : List ArgValue, OptionConfig -> Result (Result ArgValue [NoValue]) ArgExtractErr
-get_maybe_value = \values, option ->
+get_maybe_value = |values, option|
     when values is
         [] -> Ok(Err(NoValue))
         [single_value] -> Ok(Ok(single_value))
@@ -103,7 +103,7 @@ get_maybe_value = \values, option ->
 ##     Color : [Green, Red, Blue]
 ##
 ##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
-##     parse_color = \color ->
+##     parse_color = |color|
 ##         when Arg.to_str(color) is
 ##             Ok("green") -> Ok(Green)
 ##             Ok("red") -> Ok(Red)
@@ -119,24 +119,24 @@ get_maybe_value = \values, option ->
 ##     == SuccessfullyParsed(Green)
 ## ```
 single : DefaultableOptionConfigParams a -> CliBuilder a GetOptionsAction GetOptionsAction
-single = \{ parser, type, short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+single = |{ parser, type, short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     option = { expected_value: ExpectsValue(type), plurality: One, short, long, help }
 
-    default_generator = \{} ->
+    default_generator = |{}|
         when default is
             Value(default_value) -> Ok(default_value)
             Generate(generator) -> Ok(generator({}))
             NoDefault -> Err(MissingOption(option))
 
-    value_parser = \values ->
-        value = try(get_maybe_value, values, option)
+    value_parser = |values|
+        value = get_maybe_value(values, option)?
 
         when value is
             Err(NoValue) -> default_generator({})
             Ok(Err(NoValue)) -> Err(NoValueProvidedForOption(option))
             Ok(Ok(val)) ->
                 parser(val)
-                |> Result.map_err(\err -> InvalidOptionValue(err, option))
+                |> Result.map_err(|err| InvalidOptionValue(err, option))
 
     builder_with_option_parser(option, value_parser)
 
@@ -156,7 +156,7 @@ single = \{ parser, type, short ?? "", long ?? "", help ?? "", default ?? NoDefa
 ##     Color : [Green, Red, Blue]
 ##
 ##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
-##     parse_color = \color ->
+##     parse_color = |color|
 ##         when Arg.to_str(color) is
 ##             Ok("green") -> Ok(Green)
 ##             Ok("red") -> Ok(Red)
@@ -172,11 +172,11 @@ single = \{ parser, type, short ?? "", long ?? "", help ?? "", default ?? NoDefa
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe : OptionConfigParams data -> CliBuilder (Result data [NoValue]) GetOptionsAction GetOptionsAction
-maybe = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
+maybe = |{ parser, type, short ?? "", long ?? "", help ?? "" }|
     option = { expected_value: ExpectsValue(type), plurality: Optional, short, long, help }
 
-    value_parser = \values ->
-        value = try(get_maybe_value, values, option)
+    value_parser = |values|
+        value = get_maybe_value(values, option)?
 
         when value is
             Err(NoValue) -> Ok(Err(NoValue))
@@ -184,7 +184,7 @@ maybe = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
             Ok(Ok(val)) ->
                 parser(val)
                 |> Result.map_ok(Ok)
-                |> Result.map_err(\err -> InvalidOptionValue(err, option))
+                |> Result.map_err(|err| InvalidOptionValue(err, option))
 
     builder_with_option_parser(option, value_parser)
 
@@ -204,7 +204,7 @@ maybe = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
 ##     Color : [Green, Red, Blue]
 ##
 ##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
-##     parse_color = \color ->
+##     parse_color = |color|
 ##         when Arg.to_str(color) is
 ##             Ok("green") -> Ok(Green)
 ##             Ok("red") -> Ok(Red)
@@ -220,16 +220,16 @@ maybe = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([Green, Red])
 ## ```
 list : OptionConfigParams data -> CliBuilder (List data) GetOptionsAction GetOptionsAction
-list = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
+list = |{ parser, type, short ?? "", long ?? "", help ?? "" }|
     option = { expected_value: ExpectsValue(type), plurality: Many, short, long, help }
 
-    value_parser = \values ->
-        List.map_try(values, \value ->
+    value_parser = |values|
+        List.map_try(values, |value|
             when value is
                 Err(NoValue) -> Err(NoValueProvidedForOption(option))
                 Ok(val) ->
                     parser(val)
-                    |> Result.map_err(\err -> InvalidOptionValue(err, option)))
+                    |> Result.map_err(|err| InvalidOptionValue(err, option)))
 
     builder_with_option_parser(option, value_parser)
 
@@ -249,11 +249,11 @@ list = \{ parser, type, short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(Bool.true)
 ## ```
 flag : OptionConfigBaseParams -> CliBuilder Bool GetOptionsAction GetOptionsAction
-flag = \{ short ?? "", long ?? "", help ?? "" } ->
+flag = |{ short ?? "", long ?? "", help ?? "" }|
     option = { expected_value: NothingExpected, plurality: Optional, short, long, help }
 
-    value_parser = \values ->
-        value = try(get_maybe_value, values, option)
+    value_parser = |values|
+        value = get_maybe_value(values, option)?
 
         when value is
             Err(NoValue) -> Ok(Bool.false)
@@ -278,10 +278,10 @@ flag = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(5)
 ## ```
 count : OptionConfigBaseParams -> CliBuilder U64 GetOptionsAction GetOptionsAction
-count = \{ short ?? "", long ?? "", help ?? "" } ->
+count = |{ short ?? "", long ?? "", help ?? "" }|
     option = { expected_value: NothingExpected, plurality: Many, short, long, help }
 
-    value_parser = \values ->
+    value_parser = |values|
         if values |> List.any(Result.is_ok) then
             Err(OptionDoesNotExpectValue(option))
         else
@@ -305,7 +305,7 @@ count = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(Arg.from_str("abc"))
 ## ```
 arg : DefaultableOptionConfigBaseParams Arg -> CliBuilder Arg GetOptionsAction GetOptionsAction
-arg = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+arg = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
         parser: Ok,
         type: str_type_name,
@@ -331,7 +331,7 @@ arg = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_arg : OptionConfigBaseParams -> CliBuilder (Result Arg [NoValue]) GetOptionsAction GetOptionsAction
-maybe_arg = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_arg = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
         parser: Ok,
         type: str_type_name,
@@ -357,7 +357,7 @@ maybe_arg = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(List.map(["abc", "def", "ghi"], Arg.from_str))
 ## ```
 arg_list : OptionConfigBaseParams -> CliBuilder (List Arg) GetOptionsAction GetOptionsAction
-arg_list = \{ short ?? "", long ?? "", help ?? "" } ->
+arg_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
         parser: Ok,
         type: str_type_name,
@@ -382,9 +382,9 @@ arg_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([97, 98, 99])
 ## ```
 bytes : DefaultableOptionConfigBaseParams (List U8) -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
-bytes = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+bytes = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Ok(Arg.to_bytes(a)),
+        parser: |a| Ok(Arg.to_bytes(a)),
         type: str_type_name,
         short,
         long,
@@ -408,9 +408,9 @@ bytes = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_bytes : OptionConfigBaseParams -> CliBuilder (Result (List U8) [NoValue]) GetOptionsAction GetOptionsAction
-maybe_bytes = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_bytes = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Ok(Arg.to_bytes(a)),
+        parser: |a| Ok(Arg.to_bytes(a)),
         type: str_type_name,
         short,
         long,
@@ -434,9 +434,9 @@ maybe_bytes = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([[97, 98, 99], [100, 101, 102], [103, 104, 105]])
 ## ```
 bytes_list : OptionConfigBaseParams -> CliBuilder (List (List U8)) GetOptionsAction GetOptionsAction
-bytes_list = \{ short ?? "", long ?? "", help ?? "" } ->
+bytes_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Ok(Arg.to_bytes(a)),
+        parser: |a| Ok(Arg.to_bytes(a)),
         type: str_type_name,
         short,
         long,
@@ -459,7 +459,7 @@ bytes_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed("abc")
 ## ```
 str : DefaultableOptionConfigBaseParams Str -> CliBuilder Str GetOptionsAction GetOptionsAction
-str = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+str = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
         parser: Arg.to_str,
         type: str_type_name,
@@ -486,7 +486,7 @@ str = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_str : OptionConfigBaseParams -> CliBuilder (Result Str [NoValue]) GetOptionsAction GetOptionsAction
-maybe_str = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_str = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
         parser: Arg.to_str,
         type: str_type_name,
@@ -512,7 +512,7 @@ maybe_str = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(["abc", "def", "ghi"])
 ## ```
 str_list : OptionConfigBaseParams -> CliBuilder (List Str) GetOptionsAction GetOptionsAction
-str_list = \{ short ?? "", long ?? "", help ?? "" } ->
+str_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
         parser: Arg.to_str,
         type: str_type_name,
@@ -537,9 +537,9 @@ str_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2.5)
 ## ```
 dec : DefaultableOptionConfigBaseParams Dec -> CliBuilder Dec GetOptionsAction GetOptionsAction
-dec = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+dec = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_dec),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_dec),
         type: num_type_name,
         short,
         long,
@@ -563,9 +563,9 @@ dec = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_dec : OptionConfigBaseParams -> CliBuilder (Result Dec [NoValue]) GetOptionsAction GetOptionsAction
-maybe_dec = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_dec = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_dec),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_dec),
         type: num_type_name,
         short,
         long,
@@ -589,9 +589,9 @@ maybe_dec = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1.0, 2.0, -3.0])
 ## ```
 dec_list : OptionConfigBaseParams -> CliBuilder (List Dec) GetOptionsAction GetOptionsAction
-dec_list = \{ short ?? "", long ?? "", help ?? "" } ->
+dec_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_dec),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_dec),
         type: num_type_name,
         short,
         long,
@@ -614,9 +614,9 @@ dec_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2.5)
 ## ```
 f32 : DefaultableOptionConfigBaseParams F32 -> CliBuilder F32 GetOptionsAction GetOptionsAction
-f32 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+f32 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f32),
         type: num_type_name,
         short,
         long,
@@ -640,9 +640,9 @@ f32 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_f32 : OptionConfigBaseParams -> CliBuilder (Result F32 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_f32 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_f32 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f32),
         type: num_type_name,
         short,
         long,
@@ -666,9 +666,9 @@ maybe_f32 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1.0, 2.0, -3.0])
 ## ```
 f32_list : OptionConfigBaseParams -> CliBuilder (List F32) GetOptionsAction GetOptionsAction
-f32_list = \{ short ?? "", long ?? "", help ?? "" } ->
+f32_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f32),
         type: num_type_name,
         short,
         long,
@@ -691,9 +691,9 @@ f32_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2.5)
 ## ```
 f64 : DefaultableOptionConfigBaseParams F64 -> CliBuilder F64 GetOptionsAction GetOptionsAction
-f64 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+f64 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f64),
         type: num_type_name,
         short,
         long,
@@ -717,9 +717,9 @@ f64 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_f64 : OptionConfigBaseParams -> CliBuilder (Result F64 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_f64 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_f64 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f64),
         type: num_type_name,
         short,
         long,
@@ -743,9 +743,9 @@ maybe_f64 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1.0, 2.0, -3.0])
 ## ```
 f64_list : OptionConfigBaseParams -> CliBuilder (List F64) GetOptionsAction GetOptionsAction
-f64_list = \{ short ?? "", long ?? "", help ?? "" } ->
+f64_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f64),
         type: num_type_name,
         short,
         long,
@@ -768,9 +768,9 @@ f64_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 u8 : DefaultableOptionConfigBaseParams U8 -> CliBuilder U8 GetOptionsAction GetOptionsAction
-u8 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+u8 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u8),
         type: num_type_name,
         short,
         long,
@@ -794,9 +794,9 @@ u8 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u8 : OptionConfigBaseParams -> CliBuilder (Result U8 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_u8 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_u8 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u8),
         type: num_type_name,
         short,
         long,
@@ -820,9 +820,9 @@ maybe_u8 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 u8_list : OptionConfigBaseParams -> CliBuilder (List U8) GetOptionsAction GetOptionsAction
-u8_list = \{ short ?? "", long ?? "", help ?? "" } ->
+u8_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u8),
         type: num_type_name,
         short,
         long,
@@ -845,9 +845,9 @@ u8_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 u16 : DefaultableOptionConfigBaseParams U16 -> CliBuilder U16 GetOptionsAction GetOptionsAction
-u16 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+u16 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u16),
         type: num_type_name,
         short,
         long,
@@ -871,9 +871,9 @@ u16 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u16 : OptionConfigBaseParams -> CliBuilder (Result U16 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_u16 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_u16 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u16),
         type: num_type_name,
         short,
         long,
@@ -897,9 +897,9 @@ maybe_u16 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 u16_list : OptionConfigBaseParams -> CliBuilder (List U16) GetOptionsAction GetOptionsAction
-u16_list = \{ short ?? "", long ?? "", help ?? "" } ->
+u16_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u16),
         type: num_type_name,
         short,
         long,
@@ -922,9 +922,9 @@ u16_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 u32 : DefaultableOptionConfigBaseParams U32 -> CliBuilder U32 GetOptionsAction GetOptionsAction
-u32 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+u32 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u32),
         type: num_type_name,
         short,
         long,
@@ -948,9 +948,9 @@ u32 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u32 : OptionConfigBaseParams -> CliBuilder (Result U32 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_u32 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_u32 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u32),
         type: num_type_name,
         short,
         long,
@@ -974,9 +974,9 @@ maybe_u32 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 u32_list : OptionConfigBaseParams -> CliBuilder (List U32) GetOptionsAction GetOptionsAction
-u32_list = \{ short ?? "", long ?? "", help ?? "" } ->
+u32_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u32),
         type: num_type_name,
         short,
         long,
@@ -999,9 +999,9 @@ u32_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 u64 : DefaultableOptionConfigBaseParams U64 -> CliBuilder U64 GetOptionsAction GetOptionsAction
-u64 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+u64 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u64),
         type: num_type_name,
         short,
         long,
@@ -1025,9 +1025,9 @@ u64 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u64 : OptionConfigBaseParams -> CliBuilder (Result U64 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_u64 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_u64 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u64),
         type: num_type_name,
         short,
         long,
@@ -1051,9 +1051,9 @@ maybe_u64 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 u64_list : OptionConfigBaseParams -> CliBuilder (List U64) GetOptionsAction GetOptionsAction
-u64_list = \{ short ?? "", long ?? "", help ?? "" } ->
+u64_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u64),
         type: num_type_name,
         short,
         long,
@@ -1076,9 +1076,9 @@ u64_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 u128 : DefaultableOptionConfigBaseParams U128 -> CliBuilder U128 GetOptionsAction GetOptionsAction
-u128 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+u128 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u128),
         type: num_type_name,
         short,
         long,
@@ -1102,9 +1102,9 @@ u128 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u128 : OptionConfigBaseParams -> CliBuilder (Result U128 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_u128 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_u128 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u128),
         type: num_type_name,
         short,
         long,
@@ -1128,9 +1128,9 @@ maybe_u128 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 u128_list : OptionConfigBaseParams -> CliBuilder (List U128) GetOptionsAction GetOptionsAction
-u128_list = \{ short ?? "", long ?? "", help ?? "" } ->
+u128_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u128),
         type: num_type_name,
         short,
         long,
@@ -1153,9 +1153,9 @@ u128_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 i8 : DefaultableOptionConfigBaseParams I8 -> CliBuilder I8 GetOptionsAction GetOptionsAction
-i8 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+i8 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i8),
         type: num_type_name,
         short,
         long,
@@ -1179,9 +1179,9 @@ i8 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i8 : OptionConfigBaseParams -> CliBuilder (Result I8 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_i8 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_i8 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i8),
         type: num_type_name,
         short,
         long,
@@ -1205,9 +1205,9 @@ maybe_i8 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 i8_list : OptionConfigBaseParams -> CliBuilder (List I8) GetOptionsAction GetOptionsAction
-i8_list = \{ short ?? "", long ?? "", help ?? "" } ->
+i8_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i8),
         type: num_type_name,
         short,
         long,
@@ -1230,9 +1230,9 @@ i8_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 i16 : DefaultableOptionConfigBaseParams I16 -> CliBuilder I16 GetOptionsAction GetOptionsAction
-i16 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+i16 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i16),
         type: num_type_name,
         short,
         long,
@@ -1256,9 +1256,9 @@ i16 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i16 : OptionConfigBaseParams -> CliBuilder (Result I16 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_i16 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_i16 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i16),
         type: num_type_name,
         short,
         long,
@@ -1282,9 +1282,9 @@ maybe_i16 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 i16_list : OptionConfigBaseParams -> CliBuilder (List I16) GetOptionsAction GetOptionsAction
-i16_list = \{ short ?? "", long ?? "", help ?? "" } ->
+i16_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i16),
         type: num_type_name,
         short,
         long,
@@ -1307,9 +1307,9 @@ i16_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 i32 : DefaultableOptionConfigBaseParams I32 -> CliBuilder I32 GetOptionsAction GetOptionsAction
-i32 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+i32 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i32),
         type: num_type_name,
         short,
         long,
@@ -1333,9 +1333,9 @@ i32 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i32 : OptionConfigBaseParams -> CliBuilder (Result I32 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_i32 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_i32 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i32),
         type: num_type_name,
         short,
         long,
@@ -1359,9 +1359,9 @@ maybe_i32 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 i32_list : OptionConfigBaseParams -> CliBuilder (List I32) GetOptionsAction GetOptionsAction
-i32_list = \{ short ?? "", long ?? "", help ?? "" } ->
+i32_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i32),
         type: num_type_name,
         short,
         long,
@@ -1384,9 +1384,9 @@ i32_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 i64 : DefaultableOptionConfigBaseParams I64 -> CliBuilder I64 GetOptionsAction GetOptionsAction
-i64 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+i64 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i64),
         type: num_type_name,
         short,
         long,
@@ -1410,9 +1410,9 @@ i64 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i64 : OptionConfigBaseParams -> CliBuilder (Result I64 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_i64 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_i64 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i64),
         type: num_type_name,
         short,
         long,
@@ -1436,9 +1436,9 @@ maybe_i64 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 i64_list : OptionConfigBaseParams -> CliBuilder (List I64) GetOptionsAction GetOptionsAction
-i64_list = \{ short ?? "", long ?? "", help ?? "" } ->
+i64_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i64),
         type: num_type_name,
         short,
         long,
@@ -1461,9 +1461,9 @@ i64_list = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed(2)
 ## ```
 i128 : DefaultableOptionConfigBaseParams I128 -> CliBuilder I128 GetOptionsAction GetOptionsAction
-i128 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
+i128 = |{ short ?? "", long ?? "", help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i128),
         type: num_type_name,
         short,
         long,
@@ -1487,9 +1487,9 @@ i128 = \{ short ?? "", long ?? "", help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i128 : OptionConfigBaseParams -> CliBuilder (Result I128 [NoValue]) GetOptionsAction GetOptionsAction
-maybe_i128 = \{ short ?? "", long ?? "", help ?? "" } ->
+maybe_i128 = |{ short ?? "", long ?? "", help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i128),
         type: num_type_name,
         short,
         long,
@@ -1513,9 +1513,9 @@ maybe_i128 = \{ short ?? "", long ?? "", help ?? "" } ->
 ##     == SuccessfullyParsed([1, 2, 3])
 ## ```
 i128_list : OptionConfigBaseParams -> CliBuilder (List I128) GetOptionsAction GetOptionsAction
-i128_list = \{ short ?? "", long ?? "", help ?? "" } ->
+i128_list = |{ short ?? "", long ?? "", help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i128),
         type: num_type_name,
         short,
         long,

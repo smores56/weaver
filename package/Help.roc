@@ -19,7 +19,7 @@ reset_ansi_code = "\u(001b)[0m"
 ## returns the subcommand's config as if it were the root command if a
 ## subcommand is found, or just the root command's config otherwise.
 find_subcommand_or_default : CliConfig, List Str -> { config : CliConfig, subcommand_path : List Str }
-find_subcommand_or_default = \config, subcommand_path ->
+find_subcommand_or_default = |config, subcommand_path|
     base_command = {
         description: config.description,
         options: config.options,
@@ -45,14 +45,14 @@ find_subcommand_or_default = \config, subcommand_path ->
 
 ## Searches a command's config for subcommands recursively.
 find_subcommand : SubcommandConfig, List Str -> Result SubcommandConfig [KeyNotFound]
-find_subcommand = \command, path ->
+find_subcommand = |command, path|
     when path is
         [] -> Ok(command)
         [first, .. as rest] ->
             when command.subcommands is
                 NoSubcommands -> Err(KeyNotFound)
                 HasSubcommands(scs) ->
-                    sc = try(Dict.get(scs, first))
+                    sc = Dict.get(scs, first)?
                     find_subcommand(sc, rest)
 
 ## Render the help text for a command at or under the root config.
@@ -89,7 +89,7 @@ find_subcommand = \command, path ->
 ##         """
 ## ```
 help_text : CliConfig, List Str, TextStyle -> Str
-help_text = \base_config, path, text_style ->
+help_text = |base_config, path, text_style|
     { config, subcommand_path } = find_subcommand_or_default(base_config, path)
     { version, authors, description, options, parameters, subcommands } = config
 
@@ -174,14 +174,14 @@ help_text = \base_config, path, text_style ->
 ##         """
 ## ```
 usage_help : CliConfig, List Str, TextStyle -> Str
-usage_help = \config, path, text_style ->
+usage_help = |config, path, text_style|
     { config: { options, parameters, subcommands }, subcommand_path } = find_subcommand_or_default(config, path)
 
     name = Str.join_with(subcommand_path, " ")
 
     required_options =
         options
-        |> List.drop_if(\opt -> opt.expected_value == NothingExpected)
+        |> List.drop_if(|opt| opt.expected_value == NothingExpected)
         |> List.map(option_simple_name_formatter)
 
     other_options =
@@ -192,7 +192,7 @@ usage_help = \config, path, text_style ->
 
     params_strings =
         parameters
-        |> List.map(\{ name: param_name, plurality } ->
+        |> List.map(|{ name: param_name, plurality }|
             ellipsis =
                 when plurality is
                     Optional | One -> ""
@@ -222,7 +222,7 @@ usage_help = \config, path, text_style ->
     """
 
 commands_help : SubcommandsConfig, TextStyle -> Str
-commands_help = \subcommands, text_style ->
+commands_help = |subcommands, text_style|
     commands =
         when subcommands is
             NoSubcommands -> []
@@ -230,7 +230,7 @@ commands_help = \subcommands, text_style ->
 
     aligned_commands =
         commands
-        |> List.map(\(name, sub_config) ->
+        |> List.map(|(name, sub_config)|
             (name, sub_config.description))
         |> align_two_columns(text_style)
 
@@ -245,10 +245,10 @@ commands_help = \subcommands, text_style ->
     """
 
 parameters_help : List ParameterConfig, TextStyle -> Str
-parameters_help = \params, text_style ->
+parameters_help = |params, text_style|
     formatted_params =
         params
-        |> List.map(\param ->
+        |> List.map(|param|
             ellipsis =
                 when param.plurality is
                     Optional | One -> ""
@@ -268,7 +268,7 @@ parameters_help = \params, text_style ->
     """
 
 option_name_formatter : OptionConfig -> Str
-option_name_formatter = \{ short, long, expected_value } ->
+option_name_formatter = |{ short, long, expected_value }|
     short_name =
         if short != "" then
             "-$(short)"
@@ -288,11 +288,11 @@ option_name_formatter = \{ short, long, expected_value } ->
 
     [short_name, long_name]
     |> List.drop_if(Str.is_empty)
-    |> List.map(\name -> Str.concat(name, type_name))
+    |> List.map(|name| Str.concat(name, type_name))
     |> Str.join_with(", ")
 
 option_simple_name_formatter : OptionConfig -> Str
-option_simple_name_formatter = \{ short, long, expected_value } ->
+option_simple_name_formatter = |{ short, long, expected_value }|
     short_name =
         if short != "" then
             "-$(short)"
@@ -316,10 +316,10 @@ option_simple_name_formatter = \{ short, long, expected_value } ->
     |> Str.concat(type_name)
 
 options_help : List OptionConfig, TextStyle -> Str
-options_help = \options, text_style ->
+options_help = |options, text_style|
     formatted_options =
         options
-        |> List.map(\option ->
+        |> List.map(|option|
             (option_name_formatter(option), option.help))
         |> align_two_columns(text_style)
 
@@ -334,12 +334,12 @@ options_help = \options, text_style ->
     """
 
 indent_multiline_string_by : Str, U64 -> Str
-indent_multiline_string_by = \string, indent_amount ->
+indent_multiline_string_by = |string, indent_amount|
     indentation = Str.repeat(" ", indent_amount)
 
     string
     |> Str.split_on("\n")
-    |> List.map_with_index(\line, index ->
+    |> List.map_with_index(|line, index|
         if index == 0 then
             line
         else
@@ -347,10 +347,10 @@ indent_multiline_string_by = \string, indent_amount ->
     |> Str.join_with("\n")
 
 align_two_columns : List (Str, Str), TextStyle -> List Str
-align_two_columns = \columns, text_style ->
+align_two_columns = |columns, text_style|
     max_first_column_len =
         columns
-        |> List.map(\(first, _second) -> Str.count_utf8_bytes(first))
+        |> List.map(|(first, _second)| Str.count_utf8_bytes(first))
         |> List.max
         |> Result.with_default(0)
 
@@ -359,7 +359,7 @@ align_two_columns = \columns, text_style ->
             Color -> (bold_ansi_code, reset_ansi_code)
             Plain -> ("", "")
 
-    List.map(columns, \(first, second) ->
+    List.map(columns, |(first, second)|
         buffer =
             Str.repeat(" ", (max_first_column_len - Str.count_utf8_bytes(first)))
         second_shifted =

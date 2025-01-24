@@ -11,7 +11,7 @@ basic_cli =
 
 expect
     basic_cli
-    |> Cli.parse_or_display_message(["basic-cli", "-a", "123"], \a -> Unix(Str.to_utf8(a)))
+    |> Cli.parse_or_display_message(["basic-cli", "-a", "123"], |a| Unix(Str.to_utf8(a)))
     == Ok(Alpha(123))
 
 expect
@@ -29,5 +29,5 @@ expect
         """
 
     basic_cli
-    |> Cli.parse_or_display_message(["basic-cli", "-h"], \a -> Unix(Str.to_utf8(a)))
+    |> Cli.parse_or_display_message(["basic-cli", "-h"], |a| Unix(Str.to_utf8(a)))
     == Err(help_message)

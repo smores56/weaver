@@ -72,10 +72,10 @@ import Parser exposing [ArgValue]
 import Extract exposing [extract_param_values]
 
 builder_with_parameter_parser : ParameterConfig, (List Arg -> Result data ArgExtractErr) -> CliBuilder data from_action to_action
-builder_with_parameter_parser = \param, value_parser ->
-    arg_parser = \args ->
-        { values, remaining_args } = try(extract_param_values, { args, param })
-        data = try(value_parser, values)
+builder_with_parameter_parser = |param, value_parser|
+    arg_parser = |args|
+        { values, remaining_args } = extract_param_values({ args, param })?
+        data = value_parser(values)?
 
         Ok({ data, remaining_args })
 
@@ -104,7 +104,7 @@ builder_with_parameter_parser = \param, value_parser ->
 ##     Color : [Green, Red, Blue]
 ##
 ##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
-##     parse_color = \color ->
+##     parse_color = |color|
 ##         when Arg.to_str(color) is
 ##             Ok("green") -> Ok(Green)
 ##             Ok("red") -> Ok(Red)
@@ -120,21 +120,21 @@ builder_with_parameter_parser = \param, value_parser ->
 ##     == SuccessfullyParsed(Blue)
 ## ```
 single : DefaultableParameterConfigParams data -> CliBuilder data {}action GetParamsAction
-single = \{ parser, type, name, help ?? "", default ?? NoDefault } ->
+single = |{ parser, type, name, help ?? "", default ?? NoDefault }|
     param = { name, type, help, plurality: One }
 
-    default_generator = \{} ->
+    default_generator = |{}|
         when default is
             Value(default_value) -> Ok(default_value)
             Generate(generator) -> Ok(generator({}))
             NoDefault -> Err(MissingParam(param))
 
-    value_parser = \values ->
+    value_parser = |values|
         when List.first(values) is
             Err(ListWasEmpty) -> default_generator({})
             Ok(single_value) ->
                 parser(single_value)
-                |> Result.map_err(\err -> InvalidParamValue(err, param))
+                |> Result.map_err(|err| InvalidParamValue(err, param))
 
     builder_with_parameter_parser(param, value_parser)
 
@@ -159,7 +159,7 @@ single = \{ parser, type, name, help ?? "", default ?? NoDefault } ->
 ##     Color : [Green, Red, Blue]
 ##
 ##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
-##     parse_color = \color ->
+##     parse_color = |color|
 ##         when Arg.to_str(color) is
 ##             Ok("green") -> Ok(Green)
 ##             Ok("red") -> Ok(Red)
@@ -175,16 +175,16 @@ single = \{ parser, type, name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe : ParameterConfigParams data -> CliBuilder (Result data [NoValue]) {}action GetParamsAction
-maybe = \{ parser, type, name, help ?? "" } ->
+maybe = |{ parser, type, name, help ?? "" }|
     param = { name, type, help, plurality: Optional }
 
-    value_parser = \values ->
+    value_parser = |values|
         when List.first(values) is
             Err(ListWasEmpty) -> Ok(Err(NoValue))
             Ok(single_value) ->
                 parser(single_value)
                 |> Result.map_ok(Ok)
-                |> Result.map_err(\err -> InvalidParamValue(err, param))
+                |> Result.map_err(|err| InvalidParamValue(err, param))
 
     builder_with_parameter_parser(param, value_parser)
 
@@ -210,7 +210,7 @@ maybe = \{ parser, type, name, help ?? "" } ->
 ##     Color : [Green, Red, Blue]
 ##
 ##     parse_color : Arg -> Result Color [InvalidValue Str, InvalidUtf8]
-##     parse_color = \color ->
+##     parse_color = |color|
 ##         when Arg.to_str(color) is
 ##             Ok("green") -> Ok(Green)
 ##             Ok("red") -> Ok(Red)
@@ -226,12 +226,12 @@ maybe = \{ parser, type, name, help ?? "" } ->
 ##     == SuccessfullyParsed([Blue, Red, Green])
 ## ```
 list : ParameterConfigParams data -> CliBuilder (List data) {}action StopCollectingAction
-list = \{ parser, type, name, help ?? "" } ->
+list = |{ parser, type, name, help ?? "" }|
     param = { name, type, help, plurality: Many }
 
-    value_parser = \values ->
+    value_parser = |values|
         List.map_try(values, parser)
-        |> Result.map_err(\err -> InvalidParamValue(err, param))
+        |> Result.map_err(|err| InvalidParamValue(err, param))
 
     builder_with_parameter_parser(param, value_parser)
 
@@ -250,7 +250,7 @@ list = \{ parser, type, name, help ?? "" } ->
 ##     == SuccessfullyParsed(Arg.from_str("abc"))
 ## ```
 arg : DefaultableParameterConfigBaseParams Arg -> CliBuilder Arg {}action GetParamsAction
-arg = \{ name, help ?? "", default ?? NoDefault } ->
+arg = |{ name, help ?? "", default ?? NoDefault }|
     single({
         parser: Ok,
         type: str_type_name,
@@ -274,7 +274,7 @@ arg = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_arg : ParameterConfigBaseParams -> CliBuilder ArgValue {}action GetParamsAction
-maybe_arg = \{ name, help ?? "" } ->
+maybe_arg = |{ name, help ?? "" }|
     maybe({
         parser: Ok,
         type: str_type_name,
@@ -298,7 +298,7 @@ maybe_arg = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(List.map(["abc", "def", "ghi"], Arg.from_str))
 ## ```
 arg_list : ParameterConfigBaseParams -> CliBuilder (List Arg) {}action StopCollectingAction
-arg_list = \{ name, help ?? "" } ->
+arg_list = |{ name, help ?? "" }|
     list({
         parser: Ok,
         type: str_type_name,
@@ -321,9 +321,9 @@ arg_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([97, 98, 99])
 ## ```
 bytes : DefaultableParameterConfigBaseParams (List U8) -> CliBuilder (List U8) {}action GetParamsAction
-bytes = \{ name, help ?? "", default ?? NoDefault } ->
+bytes = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Ok(Arg.to_bytes(a)),
+        parser: |a| Ok(Arg.to_bytes(a)),
         type: str_type_name,
         name,
         help,
@@ -345,9 +345,9 @@ bytes = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_bytes : ParameterConfigBaseParams -> CliBuilder (Result (List U8) [NoValue]) {}action GetParamsAction
-maybe_bytes = \{ name, help ?? "" } ->
+maybe_bytes = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Ok(Arg.to_bytes(a)),
+        parser: |a| Ok(Arg.to_bytes(a)),
         type: str_type_name,
         name,
         help,
@@ -369,9 +369,9 @@ maybe_bytes = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([[97, 98, 99], [100, 101, 102], [103, 104, 105]])
 ## ```
 bytes_list : ParameterConfigBaseParams -> CliBuilder (List (List U8)) {}action StopCollectingAction
-bytes_list = \{ name, help ?? "" } ->
+bytes_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Ok(Arg.to_bytes(a)),
+        parser: |a| Ok(Arg.to_bytes(a)),
         type: str_type_name,
         name,
         help,
@@ -393,7 +393,7 @@ bytes_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed("abc")
 ## ```
 str : DefaultableParameterConfigBaseParams Str -> CliBuilder Str {}action GetParamsAction
-str = \{ name, help ?? "", default ?? NoDefault } ->
+str = |{ name, help ?? "", default ?? NoDefault }|
     single({
         parser: Arg.to_str,
         type: str_type_name,
@@ -417,7 +417,7 @@ str = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_str : ParameterConfigBaseParams -> CliBuilder (Result Str [NoValue]) {}action GetParamsAction
-maybe_str = \{ name, help ?? "" } ->
+maybe_str = |{ name, help ?? "" }|
     maybe({
         parser: Arg.to_str,
         type: str_type_name,
@@ -441,7 +441,7 @@ maybe_str = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(["abc", "def", "ghi"])
 ## ```
 str_list : ParameterConfigBaseParams -> CliBuilder (List Str) {}action StopCollectingAction
-str_list = \{ name, help ?? "" } ->
+str_list = |{ name, help ?? "" }|
     list({
         parser: Arg.to_str,
         type: str_type_name,
@@ -465,9 +465,9 @@ str_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42.5)
 ## ```
 dec : DefaultableParameterConfigBaseParams Dec -> CliBuilder Dec {}action GetParamsAction
-dec = \{ name, help ?? "", default ?? NoDefault } ->
+dec = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_dec),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_dec),
         type: num_type_name,
         name,
         help,
@@ -489,9 +489,9 @@ dec = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_dec : ParameterConfigBaseParams -> CliBuilder (Result Dec [NoValue]) {}action GetParamsAction
-maybe_dec = \{ name, help ?? "" } ->
+maybe_dec = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_dec),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_dec),
         type: num_type_name,
         name,
         help,
@@ -514,9 +514,9 @@ maybe_dec = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12.0, 34.0, -56.0])
 ## ```
 dec_list : ParameterConfigBaseParams -> CliBuilder (List Dec) {}action StopCollectingAction
-dec_list = \{ name, help ?? "" } ->
+dec_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_dec),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_dec),
         type: num_type_name,
         name,
         help,
@@ -538,9 +538,9 @@ dec_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42.5)
 ## ```
 f32 : DefaultableParameterConfigBaseParams F32 -> CliBuilder F32 {}action GetParamsAction
-f32 = \{ name, help ?? "", default ?? NoDefault } ->
+f32 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f32),
         type: num_type_name,
         name,
         help,
@@ -562,9 +562,9 @@ f32 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_f32 : ParameterConfigBaseParams -> CliBuilder (Result F32 [NoValue]) {}action GetParamsAction
-maybe_f32 = \{ name, help ?? "" } ->
+maybe_f32 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f32),
         type: num_type_name,
         name,
         help,
@@ -587,9 +587,9 @@ maybe_f32 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12.0, 34.0, -56.0])
 ## ```
 f32_list : ParameterConfigBaseParams -> CliBuilder (List F32) {}action StopCollectingAction
-f32_list = \{ name, help ?? "" } ->
+f32_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f32),
         type: num_type_name,
         name,
         help,
@@ -611,9 +611,9 @@ f32_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42.5)
 ## ```
 f64 : DefaultableParameterConfigBaseParams F64 -> CliBuilder F64 {}action GetParamsAction
-f64 = \{ name, help ?? "", default ?? NoDefault } ->
+f64 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f64),
         type: num_type_name,
         name,
         help,
@@ -635,9 +635,9 @@ f64 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_f64 : ParameterConfigBaseParams -> CliBuilder (Result F64 [NoValue]) {}action GetParamsAction
-maybe_f64 = \{ name, help ?? "" } ->
+maybe_f64 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f64),
         type: num_type_name,
         name,
         help,
@@ -660,9 +660,9 @@ maybe_f64 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, -56.0])
 ## ```
 f64_list : ParameterConfigBaseParams -> CliBuilder (List F64) {}action StopCollectingAction
-f64_list = \{ name, help ?? "" } ->
+f64_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_f64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_f64),
         type: num_type_name,
         name,
         help,
@@ -684,9 +684,9 @@ f64_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 u8 : DefaultableParameterConfigBaseParams U8 -> CliBuilder U8 {}action GetParamsAction
-u8 = \{ name, help ?? "", default ?? NoDefault } ->
+u8 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u8),
         type: num_type_name,
         name,
         help,
@@ -708,9 +708,9 @@ u8 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u8 : ParameterConfigBaseParams -> CliBuilder (Result U8 [NoValue]) {}action GetParamsAction
-maybe_u8 = \{ name, help ?? "" } ->
+maybe_u8 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u8),
         type: num_type_name,
         name,
         help,
@@ -733,9 +733,9 @@ maybe_u8 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, 56])
 ## ```
 u8_list : ParameterConfigBaseParams -> CliBuilder (List U8) {}action StopCollectingAction
-u8_list = \{ name, help ?? "" } ->
+u8_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u8),
         type: num_type_name,
         name,
         help,
@@ -757,9 +757,9 @@ u8_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 u16 : DefaultableParameterConfigBaseParams U16 -> CliBuilder U16 {}action GetParamsAction
-u16 = \{ name, help ?? "", default ?? NoDefault } ->
+u16 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u16),
         type: num_type_name,
         name,
         help,
@@ -781,9 +781,9 @@ u16 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u16 : ParameterConfigBaseParams -> CliBuilder (Result U16 [NoValue]) {}action GetParamsAction
-maybe_u16 = \{ name, help ?? "" } ->
+maybe_u16 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u16),
         type: num_type_name,
         name,
         help,
@@ -806,9 +806,9 @@ maybe_u16 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, 56])
 ## ```
 u16_list : ParameterConfigBaseParams -> CliBuilder (List U16) {}action StopCollectingAction
-u16_list = \{ name, help ?? "" } ->
+u16_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u16),
         type: num_type_name,
         name,
         help,
@@ -830,9 +830,9 @@ u16_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 u32 : DefaultableParameterConfigBaseParams U32 -> CliBuilder U32 {}action GetParamsAction
-u32 = \{ name, help ?? "", default ?? NoDefault } ->
+u32 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u32),
         type: num_type_name,
         name,
         help,
@@ -854,9 +854,9 @@ u32 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u32 : ParameterConfigBaseParams -> CliBuilder (Result U32 [NoValue]) {}action GetParamsAction
-maybe_u32 = \{ name, help ?? "" } ->
+maybe_u32 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u32),
         type: num_type_name,
         name,
         help,
@@ -879,9 +879,9 @@ maybe_u32 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, 56])
 ## ```
 u32_list : ParameterConfigBaseParams -> CliBuilder (List U32) {}action StopCollectingAction
-u32_list = \{ name, help ?? "" } ->
+u32_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u32),
         type: num_type_name,
         name,
         help,
@@ -903,9 +903,9 @@ u32_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 u64 : DefaultableParameterConfigBaseParams U64 -> CliBuilder U64 {}action GetParamsAction
-u64 = \{ name, help ?? "", default ?? NoDefault } ->
+u64 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u64),
         type: num_type_name,
         name,
         help,
@@ -927,9 +927,9 @@ u64 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u64 : ParameterConfigBaseParams -> CliBuilder (Result U64 [NoValue]) {}action GetParamsAction
-maybe_u64 = \{ name, help ?? "" } ->
+maybe_u64 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u64),
         type: num_type_name,
         name,
         help,
@@ -952,9 +952,9 @@ maybe_u64 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, 56])
 ## ```
 u64_list : ParameterConfigBaseParams -> CliBuilder (List U64) {}action StopCollectingAction
-u64_list = \{ name, help ?? "" } ->
+u64_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u64),
         type: num_type_name,
         name,
         help,
@@ -976,9 +976,9 @@ u64_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 u128 : DefaultableParameterConfigBaseParams U128 -> CliBuilder U128 {}action GetParamsAction
-u128 = \{ name, help ?? "", default ?? NoDefault } ->
+u128 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u128),
         type: num_type_name,
         name,
         help,
@@ -1000,9 +1000,9 @@ u128 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_u128 : ParameterConfigBaseParams -> CliBuilder (Result U128 [NoValue]) {}action GetParamsAction
-maybe_u128 = \{ name, help ?? "" } ->
+maybe_u128 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u128),
         type: num_type_name,
         name,
         help,
@@ -1025,9 +1025,9 @@ maybe_u128 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, 56])
 ## ```
 u128_list : ParameterConfigBaseParams -> CliBuilder (List U128) {}action StopCollectingAction
-u128_list = \{ name, help ?? "" } ->
+u128_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_u128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_u128),
         type: num_type_name,
         name,
         help,
@@ -1049,9 +1049,9 @@ u128_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 i8 : DefaultableParameterConfigBaseParams I8 -> CliBuilder I8 {}action GetParamsAction
-i8 = \{ name, help ?? "", default ?? NoDefault } ->
+i8 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i8),
         type: num_type_name,
         name,
         help,
@@ -1073,9 +1073,9 @@ i8 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i8 : ParameterConfigBaseParams -> CliBuilder (Result I8 [NoValue]) {}action GetParamsAction
-maybe_i8 = \{ name, help ?? "" } ->
+maybe_i8 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i8),
         type: num_type_name,
         name,
         help,
@@ -1098,9 +1098,9 @@ maybe_i8 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, -56])
 ## ```
 i8_list : ParameterConfigBaseParams -> CliBuilder (List I8) {}action StopCollectingAction
-i8_list = \{ name, help ?? "" } ->
+i8_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i8),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i8),
         type: num_type_name,
         name,
         help,
@@ -1122,9 +1122,9 @@ i8_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 i16 : DefaultableParameterConfigBaseParams I16 -> CliBuilder I16 {}action GetParamsAction
-i16 = \{ name, help ?? "", default ?? NoDefault } ->
+i16 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i16),
         type: num_type_name,
         name,
         help,
@@ -1146,9 +1146,9 @@ i16 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i16 : ParameterConfigBaseParams -> CliBuilder (Result I16 [NoValue]) {}action GetParamsAction
-maybe_i16 = \{ name, help ?? "" } ->
+maybe_i16 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i16),
         type: num_type_name,
         name,
         help,
@@ -1171,9 +1171,9 @@ maybe_i16 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, -56])
 ## ```
 i16_list : ParameterConfigBaseParams -> CliBuilder (List I16) {}action StopCollectingAction
-i16_list = \{ name, help ?? "" } ->
+i16_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i16),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i16),
         type: num_type_name,
         name,
         help,
@@ -1195,9 +1195,9 @@ i16_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 i32 : DefaultableParameterConfigBaseParams I32 -> CliBuilder I32 {}action GetParamsAction
-i32 = \{ name, help ?? "", default ?? NoDefault } ->
+i32 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i32),
         type: num_type_name,
         name,
         help,
@@ -1219,9 +1219,9 @@ i32 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i32 : ParameterConfigBaseParams -> CliBuilder (Result I32 [NoValue]) {}action GetParamsAction
-maybe_i32 = \{ name, help ?? "" } ->
+maybe_i32 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i32),
         type: num_type_name,
         name,
         help,
@@ -1244,9 +1244,9 @@ maybe_i32 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, -56])
 ## ```
 i32_list : ParameterConfigBaseParams -> CliBuilder (List I32) {}action StopCollectingAction
-i32_list = \{ name, help ?? "" } ->
+i32_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i32),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i32),
         type: num_type_name,
         name,
         help,
@@ -1268,9 +1268,9 @@ i32_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 i64 : DefaultableParameterConfigBaseParams I64 -> CliBuilder I64 {}action GetParamsAction
-i64 = \{ name, help ?? "", default ?? NoDefault } ->
+i64 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i64),
         type: num_type_name,
         name,
         help,
@@ -1292,9 +1292,9 @@ i64 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i64 : ParameterConfigBaseParams -> CliBuilder (Result I64 [NoValue]) {}action GetParamsAction
-maybe_i64 = \{ name, help ?? "" } ->
+maybe_i64 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i64),
         type: num_type_name,
         name,
         help,
@@ -1317,9 +1317,9 @@ maybe_i64 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, -56])
 ## ```
 i64_list : ParameterConfigBaseParams -> CliBuilder (List I64) {}action StopCollectingAction
-i64_list = \{ name, help ?? "" } ->
+i64_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i64),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i64),
         type: num_type_name,
         name,
         help,
@@ -1341,9 +1341,9 @@ i64_list = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed(42)
 ## ```
 i128 : DefaultableParameterConfigBaseParams I128 -> CliBuilder I128 {}action GetParamsAction
-i128 = \{ name, help ?? "", default ?? NoDefault } ->
+i128 = |{ name, help ?? "", default ?? NoDefault }|
     single({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i128),
         type: num_type_name,
         name,
         help,
@@ -1365,9 +1365,9 @@ i128 = \{ name, help ?? "", default ?? NoDefault } ->
 ##     == SuccessfullyParsed(Err(NoValue))
 ## ```
 maybe_i128 : ParameterConfigBaseParams -> CliBuilder (Result I128 [NoValue]) {}action GetParamsAction
-maybe_i128 = \{ name, help ?? "" } ->
+maybe_i128 = |{ name, help ?? "" }|
     maybe({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i128),
         type: num_type_name,
         name,
         help,
@@ -1390,9 +1390,9 @@ maybe_i128 = \{ name, help ?? "" } ->
 ##     == SuccessfullyParsed([12, 34, -56])
 ## ```
 i128_list : ParameterConfigBaseParams -> CliBuilder (List I128) {}action StopCollectingAction
-i128_list = \{ name, help ?? "" } ->
+i128_list = |{ name, help ?? "" }|
     list({
-        parser: \a -> Arg.to_str(a) |> Result.try(Str.to_i128),
+        parser: |a| Arg.to_str(a) |> Result.try(Str.to_i128),
         type: num_type_name,
         name,
         help,

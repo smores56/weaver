@@ -15,13 +15,13 @@ single_dash_arg = Arg.from_str("-")
 double_dash_arg = Arg.from_str("--")
 
 parse_args : List Arg -> List ParsedArg
-parse_args = \args ->
+parse_args = |args|
     starting_state = { parsed_args: [], pass_through: KeepParsing }
 
     state_after =
         args
         |> List.drop_first(1)
-        |> List.walk(starting_state, \{ parsed_args, pass_through }, arg ->
+        |> List.walk(starting_state, |{ parsed_args, pass_through }, arg|
             when pass_through is
                 KeepParsing ->
                     parsed_arg = parse_arg(arg)
@@ -41,7 +41,7 @@ parse_args = \args ->
     state_after.parsed_args
 
 parse_arg : Arg -> ParsedArg
-parse_arg = \arg ->
+parse_arg = |arg|
     str_arg =
         when Arg.to_str(arg) is
             Ok(str) -> str
@@ -66,7 +66,7 @@ parse_arg = \arg ->
             Parameter(arg)
 
 parse_long_arg : Str -> ParsedArg
-parse_long_arg = \arg ->
+parse_long_arg = |arg|
     when Str.split_first(arg, "=") is
         Ok({ before: option, after: value }) ->
             Long({ name: option, value: Ok(Arg.from_str(value)) })
@@ -75,11 +75,11 @@ parse_long_arg = \arg ->
             Long({ name: arg, value: Err(NoValue) })
 
 construct_set_of_options : Str -> ParsedArg
-construct_set_of_options = \combined ->
+construct_set_of_options = |combined|
     options =
         combined
         |> Str.to_utf8
-        |> List.keep_oks(\c -> Str.from_utf8([c]))
+        |> List.keep_oks(|c| Str.from_utf8([c]))
 
     when options is
         [alone] -> Short(alone)

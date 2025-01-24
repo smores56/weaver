@@ -31,16 +31,17 @@ import weaver.Opt
 import weaver.Cli
 import weaver.Param
 
-main! = \args ->
+main! = |args|
     data =
         Cli.parse_or_display_message(cli_parser, args, Arg.to_os_raw)
-        |> try(Result.on_err!(\message ->
-            try(Stdout.line!(message))
-            Err(Exit(1, ""))))
+        |> Result.on_err!(|message|
+            Stdout.line!(message)?
+            Err(Exit(1, ""))
+        )
 
-    try(Stdout.line!("Successfully parsed! Here's what I got:"))
-    try(Stdout.line!(""))
-    try(Stdout.line!(Inspect.to_str(data)))
+    Stdout.line!("Successfully parsed! Here's what I got:")?
+    Stdout.line!("")?
+    Stdout.line!(Inspect.to_str(data))?
 
     Ok({})
 
@@ -95,7 +96,7 @@ feature-complete, with more to come as this library matures.
 
 Now that an initial release has happened, these are some ideas I have for future development:
 
-- [ ] Optionally set `{ group ? Str }` per option so they are visually grouped in the help page
+- [ ] Optionally set `{ group ?? Str }` per option so they are visually grouped in the help page
 - [ ] Completion generation for popular shells (e.g. Bash, Zsh, Fish, etc.)
 - [X] Add terminal escape sequences to generated messages for prettier help/usage text formatting (currently working, but could be nicer/more configurable)
 - [ ] add convenient CLI platform wrappers (e.g. parse, or print help and exit) for use with module params

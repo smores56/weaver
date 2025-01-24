@@ -138,7 +138,7 @@ CliParser state : {
 ##             verbosity: Opt.count({ short: "v", long: "verbose" })
 ##                 |> Cli.map(Verbosity),
 ##             file: Param.maybe_str({ name: "file" })
-##                 |> Cli.map(\f -> Result.with_default(f, "NO_FILE")),
+##                 |> Cli.map(|f| Result.with_default(f, "NO_FILE")),
 ##         }
 ##         |> Cli.finish({ name: "example" })
 ##         |> Cli.assert_valid
@@ -147,7 +147,7 @@ CliParser state : {
 ##    == SuccessfullyParsed({ verbosity: Verbosity(3), file: "NO_FILE" })
 ## ```
 map : CliBuilder a from_action to_action, (a -> b) -> CliBuilder b from_action to_action
-map = \builder, mapper ->
+map = |builder, mapper|
     Builder.map(builder, mapper)
 
 ## Begin weaving together a CLI builder using the `<-` builder notation.
@@ -168,12 +168,12 @@ map = \builder, mapper ->
 ##    == SuccessfullyParsed({ verbosity: 3, file: "file.txt" })
 ## ```
 weave : CliBuilder a action1 action2, CliBuilder b action2 action3, (a, b -> c) -> CliBuilder c action1 action3
-weave = \left, right, combiner ->
+weave = |left, right, combiner|
     Builder.combine(left, right, combiner)
 
 ## Fail the parsing process if any arguments are left over after parsing.
 ensure_all_args_were_parsed : List ParsedArg -> Result {} ArgExtractErr
-ensure_all_args_were_parsed = \remaining_args ->
+ensure_all_args_were_parsed = |remaining_args|
     when remaining_args is
         [] -> Ok({})
         [first, ..] ->
@@ -233,9 +233,9 @@ ensure_all_args_were_parsed = \remaining_args ->
 ##     |> Result.is_err
 ## ```
 finish : CliBuilder data from_action to_action, CliConfigParams -> Result (CliParser data) CliValidationErr
-finish = \builder, params ->
+finish = |builder, params|
     { parser, config, text_style } = finish_without_validating(builder, params)
-    try(validate_cli(config))
+    validate_cli(config)?
 
     Ok({ parser, config, text_style })
 
@@ -259,12 +259,12 @@ finish = \builder, params ->
 ##     == SuccessfullyParsed({ verbosity: 2, file: Err NoValue })
 ## ```
 finish_without_validating : CliBuilder data from_action to_action, CliConfigParams -> CliParser data
-finish_without_validating = \builder, { name, authors ?? [], version ?? "", description ?? "", text_style ?? Color } ->
+finish_without_validating = |builder, { name, authors ?? [], version ?? "", description ?? "", text_style ?? Color }|
     { options, parameters, subcommands, parser } =
         builder
         |> Builder.check_for_help_and_version
-        |> Builder.update_parser(\data ->
-            try(ensure_all_args_were_parsed(data.remaining_args))
+        |> Builder.update_parser(|data|
+            ensure_all_args_were_parsed(data.remaining_args)?
 
             Ok(data))
         |> Builder.into_parts
@@ -282,9 +282,9 @@ finish_without_validating = \builder, { name, authors ?? [], version ?? "", desc
     {
         config,
         text_style,
-        parser: \args ->
+        parser: |args|
             parser({ args: parse_args(args), subcommand_path: [name] })
-            |> map_successfully_parsed(\{ data } -> data),
+            |> map_successfully_parsed(|{ data }| data),
     }
 
 ## Assert that a CLI is properly configured, crashing your program if not.
@@ -305,7 +305,7 @@ finish_without_validating = \builder, { name, authors ?? [], version ?? "", desc
 ## |> Cli.assert_valid
 ## ```
 assert_valid : Result (CliParser data) CliValidationErr -> CliParser data
-assert_valid = \result ->
+assert_valid = |result|
     when result is
         Ok(cli) -> cli
         Err(err) -> crash(format_cli_validation_err(err))
@@ -379,7 +379,7 @@ assert_valid = \result ->
 ##         )
 ## ```
 parse_or_display_message : CliParser data, List arg, (arg -> [Unix (List U8), Windows (List U16)]) -> Result data Str
-parse_or_display_message = \parser, external_args, to_raw_arg ->
+parse_or_display_message = |parser, external_args, to_raw_arg|
     args =
         external_args
         |> List.map(to_raw_arg)

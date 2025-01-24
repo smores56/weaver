@@ -9,16 +9,17 @@ import weaver.Opt
 import weaver.Cli
 import weaver.Param
 
-main! = \args ->
+main! = |args|
     data =
         Cli.parse_or_display_message(cli_parser, args, Arg.to_os_raw)
-        |> try(Result.on_err!, \message ->
-            try(Stdout.line!, message)
-            Err(Exit(1, "")))
+        |> Result.on_err!(|message|
+            Stdout.line!(message)?
+            Err(Exit(1, ""))
+        )
 
-    try(Stdout.line!, "Successfully parsed! Here's what I got:")
-    try(Stdout.line!, "")
-    try(Stdout.line!, Inspect.to_str(data))
+    Stdout.line!("Successfully parsed! Here's what I got:")?
+    Stdout.line!("")?
+    Stdout.line!(Inspect.to_str(data))?
 
     Ok({})
 

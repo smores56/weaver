@@ -12,7 +12,7 @@ import Base exposing [
 import Validate exposing [CliValidationErr]
 
 option_display_name : { short : Str, long : Str }* -> Str
-option_display_name = \option ->
+option_display_name = |option|
     when (option.short, option.long) is
         ("", "") -> ""
         (short, "") -> "-$(short)"
@@ -20,13 +20,13 @@ option_display_name = \option ->
         (short, long) -> "-$(short)/--$(long)"
 
 option_type_name : { expected_value : ExpectedValue }* -> Str
-option_type_name = \{ expected_value } ->
+option_type_name = |{ expected_value }|
     when expected_value is
         ExpectsValue(type_name) -> full_type_name(type_name)
         NothingExpected -> ""
 
 full_type_name : Str -> Str
-full_type_name = \type_name ->
+full_type_name = |type_name|
     if type_name == str_type_name then
         "string"
     else if type_name == num_type_name then
@@ -38,7 +38,7 @@ full_type_name = \type_name ->
 ##
 ## Used in [Cli.parse_or_display_message].
 format_arg_extract_err : ArgExtractErr -> Str
-format_arg_extract_err = \err ->
+format_arg_extract_err = |err|
     when err is
         NoSubcommandCalled ->
             "A subcommand must be called."
@@ -98,8 +98,8 @@ format_arg_extract_err = \err ->
 ##
 ## Displayed as the crash message when [Cli.assert_valid] fails.
 format_cli_validation_err : CliValidationErr -> Str
-format_cli_validation_err = \err ->
-    value_at_subcommand_name = \{ name, subcommand_path } ->
+format_cli_validation_err = |err|
+    value_at_subcommand_name = |{ name, subcommand_path }|
         subcommand_path_suffix =
             if List.len(subcommand_path) <= 1 then
                 ""
@@ -108,10 +108,10 @@ format_cli_validation_err = \err ->
 
         "$(name)$(subcommand_path_suffix)"
 
-    option_at_subcommand_name = \{ option, subcommand_path } ->
+    option_at_subcommand_name = |{ option, subcommand_path }|
         value_at_subcommand_name({ name: "option '$(option_display_name(option))'", subcommand_path })
 
-    param_at_subcommand_name = \{ name, subcommand_path } ->
+    param_at_subcommand_name = |{ name, subcommand_path }|
         value_at_subcommand_name({ name: "parameter '$(name)'", subcommand_path })
 
     when err is

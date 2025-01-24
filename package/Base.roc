@@ -63,8 +63,8 @@ ArgParser a : ArgParserParams -> ArgParserResult (ArgParserState a)
 ## is provided to a callback and the resulting [ArgParserResult] is
 ## passed along in the newly bound [ArgParser].
 on_successful_arg_parse : ArgParser a, (ArgParserState a -> ArgParserResult (ArgParserState b)) -> ArgParser b
-on_successful_arg_parse = \result, mapper ->
-    \input ->
+on_successful_arg_parse = |result, mapper|
+    |input|
         when result(input) is
             ShowVersion -> ShowVersion
             ShowHelp({ subcommand_path }) -> ShowHelp({ subcommand_path })
@@ -75,7 +75,7 @@ on_successful_arg_parse = \result, mapper ->
 ## Maps successfully parsed data that was parsed by an [ArgParser]
 ## by a user-defined operation.
 map_successfully_parsed : ArgParserResult a, (a -> b) -> ArgParserResult b
-map_successfully_parsed = \result, mapper ->
+map_successfully_parsed = |result, mapper|
     when result is
         ShowVersion -> ShowVersion
         ShowHelp({ subcommand_path }) -> ShowHelp({ subcommand_path })
@@ -252,11 +252,11 @@ SubcommandConfigParams : {
 SubcommandsConfig : [
     NoSubcommands,
     HasSubcommands (Dict Str {
-                description : Str,
-                subcommands : SubcommandsConfig,
-                options : List OptionConfig,
-                parameters : List ParameterConfig,
-            }),
+        description : Str,
+        subcommands : SubcommandsConfig,
+        options : List OptionConfig,
+        parameters : List ParameterConfig,
+    }),
 ]
 
 ## Metadata for a subcommand.

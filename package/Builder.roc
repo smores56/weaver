@@ -44,8 +44,8 @@ CliBuilder data from_action to_action := {
 }
 
 from_arg_parser : (List ParsedArg -> Result { data : data, remaining_args : List ParsedArg } ArgExtractErr) -> CliBuilder data from_action to_action
-from_arg_parser = \parser ->
-    new_parser = \{ args, subcommand_path } ->
+from_arg_parser = |parser|
+    new_parser = |{ args, subcommand_path }|
         when parser(args) is
             Ok({ data, remaining_args }) -> SuccessfullyParsed({ data, remaining_args, subcommand_path })
             Err(err) -> IncorrectUsage(err, { subcommand_path })
@@ -58,7 +58,7 @@ from_arg_parser = \parser ->
     })
 
 from_full_parser : ArgParser data -> CliBuilder data from_action to_action
-from_full_parser = \parser ->
+from_full_parser = |parser|
     @CliBuilder({
         parser,
         options: [],
@@ -67,19 +67,19 @@ from_full_parser = \parser ->
     })
 
 add_option : CliBuilder state from_action to_action, OptionConfig -> CliBuilder state from_action to_action
-add_option = \@CliBuilder(builder), new_option ->
+add_option = |@CliBuilder(builder), new_option|
     @CliBuilder({ builder & options: List.append(builder.options, new_option) })
 
 add_parameter : CliBuilder state from_action to_action, ParameterConfig -> CliBuilder state from_action to_action
-add_parameter = \@CliBuilder(builder), new_parameter ->
+add_parameter = |@CliBuilder(builder), new_parameter|
     @CliBuilder({ builder & parameters: List.append(builder.parameters, new_parameter) })
 
 add_subcommands : CliBuilder state from_action to_action, Dict Str SubcommandConfig -> CliBuilder state from_action to_action
-add_subcommands = \@CliBuilder(builder), new_subcommands ->
+add_subcommands = |@CliBuilder(builder), new_subcommands|
     @CliBuilder({ builder & subcommands: Dict.insert_all(builder.subcommands, new_subcommands) })
 
 set_parser : CliBuilder state from_action to_action, ArgParser next_state -> CliBuilder next_state from_action to_action
-set_parser = \@CliBuilder(builder), parser ->
+set_parser = |@CliBuilder(builder), parser|
     @CliBuilder({
         options: builder.options,
         parameters: builder.parameters,
@@ -88,9 +88,9 @@ set_parser = \@CliBuilder(builder), parser ->
     })
 
 update_parser : CliBuilder state from_action to_action, ({ data : state, remaining_args : List ParsedArg } -> Result { data : next_state, remaining_args : List ParsedArg } ArgExtractErr) -> CliBuilder next_state from_action to_action
-update_parser = \@CliBuilder(builder), updater ->
+update_parser = |@CliBuilder(builder), updater|
     new_parser =
-        on_successful_arg_parse(builder.parser, \{ data, remaining_args, subcommand_path } ->
+        on_successful_arg_parse(builder.parser, |{ data, remaining_args, subcommand_path }|
             when updater({ data, remaining_args }) is
                 Err(err) -> IncorrectUsage(err, { subcommand_path })
                 Ok({ data: updated_data, remaining_args: rest_of_args }) ->
@@ -99,10 +99,10 @@ update_parser = \@CliBuilder(builder), updater ->
     set_parser(@CliBuilder(builder), new_parser)
 
 bind_parser : CliBuilder state from_action to_action, (ArgParserState state -> ArgParserResult (ArgParserState next_state)) -> CliBuilder next_state from_action to_action
-bind_parser = \@CliBuilder(builder), updater ->
+bind_parser = |@CliBuilder(builder), updater|
     new_parser : ArgParser next_state
     new_parser =
-        on_successful_arg_parse(builder.parser, \{ data, remaining_args, subcommand_path } ->
+        on_successful_arg_parse(builder.parser, |{ data, remaining_args, subcommand_path }|
             updater({ data, remaining_args, subcommand_path }))
 
     set_parser(@CliBuilder(builder), new_parser)
@@ -115,13 +115,13 @@ into_parts :
         parameters : List ParameterConfig,
         subcommands : Dict Str SubcommandConfig,
     }
-into_parts = \@CliBuilder(builder) -> builder
+into_parts = |@CliBuilder(builder)| builder
 
 map : CliBuilder a from_action to_action, (a -> b) -> CliBuilder b from_action to_action
-map = \@CliBuilder(builder), mapper ->
-    combined_parser = \input ->
+map = |@CliBuilder(builder), mapper|
+    combined_parser = |input|
         builder.parser(input)
-        |> map_successfully_parsed(\{ data, remaining_args, subcommand_path } ->
+        |> map_successfully_parsed(|{ data, remaining_args, subcommand_path }|
             { data: mapper(data), remaining_args, subcommand_path })
 
     @CliBuilder({
@@ -132,8 +132,8 @@ map = \@CliBuilder(builder), mapper ->
     })
 
 combine : CliBuilder a action1 action2, CliBuilder b action2 action3, (a, b -> c) -> CliBuilder c action1 action3
-combine = \@CliBuilder(left), @CliBuilder(right), combiner ->
-    combined_parser = \input ->
+combine = |@CliBuilder(left), @CliBuilder(right), combiner|
+    combined_parser = |input|
         when left.parser(input) is
             ShowVersion -> ShowVersion
             ShowHelp(sp) -> ShowHelp(sp)
@@ -154,17 +154,17 @@ combine = \@CliBuilder(left), @CliBuilder(right), combiner ->
     })
 
 flag_was_passed : OptionConfig, List ParsedArg -> Bool
-flag_was_passed = \option, args ->
-    List.any(args, \arg ->
+flag_was_passed = |option, args|
+    List.any(args, |arg|
         when arg is
             Short(short) -> short == option.short
-            ShortGroup(sg) -> List.any(sg.names, \n -> n == option.short)
+            ShortGroup(sg) -> List.any(sg.names, |n| n == option.short)
             Long(long) -> long.name == option.long
             Parameter(_p) -> Bool.false)
 
 check_for_help_and_version : CliBuilder state from_action to_action -> CliBuilder state from_action to_action
-check_for_help_and_version = \@CliBuilder(builder) ->
-    new_parser = \{ args, subcommand_path } ->
+check_for_help_and_version = |@CliBuilder(builder)|
+    new_parser = |{ args, subcommand_path }|
         when builder.parser({ args, subcommand_path }) is
             ShowHelp(sp) -> ShowHelp(sp)
             ShowVersion -> ShowVersion
@@ -185,7 +185,7 @@ check_for_help_and_version = \@CliBuilder(builder) ->
 
 expect
     { parser } =
-        from_arg_parser(\args -> Ok({ data: Inspect.to_str(args), remaining_args: [] }))
+        from_arg_parser(|args| Ok({ data: Inspect.to_str(args), remaining_args: [] }))
         |> map(Inspected)
         |> into_parts
 
