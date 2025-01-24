@@ -4,15 +4,15 @@ import Opt
 import Cli
 
 basic_cli =
-    Opt.u64 { short: "a", help: "Set the alpha level." }
-    |> Cli.map Alpha
-    |> Cli.finish { name: "basic-cli", version: "v1.0.0", text_style: Plain }
+    Opt.u64({ short: "a", help: "Set the alpha level." })
+    |> Cli.map(Alpha)
+    |> Cli.finish({ name: "basic-cli", version: "v1.0.0", text_style: Plain })
     |> Cli.assert_valid
 
 expect
     basic_cli
-    |> Cli.parse_or_display_message ["basic-cli", "-a", "123"] \a -> Unix (Str.toUtf8 a)
-    == Ok (Alpha 123)
+    |> Cli.parse_or_display_message(["basic-cli", "-a", "123"], |a| Unix(Str.to_utf8(a)))
+    == Ok(Alpha(123))
 
 expect
     help_message =
@@ -29,5 +29,5 @@ expect
         """
 
     basic_cli
-    |> Cli.parse_or_display_message ["basic-cli", "-h"] \a -> Unix (Str.toUtf8 a)
-    == Err help_message
+    |> Cli.parse_or_display_message(["basic-cli", "-h"], |a| Unix(Str.to_utf8(a)))
+    == Err(help_message)

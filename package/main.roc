@@ -1,6 +1,7 @@
 package [
     Opt,
     Base,
+    Builder,
     Cli,
     ErrorFormatter,
     Help,

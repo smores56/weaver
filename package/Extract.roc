@@ -21,7 +21,7 @@ ExtractParamValuesOutput : {
 }
 
 extract_param_values : ExtractParamValuesParams -> Result ExtractParamValuesOutput ArgExtractErr
-extract_param_values = \{ args, param } ->
+extract_param_values = |{ args, param }|
     starting_state = {
         action: GetParam,
         values: [],
@@ -30,35 +30,35 @@ extract_param_values = \{ args, param } ->
 
     state_after =
         args
-        |> List.walkTry starting_state \state, arg ->
+        |> List.walk_try(starting_state, |state, arg|
             when state.action is
-                GetParam -> extract_single_param state param arg
-                StopParsing -> Ok { state & remaining_args: state.remaining_args |> List.append arg }
+                GetParam -> extract_single_param(state, param, arg)
+                StopParsing -> Ok({ state & remaining_args: state.remaining_args |> List.append(arg) }))
 
-    Result.map state_after \{ values, remaining_args } ->
-        { values, remaining_args }
+    Result.map_ok(state_after, |{ values, remaining_args }|
+        { values, remaining_args })
 
 extract_single_param : ExtractParamValuesState, ParameterConfig, ParsedArg -> Result ExtractParamValuesState ArgExtractErr
-extract_single_param = \state, param, arg ->
+extract_single_param = |state, param, arg|
     when arg is
-        Short short ->
-            Err (UnrecognizedShortArg short)
+        Short(short) ->
+            Err(UnrecognizedShortArg(short))
 
-        ShortGroup group ->
+        ShortGroup(group) ->
             name =
                 group.names
                 |> List.first
-                |> Result.withDefault ""
+                |> Result.with_default("")
 
-            Err (UnrecognizedShortArg name)
+            Err(UnrecognizedShortArg(name))
 
-        Long long ->
-            Err (UnrecognizedLongArg long.name)
+        Long(long) ->
+            Err(UnrecognizedLongArg(long.name))
 
-        Parameter p ->
+        Parameter(p) ->
             when param.plurality is
-                Optional | One -> Ok { state & action: StopParsing, values: state.values |> List.append p }
-                Many -> Ok { state & values: state.values |> List.append p }
+                Optional | One -> Ok({ state & action: StopParsing, values: state.values |> List.append(p) })
+                Many -> Ok({ state & values: state.values |> List.append(p) })
 
 ExtractOptionValuesParams : {
     args : List ParsedArg,
@@ -77,104 +77,105 @@ ExtractOptionValueWalkerState : {
 }
 
 extract_option_values : ExtractOptionValuesParams -> Result ExtractOptionValuesOutput ArgExtractErr
-extract_option_values = \{ args, option } ->
+extract_option_values = |{ args, option }|
     starting_state = {
         action: FindOption,
         values: [],
         remaining_args: [],
     }
 
-    state_after = List.walkTry args starting_state \state, arg ->
+    state_after = List.walk_try(args, starting_state, |state, arg|
         when state.action is
-            FindOption -> find_option_for_extraction state arg option
-            GetValue -> get_value_for_extraction state arg option
+            FindOption -> find_option_for_extraction(state, arg, option)
+            GetValue -> get_value_for_extraction(state, arg, option))
 
     when state_after is
-        Err err -> Err err
-        Ok { action, values, remaining_args } ->
+        Err(err) -> Err(err)
+        Ok({ action, values, remaining_args }) ->
             when action is
-                GetValue -> Err (NoValueProvidedForOption option)
-                FindOption -> Ok { values, remaining_args }
+                GetValue -> Err(NoValueProvidedForOption(option))
+                FindOption -> Ok({ values, remaining_args })
 
 find_option_for_extraction : ExtractOptionValueWalkerState, ParsedArg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
-find_option_for_extraction = \state, arg, option ->
+find_option_for_extraction = |state, arg, option|
     when arg is
-        Short short ->
+        Short(short) ->
             if short == option.short then
                 if option.expected_value == NothingExpected then
-                    Ok { state & values: state.values |> List.append (Err NoValue) }
+                    Ok({ state & values: state.values |> List.append(Err(NoValue)) })
                 else
-                    Ok { state & action: GetValue }
+                    Ok({ state & action: GetValue })
             else
-                Ok { state & remaining_args: state.remaining_args |> List.append arg }
+                Ok({ state & remaining_args: state.remaining_args |> List.append(arg) })
 
-        ShortGroup short_group ->
-            find_options_in_short_group state option short_group
+        ShortGroup(short_group) ->
+            find_options_in_short_group(state, option, short_group)
 
-        Long long ->
+        Long(long) ->
             if long.name == option.long then
                 if option.expected_value == NothingExpected then
                     when long.value is
-                        Ok _val -> Err (OptionDoesNotExpectValue option)
-                        Err NoValue -> Ok { state & values: state.values |> List.append (Err NoValue) }
+                        Ok(_val) -> Err(OptionDoesNotExpectValue(option))
+                        Err(NoValue) -> Ok({ state & values: state.values |> List.append(Err(NoValue)) })
                 else
                     when long.value is
-                        Ok val -> Ok { state & values: state.values |> List.append (Ok val) }
-                        Err NoValue -> Ok { state & action: GetValue }
+                        Ok(val) -> Ok({ state & values: state.values |> List.append(Ok(val)) })
+                        Err(NoValue) -> Ok({ state & action: GetValue })
             else
-                Ok { state & remaining_args: state.remaining_args |> List.append arg }
+                Ok({ state & remaining_args: state.remaining_args |> List.append(arg) })
 
         _nothing_found ->
-            Ok { state & remaining_args: state.remaining_args |> List.append arg }
+            Ok({ state & remaining_args: state.remaining_args |> List.append(arg) })
 
 find_options_in_short_group : ExtractOptionValueWalkerState, OptionConfig, { names : List Str, complete : [Partial, Complete] } -> Result ExtractOptionValueWalkerState ArgExtractErr
-find_options_in_short_group = \state, option, short_group ->
+find_options_in_short_group = |state, option, short_group|
     state_after =
         short_group.names
-        |> List.walkTry { action: FindOption, remaining: [], values: [] } \sg_state, name ->
+        |> List.walk_try({ action: FindOption, remaining: [], values: [] }, |sg_state, name|
             when sg_state.action is
-                GetValue -> Err (CannotUsePartialShortGroupAsValue option short_group.names)
+                GetValue -> Err(CannotUsePartialShortGroupAsValue(option, short_group.names))
                 FindOption ->
                     if name == option.short then
                         if option.expected_value == NothingExpected then
-                            Ok { sg_state & values: sg_state.values |> List.append (Err NoValue) }
+                            Ok({ sg_state & values: sg_state.values |> List.append(Err(NoValue)) })
                         else
-                            Ok { sg_state & action: GetValue }
+                            Ok({ sg_state & action: GetValue })
                     else
-                        Ok sg_state
+                        Ok(sg_state))
 
     when state_after is
-        Err err -> Err err
-        Ok { action, remaining, values } ->
+        Err(err) -> Err(err)
+        Ok({ action, remaining, values }) ->
             rest_of_group =
-                if List.isEmpty values then
-                    Ok (ShortGroup short_group)
-                else if List.isEmpty remaining then
-                    Err NoValue
+                if List.is_empty(values) then
+                    Ok(ShortGroup(short_group))
+                else if List.is_empty(remaining) then
+                    Err(NoValue)
                 else
-                    Ok (ShortGroup { complete: Partial, names: remaining })
+                    Ok(ShortGroup({ complete: Partial, names: remaining }))
 
-            Ok
+            Ok(
                 { state &
                     action,
-                    remaining_args: state.remaining_args |> List.appendIfOk rest_of_group,
-                    values: state.values |> List.concat values,
-                }
+                    remaining_args: state.remaining_args |> List.append_if_ok(rest_of_group),
+                    values: state.values |> List.concat(values),
+                },
+            )
 
 get_value_for_extraction : ExtractOptionValueWalkerState, ParsedArg, OptionConfig -> Result ExtractOptionValueWalkerState ArgExtractErr
-get_value_for_extraction = \state, arg, option ->
+get_value_for_extraction = |state, arg, option|
     value =
         when arg is
-            Short s -> Arg.from_str "-$(s)"
-            ShortGroup { names, complete: Complete } -> Arg.from_str "-$(Str.joinWith names "")"
-            ShortGroup { names, complete: Partial } ->
-                return Err (CannotUsePartialShortGroupAsValue option names)
+            Short(s) -> Arg.from_str("-$(s)")
+            ShortGroup({ names, complete: Complete }) -> Arg.from_str("-$(Str.join_with(names, ""))")
+            ShortGroup({ names, complete: Partial }) ->
+                return Err(CannotUsePartialShortGroupAsValue(option, names))
 
-            Long { name, value: Ok val } ->
+            Long({ name, value: Ok(val) }) ->
                 # Using [Arg.display] is safe here because `val` must be valid UTF-8 to be `Ok`
-                Arg.from_str "--$(name)=$(Arg.display val)"
+                Arg.from_str("--$(name)=$(Arg.display(val))")
 
-            Long { name, value: Err NoValue } -> Arg.from_str "--$(name)"
-            Parameter p -> p
+            Long({ name, value: Err(NoValue) }) -> Arg.from_str("--$(name)")
+            Parameter(p) -> p
 
-    Ok { state & action: FindOption, values: state.values |> List.append (Ok value) }
+    Ok({ state & action: FindOption, values: state.values |> List.append(Ok(value)) })
