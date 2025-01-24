@@ -115,7 +115,7 @@ format_cli_validation_err = |err|
         value_at_subcommand_name({ name: "parameter '$(name)'", subcommand_path })
 
     when err is
-        OverlappingOptionNames(option1, option2) ->
+        OverlappingOptionNames({ left: option1, right: option2 }) ->
             "The $(option_at_subcommand_name(option1)) overlaps with the $(option_at_subcommand_name(option2))."
 
         OverlappingParameterNames({ first, second, subcommand_path }) ->

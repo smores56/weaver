@@ -55,7 +55,7 @@ parse_arg = |arg|
             else
                 when Str.split_first(after, "-") is
                     Ok({ before: "", after: rest }) ->
-                        if rest == "" || Str.starts_with(rest, "-") then
+                        if rest == "" or Str.starts_with(rest, "-") then
                             Parameter(arg)
                         else
                             parse_long_arg(rest)
